@@ -6,7 +6,9 @@ import { useAuth } from '../context/AuthContext';
 
 const pageTitles = {
   '/': 'Dashboard',
+  '/solicitudes': 'Solicitudes',
   '/nueva-solicitud': 'Nueva Solicitud',
+  '/seguimiento': 'Seguimiento de Vehículo',
   '/servicios': 'Servicios',
   '/reportes': 'Reportes',
 };

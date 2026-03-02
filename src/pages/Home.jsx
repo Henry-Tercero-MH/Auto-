@@ -32,6 +32,30 @@ export default function Home() {
   const { user } = useAuth();
   const today = new Date().toLocaleDateString('es-MX', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
 
+  // Servicios con imágenes
+  const servicios = [
+    {
+      title: 'Scaner',
+      image: 'https://media.istockphoto.com/id/2201019036/photo/portrait-of-smiling-interracial-auto-mechanic-scrolling-on-tablet-at-mechanic-workshop.jpg?s=2048x2048&w=is&k=20&c=WceBVc53kkhYNWY0GepYxOveh9tzOL03eVxE2yxS6tA=',
+      description: 'Lectura de códigos de falla con equipo de última generación.'
+    },
+    {
+      title: 'Servicio motor',
+      image: 'https://images.unsplash.com/photo-1517048676732-d65bc937f952?auto=format&fit=crop&w=400&q=80',
+      description: 'Mantenimiento y reparación integral del motor'
+    },
+    {
+      title: 'Servicio completo',
+      image: 'https://images.unsplash.com/photo-1503376780353-7e6692767b70?auto=format&fit=crop&w=400&q=80',
+      description: 'Revisión general: aceite, filtros, bujías y más'
+    },
+    {
+      title: 'Servicio frenos',
+      image: 'https://images.unsplash.com/photo-1463926578305-76fce3b1c2c5?auto=format&fit=crop&w=400&q=80',
+      description: 'Pastillas, discos y líquido de frenos'
+    }
+  ];
+
   return (
     <div className="space-y-6">
       {/* Welcome */}
@@ -53,20 +77,25 @@ export default function Home() {
         </Link>
       </div>
 
-      {/* Stats cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
-        {stats.map((stat) => (
-          <div key={stat.label} className="bg-white rounded-xl shadow-sm border border-gray-100 p-5 flex items-center gap-4">
-            <div className={`${stat.color} p-3 rounded-xl flex-shrink-0`}>
-              <Icon path={stat.icon} />
+      {/* Nuestros servicios */}
+      <div className="mt-8">
+        <h3 className="text-xl font-bold text-primary mb-4">Nuestros servicios</h3>
+        <p className="text-slate-500 mb-6">Atención especializada para tu vehículo</p>
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-6">
+          {servicios.map((serv) => (
+            <div key={serv.title} className="bg-white rounded-xl shadow-md border border-gray-100 hover:shadow-lg transition-shadow w-full max-w-xs mx-auto p-0">
+              <img
+                src={serv.image}
+                alt={serv.title}
+                className="rounded-t-xl object-cover w-full h-40"
+              />
+              <div className="p-4">
+                <h3 className="font-semibold text-lg text-primary mb-1">{serv.title}</h3>
+                <p className="text-gray-500 text-sm text-left">{serv.description}</p>
+              </div>
             </div>
-            <div>
-              <p className="text-slate-500 text-xs font-medium">{stat.label}</p>
-              <p className="text-2xl font-bold text-primary">{stat.value}</p>
-              <p className="text-xs text-slate-400 mt-0.5">{stat.change} este mes</p>
-            </div>
-          </div>
-        ))}
+          ))}
+        </div>
       </div>
 
       {/* Recent solicitudes */}

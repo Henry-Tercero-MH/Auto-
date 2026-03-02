@@ -3,8 +3,14 @@ import { Link } from 'react-router-dom';
 const servicios = [
   {
     title: 'Scaner',
-    icon: '🔍',
-    description: 'Diagnóstico computarizado completo. Lectura de códigos de falla y análisis del sistema electrónico del vehículo.',
+    icon: (
+      <img
+        src="https://media.istockphoto.com/id/2201019036/photo/portrait-of-smiling-interracial-auto-mechanic-scrolling-on-tablet-at-mechanic-workshop.jpg?s=2048x2048&w=is&k=20&c=WceBVc53kkhYNWY0GepYxOveh9tzOL03eVxE2yxS6tA="
+        alt="Scaner mecánico"
+        className="rounded-lg object-cover w-20 h-20 shadow-md"
+      />
+    ),
+    description: 'Lectura de códigos de falla con equipo de última generación.',
     duracion: '30 - 45 min',
     color: 'border-blue-200 hover:border-blue-400',
     badge: 'Popular',
