@@ -10,6 +10,7 @@ const pageTitles = {
   '/nueva-solicitud': 'Nueva Solicitud',
   '/seguimiento': 'Seguimiento de Vehículo',
   '/servicios': 'Servicios',
+  '/catalogos': 'Catálogos',
   '/reportes': 'Reportes',
 };
 

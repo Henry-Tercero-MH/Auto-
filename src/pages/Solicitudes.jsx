@@ -1,19 +1,25 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { useSolicitudes } from '../context/SolicitudesContext';
-
-const estadoConfig = {
-  Completada:   { cls: 'bg-green-100 text-green-700 ring-green-400',   dot: 'bg-green-500',  label: 'Completada'  },
-  'En proceso': { cls: 'bg-orange-100 text-orange-700 ring-orange-400',dot: 'bg-orange-500', label: 'En proceso'  },
-  Pendiente:    { cls: 'bg-amber-100 text-amber-700 ring-amber-400',   dot: 'bg-amber-500',  label: 'Pendiente'   },
-};
-
-const ESTADOS = ['Pendiente', 'En proceso', 'Completada'];
-const FILTROS = ['Todos', 'Pendiente', 'En proceso', 'Completada'];
+import { useCatalogos } from '../context/CatalogosContext';
 
 export default function Solicitudes() {
   const { solicitudes, cambiarEstado } = useSolicitudes();
+  const { estados } = useCatalogos();
+
+  // Construir config de estados dinámicamente desde catálogo
+  const estadoConfig = useMemo(() => {
+    const cfg = {};
+    estados.forEach((e) => {
+      cfg[e.nombre] = { cls: e.bgClass, dot: e.dotClass, label: e.nombre };
+    });
+    return cfg;
+  }, [estados]);
+
+  const ESTADOS = useMemo(() => estados.map((e) => e.nombre), [estados]);
+  const FILTROS = useMemo(() => ['Todos', ...ESTADOS], [ESTADOS]);
+
   const [filtro, setFiltro] = useState('Todos');
   const [busqueda, setBusqueda] = useState('');
   const [expandido, setExpandido] = useState(null);
@@ -31,12 +37,11 @@ export default function Solicitudes() {
     return matchFiltro && matchBusqueda;
   });
 
-  const conteo = {
-    Todos: solicitudes.length,
-    Pendiente: solicitudes.filter((s) => s.estado === 'Pendiente').length,
-    'En proceso': solicitudes.filter((s) => s.estado === 'En proceso').length,
-    Completada: solicitudes.filter((s) => s.estado === 'Completada').length,
-  };
+  const conteo = useMemo(() => {
+    const c = { Todos: solicitudes.length };
+    ESTADOS.forEach((e) => { c[e] = solicitudes.filter((s) => s.estado === e).length; });
+    return c;
+  }, [solicitudes, ESTADOS]);
 
   const handleCambiarEstado = (id, nuevoEstado) => {
     cambiarEstado(id, nuevoEstado);
@@ -107,7 +112,7 @@ export default function Solicitudes() {
         ) : (
           <div className="divide-y divide-gray-100">
             {datos.map((s) => {
-              const cfg = estadoConfig[s.estado];
+              const cfg = estadoConfig[s.estado] || { cls: 'bg-slate-100 text-slate-600', dot: 'bg-slate-400', label: s.estado };
               const abierto = expandido === s.id;
               return (
                 <div key={s.id}>

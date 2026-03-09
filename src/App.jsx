@@ -9,6 +9,8 @@ import Servicios from './pages/Servicios';
 import Solicitudes from './pages/Solicitudes';
 import Seguimiento from './pages/Seguimiento';
 import Scaner from './pages/Scaner';
+import Catalogos from './pages/Catalogos';
+import { CatalogosProvider } from './context/CatalogosContext';
 
 function ProtectedLayout() {
   const { user } = useAuth();
@@ -34,6 +36,7 @@ function AppRoutes() {
         <Route path="/solicitudes" element={<Solicitudes />} />
         <Route path="/nueva-solicitud" element={<NuevaSolicitud />} />
         <Route path="/servicios" element={<Servicios />} />
+        <Route path="/catalogos" element={<Catalogos />} />
         <Route path="/reportes" element={<div className="text-center py-20 text-slate-400 text-lg">Módulo en desarrollo...</div>} />
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />
@@ -45,9 +48,11 @@ export default function App() {
   return (
     <AuthProvider>
       <SolicitudesProvider>
-        <Router>
-          <AppRoutes />
-        </Router>
+        <CatalogosProvider>
+          <Router>
+            <AppRoutes />
+          </Router>
+        </CatalogosProvider>
       </SolicitudesProvider>
     </AuthProvider>
   );

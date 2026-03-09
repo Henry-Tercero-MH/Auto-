@@ -1,27 +1,28 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import logo from '../imagenes/logoMecanica.png';
 import { useSolicitudes } from '../context/SolicitudesContext';
-
-const TIMELINE = [
-  { key: 'Pendiente',   label: 'Recibido',    desc: 'Vehículo ingresado al taller' },
-  { key: 'En proceso',  label: 'En proceso',  desc: 'Diagnóstico y reparación en curso' },
-  { key: 'Completada',  label: 'Listo',        desc: 'Vehículo listo para entrega' },
-];
-
-const estadoColor = {
-  Completada:   'bg-green-100 text-green-700 border-green-300',
-  'En proceso': 'bg-orange-100 text-orange-700 border-orange-300',
-  Pendiente:    'bg-amber-100 text-amber-700 border-amber-300',
-};
-
-function getStepIndex(estado) {
-  if (estado === 'Completada') return 2;
-  if (estado === 'En proceso') return 1;
-  return 0;
-}
+import { useCatalogos } from '../context/CatalogosContext';
 
 export default function Seguimiento() {
   const { solicitudes } = useSolicitudes();
+  const { estados } = useCatalogos();
+
+  // Construir TIMELINE y helpers a partir del catálogo
+  const TIMELINE = useMemo(
+    () => estados.map((e) => ({ key: e.nombre, label: e.timelineLabel || e.nombre, desc: e.timelineDesc || '' })),
+    [estados]
+  );
+
+  const estadoColor = useMemo(() => {
+    const m = {};
+    estados.forEach((e) => { m[e.nombre] = e.bgClass; });
+    return m;
+  }, [estados]);
+
+  const getStepIndex = (estado) => {
+    const idx = estados.findIndex((e) => e.nombre === estado);
+    return idx >= 0 ? idx : 0;
+  };
   const [ticket, setTicket] = useState('');
   const [resultado, setResultado] = useState(null);
   const [buscado, setBuscado] = useState(false);
@@ -102,7 +103,7 @@ export default function Seguimiento() {
           <div className="space-y-4">
 
             {/* Estado actual destacado */}
-            <div className={`rounded-2xl border p-4 flex items-center gap-4 ${estadoColor[resultado.estado]}`}>
+            <div className={`rounded-2xl border p-4 flex items-center gap-4 ${estadoColor[resultado.estado] || 'bg-slate-100 text-slate-700'}`} style={{ borderColor: estados.find(e => e.nombre === resultado.estado)?.color || '#cbd5e1' }}>
               <div className="flex-1">
                 <p className="text-xs font-semibold uppercase tracking-widest opacity-70 mb-0.5">Estado actual</p>
                 <p className="text-xl font-black">{resultado.estado}</p>
@@ -140,7 +141,7 @@ export default function Seguimiento() {
                 {/* Línea de progreso */}
                 <div
                   className="absolute left-4 top-4 w-0.5 bg-primary transition-all duration-500"
-                  style={{ height: stepIdx === 0 ? '0%' : stepIdx === 1 ? '50%' : '100%' }}
+                  style={{ height: stepIdx <= 0 ? '0%' : `${(stepIdx / (TIMELINE.length - 1)) * 100}%` }}
                 />
                 <div className="space-y-6">
                   {TIMELINE.map((step, i) => {

@@ -1,25 +1,10 @@
 import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { useCatalogos } from '../context/CatalogosContext';
+import { useSolicitudes } from '../context/SolicitudesContext';
 
-const stats = [
-  { label: 'Total Solicitudes', value: '128', change: '+12%', color: 'bg-primary', icon: 'M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2' },
-  { label: 'Pendientes', value: '24', change: '+3', color: 'bg-amber-500', icon: 'M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z' },
-  { label: 'En Proceso', value: '18', change: '-2', color: 'bg-orange-500', icon: 'M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15' },
-  { label: 'Completadas', value: '86', change: '+8%', color: 'bg-green-500', icon: 'M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z' },
-];
-
-const recentSolicitudes = [
-  { id: '#0128', cliente: 'Carlos Medina', vehiculo: 'Toyota Corolla 2021', servicio: 'Cambio de aceite', estado: 'Completada' },
-  { id: '#0127', cliente: 'María López', vehiculo: 'Honda Civic 2019', servicio: 'Revisión de frenos', estado: 'En proceso' },
-  { id: '#0126', cliente: 'Roberto García', vehiculo: 'Nissan Sentra 2020', servicio: 'Diagnóstico', estado: 'En proceso' },
-  { id: '#0125', cliente: 'Ana Torres', vehiculo: 'Chevrolet Spark 2022', servicio: 'Alineación y balanceo', estado: 'Pendiente' },
-  { id: '#0124', cliente: 'Luis Ramírez', vehiculo: 'Ford Focus 2018', servicio: 'Suspensión', estado: 'Completada' },
-];
-
-const estadoStyles = {
-  Completada: 'bg-green-100 text-green-700',
-  'En proceso': 'bg-orange-100 text-orange-700',
-  Pendiente: 'bg-amber-100 text-amber-700',
+const estadoIcons = {
+  Total: 'M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2',
 };
 
 const Icon = ({ path }) => (
@@ -30,31 +15,29 @@ const Icon = ({ path }) => (
 
 export default function Home() {
   const { user } = useAuth();
+  const { servicios: CATEGORIAS_SERVICIOS, estados } = useCatalogos();
+  const { solicitudes } = useSolicitudes();
   const today = new Date().toLocaleDateString('es-MX', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
 
-  // Servicios con imágenes
-  const servicios = [
-    {
-      title: 'Scaner',
-      image: 'https://media.istockphoto.com/id/2201019036/photo/portrait-of-smiling-interracial-auto-mechanic-scrolling-on-tablet-at-mechanic-workshop.jpg?s=2048x2048&w=is&k=20&c=WceBVc53kkhYNWY0GepYxOveh9tzOL03eVxE2yxS6tA=',
-      description: 'Lectura de códigos de falla con equipo de última generación.'
-    },
-    {
-      title: 'Servicio motor',
-      image: 'https://images.unsplash.com/photo-1517048676732-d65bc937f952?auto=format&fit=crop&w=400&q=80',
-      description: 'Mantenimiento y reparación integral del motor'
-    },
-    {
-      title: 'Servicio completo',
-      image: 'https://images.unsplash.com/photo-1503376780353-7e6692767b70?auto=format&fit=crop&w=400&q=80',
-      description: 'Revisión general: aceite, filtros, bujías y más'
-    },
-    {
-      title: 'Servicio frenos',
-      image: 'https://images.unsplash.com/photo-1463926578305-76fce3b1c2c5?auto=format&fit=crop&w=400&q=80',
-      description: 'Pastillas, discos y líquido de frenos'
-    }
+  // Stats calculados dinámicamente desde los datos reales
+  const stats = [
+    { label: 'Total Solicitudes', value: solicitudes.length, color: 'bg-primary', icon: estadoIcons.Total },
+    ...estados.map((e) => ({
+      label: e.nombre,
+      value: solicitudes.filter((s) => s.estado === e.nombre).length,
+      color: e.dotClass ? e.dotClass.replace('bg-', 'bg-') : 'bg-slate-500',
+      icon: estadoIcons.Total,
+    })),
   ];
+
+  // Solicitudes recientes (últimas 5) desde el contexto real
+  const recentSolicitudes = solicitudes.slice(0, 5);
+
+  // Estilos de estado desde el catálogo
+  const estadoStyles = {};
+  estados.forEach((e) => { estadoStyles[e.nombre] = e.bgClass; });
+
+
 
   return (
     <div className="space-y-6">
@@ -77,23 +60,43 @@ export default function Home() {
         </Link>
       </div>
 
+      {/* Stats KPI Cards */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+        {stats.map((s) => (
+          <div key={s.label} className="bg-white rounded-xl shadow-sm border border-gray-100 p-5 flex items-center gap-4">
+            <div className={`w-11 h-11 ${s.color} rounded-xl flex items-center justify-center shrink-0`}>
+              <Icon path={s.icon} />
+            </div>
+            <div>
+              <p className="text-2xl font-bold text-primary">{s.value}</p>
+              <p className="text-xs text-slate-500 leading-tight">{s.label}</p>
+            </div>
+          </div>
+        ))}
+      </div>
+
       {/* Nuestros servicios */}
       <div className="mt-8">
-        <h3 className="text-xl font-bold text-primary mb-4">Nuestros servicios</h3>
-        <p className="text-slate-500 mb-6">Atención especializada para tu vehículo</p>
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-6">
-          {servicios.map((serv) => (
-            <div key={serv.title} className="bg-white rounded-xl shadow-md border border-gray-100 hover:shadow-lg transition-shadow w-full max-w-xs mx-auto p-0">
-              <img
-                src={serv.image}
-                alt={serv.title}
-                className="rounded-t-xl object-cover w-full h-40"
-              />
-              <div className="p-4">
-                <h3 className="font-semibold text-lg text-primary mb-1">{serv.title}</h3>
-                <p className="text-gray-500 text-sm text-left">{serv.description}</p>
-              </div>
-            </div>
+        <div className="flex items-center justify-between mb-4">
+          <div>
+            <h3 className="text-xl font-bold text-primary">Nuestros servicios</h3>
+            <p className="text-slate-500 text-sm mt-1">10 categorías · Atención especializada para tu vehículo</p>
+          </div>
+          <Link to="/servicios" className="text-sm text-accent hover:underline font-medium">
+            Ver todos
+          </Link>
+        </div>
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-5 gap-4">
+          {CATEGORIAS_SERVICIOS.map((cat) => (
+            <Link
+              key={cat.categoria}
+              to="/servicios"
+              className={`bg-white rounded-xl border-2 ${cat.color} shadow-sm p-4 flex flex-col items-center gap-2 text-center hover:shadow-md transition-all group`}
+            >
+              <span className="text-3xl">{cat.icon}</span>
+              <h4 className="font-semibold text-sm text-primary group-hover:text-accent transition-colors leading-tight">{cat.categoria}</h4>
+              <span className="text-xs text-slate-400">{cat.servicios.length} servicios</span>
+            </Link>
           ))}
         </div>
       </div>
@@ -118,14 +121,16 @@ export default function Home() {
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
-              {recentSolicitudes.map((s) => (
+              {recentSolicitudes.length === 0 ? (
+                <tr><td colSpan={5} className="px-6 py-8 text-center text-slate-400 text-sm">No hay solicitudes registradas</td></tr>
+              ) : recentSolicitudes.map((s) => (
                 <tr key={s.id} className="hover:bg-slate-50 transition-colors">
-                  <td className="px-6 py-3.5 font-mono text-slate-500">{s.id}</td>
+                  <td className="px-6 py-3.5 font-mono text-slate-500">#{s.id}</td>
                   <td className="px-6 py-3.5 font-medium text-slate-800">{s.cliente}</td>
                   <td className="px-6 py-3.5 text-slate-500 hidden md:table-cell">{s.vehiculo}</td>
                   <td className="px-6 py-3.5 text-slate-500 hidden sm:table-cell">{s.servicio}</td>
                   <td className="px-6 py-3.5">
-                    <span className={`px-2.5 py-1 rounded-full text-xs font-semibold ${estadoStyles[s.estado]}`}>
+                    <span className={`px-2.5 py-1 rounded-full text-xs font-semibold ${estadoStyles[s.estado] || 'bg-slate-100 text-slate-600'}`}>
                       {s.estado}
                     </span>
                   </td>
