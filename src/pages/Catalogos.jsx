@@ -872,10 +872,24 @@ function TabTiposDano() {
 /* ═══════════════════════════════════════════════════════════════════════════════
    TAB: CONFIGURACIÓN DEL NEGOCIO
    ═══════════════════════════════════════════════════════════════════════════════ */
+const DIAS_SEMANA = [
+  { val: 0, label: 'Dom' },
+  { val: 1, label: 'Lun' },
+  { val: 2, label: 'Mar' },
+  { val: 3, label: 'Mié' },
+  { val: 4, label: 'Jue' },
+  { val: 5, label: 'Vie' },
+  { val: 6, label: 'Sáb' },
+];
+
 function TabConfig() {
-  const { configNegocio, actualizarConfigNegocio } = useCatalogos();
+  const { configNegocio, actualizarConfigNegocio, horarioAcceso, actualizarHorarioAcceso } = useCatalogos();
   const [form, setForm] = useState({ ...configNegocio });
   const [changed, setChanged] = useState(false);
+  // null = sin edits; si es null, se usa el valor del contexto directamente
+  const [horarioDraft, setHorarioDraft] = useState(null);
+  const horario = horarioDraft ?? horarioAcceso;
+  const horarioChanged = horarioDraft !== null;
 
   const handleChange = (key, value) => {
     setForm((prev) => ({ ...prev, [key]: value }));
@@ -886,6 +900,26 @@ function TabConfig() {
     actualizarConfigNegocio(form);
     setChanged(false);
     toast.success('Configuración guardada');
+  };
+
+  const setHorario = (updater) => {
+    setHorarioDraft((prev) => {
+      const base = prev ?? horarioAcceso;
+      return typeof updater === 'function' ? updater(base) : { ...base, ...updater };
+    });
+  };
+
+  const toggleDia = (val) => {
+    setHorario((prev) => {
+      const dias = prev.dias.includes(val) ? prev.dias.filter((d) => d !== val) : [...prev.dias, val];
+      return { ...prev, dias };
+    });
+  };
+
+  const handleHorarioSave = () => {
+    actualizarHorarioAcceso(horario);
+    setHorarioDraft(null);
+    toast.success('Horario de acceso guardado');
   };
 
   return (
@@ -942,6 +976,86 @@ function TabConfig() {
           <p className="text-[11px] text-slate-500">{form.slogan}</p>
           <p className="text-[11px] text-slate-400 mt-1">{form.direccion}</p>
           <p className="text-[11px] text-slate-400">Tel: {form.telefono} {form.nit && `· NIT: ${form.nit}`}</p>
+        </div>
+      </div>
+
+      {/* Horario de acceso */}
+      <div className="bg-white rounded-lg border border-slate-200 shadow-sm p-5 max-w-2xl">
+        <div className="flex items-center justify-between mb-4">
+          <div>
+            <h4 className="text-[13px] font-bold text-slate-800">Horario de acceso</h4>
+            <p className="text-[11px] text-slate-400 mt-0.5">Restringe el ingreso al sistema fuera de este horario</p>
+          </div>
+          <label className="relative inline-flex items-center cursor-pointer">
+            <input
+              type="checkbox"
+              className="sr-only peer"
+              checked={horario.activo}
+              onChange={(e) => { setHorario((p) => ({ ...p, activo: e.target.checked })); }}
+            />
+            <div className="w-10 h-5 bg-slate-200 rounded-full peer peer-checked:bg-primary peer-checked:after:translate-x-5 after:content-[''] after:absolute after:top-0.5 after:left-0.5 after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all" />
+          </label>
+        </div>
+
+        <div className={`space-y-4 ${!horario.activo ? 'opacity-40 pointer-events-none' : ''}`}>
+          {/* Horas */}
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className={labelCls}>Hora inicio</label>
+              <input
+                type="time"
+                className={inputCls}
+                value={horario.hora_inicio}
+                onChange={(e) => { setHorario((p) => ({ ...p, hora_inicio: e.target.value })); }}
+              />
+            </div>
+            <div>
+              <label className={labelCls}>Hora fin</label>
+              <input
+                type="time"
+                className={inputCls}
+                value={horario.hora_fin}
+                onChange={(e) => { setHorario((p) => ({ ...p, hora_fin: e.target.value })); }}
+              />
+            </div>
+          </div>
+
+          {/* Días */}
+          <div>
+            <label className={labelCls}>Días permitidos</label>
+            <div className="flex gap-1.5 flex-wrap mt-1">
+              {DIAS_SEMANA.map((d) => {
+                const activo = horario.dias.includes(d.val);
+                return (
+                  <button
+                    key={d.val}
+                    type="button"
+                    onClick={() => toggleDia(d.val)}
+                    className={`px-3 py-1.5 rounded-md text-[12px] font-semibold border transition-colors ${activo ? 'bg-primary text-white border-primary' : 'bg-white text-slate-500 border-slate-300 hover:border-primary'}`}
+                  >
+                    {d.label}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Resumen */}
+          {horario.activo && (
+            <p className="text-[11px] text-slate-500 bg-slate-50 rounded-md px-3 py-2 border border-slate-200">
+              Acceso permitido de <strong>{horario.hora_inicio}</strong> a <strong>{horario.hora_fin}</strong> los días:{' '}
+              <strong>{DIAS_SEMANA.filter((d) => horario.dias.includes(d.val)).map((d) => d.label).join(', ') || 'ninguno'}</strong>
+            </p>
+          )}
+        </div>
+
+        <div className="flex items-center justify-between mt-5 pt-4 border-t border-slate-100">
+          <div>
+            {horarioChanged && <span className="text-[11px] text-amber-600 font-medium">Tienes cambios sin guardar</span>}
+          </div>
+          <button onClick={handleHorarioSave} disabled={!horarioChanged} className={`${btnPrimary} ${!horarioChanged ? 'opacity-50 cursor-not-allowed' : ''}`}>
+            <I d={icons.save} className="w-4 h-4" />Guardar horario
+          </button>
         </div>
       </div>
     </div>

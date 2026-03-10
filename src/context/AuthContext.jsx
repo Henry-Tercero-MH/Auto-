@@ -16,29 +16,55 @@ export function AuthProvider({ children }) {
     // Cargar mecánicos con PIN desde hoja Mecanicos
     api.getMecanicos()
       .then((data) => {
-        const activos = data.filter((m) => m.activo && m.pin);
+        const activos = data.filter((m) => {
+          const activo = m.activo === true || m.activo === 'true' || m.activo === 1 || m.activo === '1';
+          return activo && m.pin;
+        });
         if (activos.length) setMecanicosLogin(activos);
       })
       .catch(() => {});
   }, []);
 
   /**
+   * Verifica si la hora/día actual están dentro del horario permitido en Config.
+   * Retorna true si está permitido, false si está fuera de horario.
+   * Si la API falla o el horario no está activo, siempre permite el acceso.
+   */
+  const verificarHorario = async () => {
+    try {
+      const cfg = await api.getConfig();
+      if (!cfg || (cfg.horario_activo !== 'true' && cfg.horario_activo !== true)) return true;
+      const now  = new Date();
+      const dia  = now.getDay(); // 0=Dom 1=Lun ... 6=Sáb
+      const dias = String(cfg.horario_dias || '1,2,3,4,5,6').split(',').map(Number);
+      if (!dias.includes(dia)) return false;
+      const [hIni, mIni] = (cfg.horario_inicio || '08:00').split(':').map(Number);
+      const [hFin, mFin] = (cfg.horario_fin    || '18:00').split(':').map(Number);
+      const minNow = now.getHours() * 60 + now.getMinutes();
+      return minNow >= hIni * 60 + mIni && minNow < hFin * 60 + mFin;
+    } catch {
+      return true;
+    }
+  };
+
+  /**
    * Login unificado (async).
    * Admin:    login({ email, password })
-   * Mecánico: login({ mecanicoId, pin })
-   * Devuelve true/false
+   * Mecánico: login({ mecanicoNombre, pin })
+   * Devuelve: true | false | 'horario'
    */
-  const login = async ({ email, password, mecanicoId, pin } = {}) => {
+  const login = async ({ email, password, mecanicoNombre, pin } = {}) => {
 
     // ── Admin / Supervisor ──────────────────────────────────────────────
     if (email && password) {
       try {
-        // Consulta Sheets en tiempo real para no depender del estado cargado
         const usuarios = await api.getUsuarios();
         const found = usuarios.find(
           (u) => u.email === email && String(u.password) === String(password) && u.activo
         );
         if (found) {
+          const permitido = await verificarHorario();
+          if (!permitido) return 'horario';
           const u = { id: found.id, email, name: found.nombre, rol: found.rol };
           setUser(u);
           localStorage.setItem('drivebot_user', JSON.stringify(u));
@@ -52,11 +78,31 @@ export function AuthProvider({ children }) {
     }
 
     // ── Mecánico ────────────────────────────────────────────────────────
-    if (mecanicoId && pin) {
-      const mec = mecanicosLogin.find(
-        (m) => m.id === mecanicoId && String(m.pin) === String(pin) && m.activo
+    if (mecanicoNombre && pin) {
+      const nombreLower = mecanicoNombre.trim().toLowerCase();
+
+      // Si aún no cargaron los mecánicos (carga async), los pedimos ahora
+      let lista = mecanicosLogin;
+      if (!lista.length) {
+        try {
+          const data = await api.getMecanicos();
+          lista = data.filter((m) => {
+            const activo = m.activo === true || m.activo === 'true' || m.activo === 1 || m.activo === '1';
+            return activo && m.pin;
+          });
+          if (lista.length) setMecanicosLogin(lista);
+        } catch {}
+      }
+
+      const esActivoSheet = (m) => m.activo === true || m.activo === 'true' || m.activo === 1 || m.activo === '1';
+      const mec = lista.find(
+        (m) => (m.nombre || m.name || '').trim().toLowerCase() === nombreLower
+          && String(m.pin).trim() === String(pin).trim()
+          && esActivoSheet(m)
       );
       if (mec) {
+        const permitido = await verificarHorario();
+        if (!permitido) return 'horario';
         const u = { id: mec.id, name: mec.nombre || mec.name, especialidad: mec.especialidad, rol: 'mecanico' };
         setUser(u);
         localStorage.setItem('drivebot_user', JSON.stringify(u));

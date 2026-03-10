@@ -29,12 +29,21 @@ const CONFIG_NEGOCIO_INICIAL = {
   slogan:    'Servicio automotriz profesional',
 };
 
+// ── Horario de acceso defaults ─────────────────────────────────────────────
+const HORARIO_INICIAL = {
+  activo:      false,
+  hora_inicio: '08:00',
+  hora_fin:    '18:00',
+  dias:        [1, 2, 3, 4, 5, 6], // 0=Dom 1=Lun ... 6=Sáb
+};
+
 // ── Provider ──────────────────────────────────────────────────────────────
 export function CatalogosProvider({ children }) {
   // ── Estado local: algunos datos siguen siendo locales (estados, tiposDano, marcas)
   const [estados,        setEstados]        = useState(ESTADOS_INICIAL);
   const [tiposDano,      setTiposDano]      = useState(TIPOS_DANO_INICIAL);
   const [configNegocio,  setConfigNegocio]  = useState(CONFIG_NEGOCIO_INICIAL);
+  const [horarioAcceso,  setHorarioAcceso]  = useState(HORARIO_INICIAL);
 
   // ── Estado conectado a Sheets ──────────────────────────────────────────
   const [clientes,  setClientes]  = useState([]);
@@ -59,15 +68,26 @@ export function CatalogosProvider({ children }) {
       .then((data) => { if (data && Object.keys(data).length) setMarcas(data); })
       .catch(() => {});
 
-    // Config negocio
+    // Config negocio + horario
     api.getConfig()
       .then((cfg) => {
-        if (cfg?.taller_nombre) {
+        if (!cfg) return;
+        if (cfg.taller_nombre) {
           setConfigNegocio((prev) => ({
             ...prev,
-            nombre:   cfg.taller_nombre || prev.nombre,
-            moneda:   cfg.moneda        || prev.moneda,
+            nombre: cfg.taller_nombre || prev.nombre,
+            moneda: cfg.moneda        || prev.moneda,
           }));
+        }
+        if (cfg.horario_activo !== undefined) {
+          setHorarioAcceso({
+            activo:      cfg.horario_activo === 'true' || cfg.horario_activo === true,
+            hora_inicio: cfg.horario_inicio || '08:00',
+            hora_fin:    cfg.horario_fin    || '18:00',
+            dias:        cfg.horario_dias
+              ? String(cfg.horario_dias).split(',').map(Number)
+              : [1, 2, 3, 4, 5, 6],
+          });
         }
       })
       .catch(() => {});
@@ -300,6 +320,18 @@ export function CatalogosProvider({ children }) {
     } catch {}
   }, []);
 
+  const actualizarHorarioAcceso = useCallback(async (data) => {
+    setHorarioAcceso((prev) => ({ ...prev, ...data }));
+    try {
+      await api.guardarConfig({
+        horario_activo: String(data.activo),
+        horario_inicio: data.hora_inicio,
+        horario_fin:    data.hora_fin,
+        horario_dias:   data.dias.join(','),
+      });
+    } catch {}
+  }, []);
+
   // ─────────────────────────────────────────────────────────────────────
   // RESET
   // ─────────────────────────────────────────────────────────────────────
@@ -324,7 +356,7 @@ export function CatalogosProvider({ children }) {
   return (
     <CatalogosContext.Provider
       value={{
-        clientes, marcas, servicios, preciosMap, estados, mecanicos, tiposDano, configNegocio,
+        clientes, marcas, servicios, preciosMap, estados, mecanicos, tiposDano, configNegocio, horarioAcceso,
         agregarCliente, editarCliente, eliminarCliente,
         agregarMarca, eliminarMarca, agregarModelo, eliminarModelo,
         agregarCategoria, editarCategoria, eliminarCategoria,
@@ -332,7 +364,7 @@ export function CatalogosProvider({ children }) {
         agregarEstado, editarEstado, eliminarEstado,
         agregarMecanico, editarMecanico, eliminarMecanico,
         agregarTipoDano, editarTipoDano, eliminarTipoDano,
-        actualizarConfigNegocio,
+        actualizarConfigNegocio, actualizarHorarioAcceso,
         resetCatalogos,
       }}
     >

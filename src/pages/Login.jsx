@@ -48,11 +48,11 @@ function ErrorBox({ msg }) {
 
 /* ─── Modal de login ─── */
 function LoginModal({ onClose }) {
-  const { login, mecanicosDemo } = useAuth();
+  const { login } = useAuth();
   const navigate = useNavigate();
   const [tab, setTab] = useState('admin'); // 'admin' | 'mecanico'
   const [form, setForm] = useState({ email: '', password: '' });
-  const [mecForm, setMecForm] = useState({ mecanicoId: '', pin: '' });
+  const [mecForm, setMecForm] = useState({ nombre: '', pin: '' });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
@@ -70,8 +70,9 @@ function LoginModal({ onClose }) {
     e.preventDefault();
     setError('');
     setLoading(true);
-    const ok = await login({ email: form.email, password: form.password });
-    if (ok) { navigate('/'); }
+    const result = await login({ email: form.email, password: form.password });
+    if (result === true) { navigate('/'); }
+    else if (result === 'horario') { setError('Acceso no permitido fuera del horario laboral'); setLoading(false); }
     else { setError('Correo o contraseña incorrectos'); setLoading(false); }
   };
 
@@ -79,9 +80,10 @@ function LoginModal({ onClose }) {
     e.preventDefault();
     setError('');
     setLoading(true);
-    const ok = await login({ mecanicoId: mecForm.mecanicoId, pin: mecForm.pin });
-    if (ok) { navigate('/solicitudes'); }
-    else { setError('PIN incorrecto o mecánico inactivo'); setLoading(false); }
+    const result = await login({ mecanicoNombre: mecForm.nombre, pin: mecForm.pin });
+    if (result === true) { navigate('/solicitudes'); }
+    else if (result === 'horario') { setError('Acceso no permitido fuera del horario laboral'); setLoading(false); }
+    else { setError('Correo o PIN incorrecto'); setLoading(false); }
   };
 
   return (
@@ -162,18 +164,16 @@ function LoginModal({ onClose }) {
           {tab === 'mecanico' && (
             <form onSubmit={handleSubmitMecanico} className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1.5">Selecciona tu nombre</label>
-                <select
-                  value={mecForm.mecanicoId}
-                  onChange={(e) => setMecForm({ ...mecForm, mecanicoId: e.target.value })}
-                  className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-slate-800 bg-slate-50 focus:outline-none focus:ring-2 focus:ring-accent focus:border-accent transition"
+                <label className="block text-sm font-medium text-slate-700 mb-1.5">Correo electrónico</label>
+                <input
+                  type="email"
+                  value={mecForm.nombre}
+                  onChange={(e) => setMecForm({ ...mecForm, nombre: e.target.value })}
+                  className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-accent focus:border-accent transition bg-slate-50"
+                  placeholder="tu@correo.com"
+                  autoComplete="email"
                   required
-                >
-                  <option value="">— Seleccionar —</option>
-                  {mecanicosDemo.filter((m) => m.activo).map((m) => (
-                    <option key={m.id} value={m.id}>{m.nombre || m.name} · {m.especialidad}</option>
-                  ))}
-                </select>
+                />
               </div>
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-1.5">PIN de acceso</label>
@@ -182,7 +182,9 @@ function LoginModal({ onClose }) {
                   value={mecForm.pin}
                   onChange={(e) => setMecForm({ ...mecForm, pin: e.target.value })}
                   className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-accent focus:border-accent transition bg-slate-50 tracking-widest text-center text-lg"
-                  placeholder="••••" required
+                  placeholder="••••"
+                  autoComplete="current-password"
+                  required
                 />
               </div>
               {error && <ErrorBox msg={error} />}
@@ -190,11 +192,6 @@ function LoginModal({ onClose }) {
                 className="w-full bg-accent hover:bg-red-700 text-white font-semibold py-3 rounded-xl shadow-sm transition-all disabled:opacity-60 disabled:cursor-not-allowed">
                 {loading ? spinnerIcon : 'Ingresar como mecánico'}
               </button>
-              <div className="p-3 bg-slate-50 rounded-xl border border-slate-100 text-xs text-slate-400 space-y-1">
-                <p className="font-semibold text-slate-500">Demo (PINs):</p>
-                <p>Pedro Hernández → <span className="font-mono text-slate-600">1234</span></p>
-                <p>Juan Carlos López → <span className="font-mono text-slate-600">2345</span></p>
-              </div>
             </form>
           )}
 
