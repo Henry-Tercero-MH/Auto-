@@ -2,6 +2,7 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { SolicitudesProvider } from './context/SolicitudesContext';
 import { NotificacionesProvider } from './context/NotificacionesContext';
+import { Toaster } from 'sonner';
 import Layout from './components/Layout';
 import Login from './pages/Login';
 import Home from './pages/Home';
@@ -62,6 +63,7 @@ export default function App() {
             <Router>
               <AppRoutes />
             </Router>
+            <Toaster position="top-right" richColors closeButton theme="light" toastOptions={{ className: 'text-sm' }} />
           </NotificacionesProvider>
         </CatalogosProvider>
       </SolicitudesProvider>

@@ -1,7 +1,7 @@
 import { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
 import { useAuth } from './AuthContext';
 import { api } from '../services/sheetsApi';
-import toast from 'react-hot-toast';
+import { toast } from 'sonner';
 
 const NotificacionesContext = createContext();
 
@@ -22,7 +22,7 @@ function playNotifSound() {
   } catch { /* silencio si no soporta audio */ }
 }
 
-// ── Pedir permiso para notificaciones del navegador ─────────────────────────
+// ── Notificaciones nativas del navegador ────────────────────────────────────
 async function pedirPermisoNotificaciones() {
   if (!('Notification' in window)) return 'denied';
   if (Notification.permission === 'granted') return 'granted';
@@ -42,41 +42,50 @@ function enviarNotificacionNativa(titulo, cuerpo) {
         vibrate: [200, 100, 200],
         tag: 'nueva-solicitud',
       });
-    } catch { /* SW notification fallback no necesario por ahora */ }
+    } catch { /* fallback silencioso */ }
   }
 }
 
-// ── Provider ────────────────────────────────────────────────────────────────
-const POLL_INTERVAL = 30_000; // 30 segundos
-const STORAGE_KEY = 'drivebot_notifs';
+// ── Constantes ──────────────────────────────────────────────────────────────
+const POLL_INTERVAL = 30_000;
+const NOTIFS_KEY = 'drivebot_notifs';
 const SEEN_KEY = 'drivebot_seen_ids';
 
+// ── Helpers localStorage ────────────────────────────────────────────────────
+function loadFromStorage(key, fallback) {
+  try { return JSON.parse(localStorage.getItem(key)) || fallback; }
+  catch { return fallback; }
+}
+function saveToStorage(key, data) {
+  try { localStorage.setItem(key, JSON.stringify(data)); } catch {}
+}
+
+// ── Provider ────────────────────────────────────────────────────────────────
 export function NotificacionesProvider({ children }) {
   const { user, esAdmin } = useAuth();
-  const [notificaciones, setNotificaciones] = useState([]);
+  const [notificaciones, setNotificaciones] = useState(() => loadFromStorage(NOTIFS_KEY, []));
   const [noLeidas, setNoLeidas] = useState(0);
   const knownIdsRef = useRef(new Set());
   const firstLoadRef = useRef(true);
 
   // Cargar IDs conocidos del localStorage
   useEffect(() => {
-    try {
-      const saved = JSON.parse(localStorage.getItem(SEEN_KEY) || '[]');
-      saved.forEach((id) => knownIdsRef.current.add(id));
-    } catch {}
+    loadFromStorage(SEEN_KEY, []).forEach((id) => knownIdsRef.current.add(id));
   }, []);
 
-  // Guardar IDs conocidos
+  // Persistir notificaciones cada vez que cambien
+  useEffect(() => {
+    saveToStorage(NOTIFS_KEY, notificaciones.slice(0, 100));
+    setNoLeidas(notificaciones.filter((n) => !n.leida).length);
+  }, [notificaciones]);
+
   const persistSeenIds = useCallback(() => {
-    const arr = [...knownIdsRef.current].slice(-500); // max 500
-    localStorage.setItem(SEEN_KEY, JSON.stringify(arr));
+    saveToStorage(SEEN_KEY, [...knownIdsRef.current].slice(-500));
   }, []);
 
   // Pedir permiso al login de admin
   useEffect(() => {
-    if (user && esAdmin) {
-      pedirPermisoNotificaciones();
-    }
+    if (user && esAdmin) pedirPermisoNotificaciones();
   }, [user, esAdmin]);
 
   // ── Polling de solicitudes nuevas ─────────────────────────────────────────
@@ -89,14 +98,12 @@ export function NotificacionesProvider({ children }) {
         if (!data?.length) return;
 
         if (firstLoadRef.current) {
-          // Primera carga: registrar todas las IDs existentes sin notificar
           data.forEach((s) => knownIdsRef.current.add(s.id));
           persistSeenIds();
           firstLoadRef.current = false;
           return;
         }
 
-        // Detectar IDs nuevas
         const nuevas = data.filter((s) => !knownIdsRef.current.has(s.id));
         if (nuevas.length > 0) {
           nuevas.forEach((s) => knownIdsRef.current.add(s.id));
@@ -107,24 +114,24 @@ export function NotificacionesProvider({ children }) {
             solicitudId: s.id,
             titulo: 'Nueva solicitud',
             mensaje: `#${s.id} — ${s.cliente} · ${s.vehiculo}`,
+            detalle: s.servicio || '',
             fecha: new Date().toISOString(),
             leida: false,
           }));
 
-          setNotificaciones((prev) => [...nuevasNotifs, ...prev].slice(0, 50));
+          setNotificaciones((prev) => [...nuevasNotifs, ...prev].slice(0, 100));
 
-          // Notificación nativa + sonido + toast
+          // Sonner toast + nativa + sonido
           nuevas.forEach((s) => {
             const titulo = `Nueva solicitud #${s.id}`;
             const cuerpo = `${s.cliente} — ${s.vehiculo} · ${s.servicio}`;
             enviarNotificacionNativa(titulo, cuerpo);
-            toast(cuerpo, {
+            toast.info(titulo, {
+              description: cuerpo,
+              duration: 8000,
               icon: '🔔',
-              duration: 6000,
-              style: { borderLeft: '4px solid #e53935' },
             });
           });
-
           playNotifSound();
         }
       } catch { /* silencio en error de red */ }
@@ -135,18 +142,29 @@ export function NotificacionesProvider({ children }) {
     return () => clearInterval(interval);
   }, [user, esAdmin, persistSeenIds]);
 
-  // ── Contar no leídas ──────────────────────────────────────────────────────
-  useEffect(() => {
-    setNoLeidas(notificaciones.filter((n) => !n.leida).length);
-  }, [notificaciones]);
-
   // ── Acciones ──────────────────────────────────────────────────────────────
+  const toggleLeida = useCallback((id) => {
+    setNotificaciones((prev) =>
+      prev.map((n) => n.id === id ? { ...n, leida: !n.leida } : n)
+    );
+  }, []);
+
   const marcarLeida = useCallback((id) => {
-    setNotificaciones((prev) => prev.map((n) => n.id === id ? { ...n, leida: true } : n));
+    setNotificaciones((prev) =>
+      prev.map((n) => n.id === id ? { ...n, leida: true } : n)
+    );
   }, []);
 
   const marcarTodasLeidas = useCallback(() => {
     setNotificaciones((prev) => prev.map((n) => ({ ...n, leida: true })));
+  }, []);
+
+  const marcarTodasNoLeidas = useCallback(() => {
+    setNotificaciones((prev) => prev.map((n) => ({ ...n, leida: false })));
+  }, []);
+
+  const eliminarNotificacion = useCallback((id) => {
+    setNotificaciones((prev) => prev.filter((n) => n.id !== id));
   }, []);
 
   const limpiarNotificaciones = useCallback(() => {
@@ -157,8 +175,11 @@ export function NotificacionesProvider({ children }) {
     <NotificacionesContext.Provider value={{
       notificaciones,
       noLeidas,
+      toggleLeida,
       marcarLeida,
       marcarTodasLeidas,
+      marcarTodasNoLeidas,
+      eliminarNotificacion,
       limpiarNotificaciones,
     }}>
       {children}
