@@ -50,14 +50,14 @@ function GraficaBarras({ datos, colorBarra = '#e53935', alto = 120 }) {
 // ── Tarjeta KPI ───────────────────────────────────────────────────────────────
 function KpiCard({ label, value, sub, icon, color = 'bg-primary' }) {
   return (
-    <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-5 flex items-center gap-4">
-      <div className={`w-11 h-11 ${color} rounded-xl flex items-center justify-center shrink-0`}>
-        <Icon path={icon} className="w-5 h-5 text-white" />
+    <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-3 sm:p-5 flex items-center gap-3">
+      <div className={`w-9 h-9 sm:w-11 sm:h-11 ${color} rounded-xl flex items-center justify-center shrink-0`}>
+        <Icon path={icon} className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
       </div>
-      <div>
-        <p className="text-2xl font-black text-primary">{value}</p>
-        <p className="text-xs font-semibold text-slate-700">{label}</p>
-        {sub && <p className="text-xs text-slate-400">{sub}</p>}
+      <div className="min-w-0">
+        <p className="text-xl sm:text-2xl font-black text-primary">{value}</p>
+        <p className="text-xs font-semibold text-slate-700 truncate">{label}</p>
+        {sub && <p className="text-xs text-slate-400 hidden sm:block truncate">{sub}</p>}
       </div>
     </div>
   );
@@ -187,7 +187,7 @@ export default function Reportes() {
       </div>
 
       {/* ── KPIs ── */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
+      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-4">
         <KpiCard label="Total órdenes"   value={kpis.total}       sub={`año ${añoFiltro}`}        color="bg-primary"    icon="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
         <KpiCard label="Completadas"     value={kpis.completadas} sub="finalizadas"               color="bg-green-500"  icon="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
         <KpiCard label="En proceso"      value={kpis.enProceso}   sub="actualmente"               color="bg-orange-500" icon="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -196,25 +196,25 @@ export default function Reportes() {
       </div>
 
       {/* ── Tarjetas resumen extra ── */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-5">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
+        <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-4 sm:p-5">
           <p className="text-xs text-slate-400 uppercase tracking-wide mb-1">Mes con más actividad</p>
-          <p className="text-lg font-black text-primary">{mesPico}</p>
+          <p className="text-base sm:text-lg font-black text-primary">{mesPico}</p>
         </div>
-        <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-5">
+        <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-4 sm:p-5">
           <p className="text-xs text-slate-400 uppercase tracking-wide mb-1">Sin asignar a mecánico</p>
-          <p className="text-lg font-black text-amber-600">{kpis.sinAsignar} <span className="text-sm font-normal text-slate-400">órdenes</span></p>
+          <p className="text-base sm:text-lg font-black text-amber-600">{kpis.sinAsignar} <span className="text-sm font-normal text-slate-400">órdenes</span></p>
         </div>
-        <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-5">
+        <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-4 sm:p-5">
           <p className="text-xs text-slate-400 uppercase tracking-wide mb-1">Servicio #1</p>
-          <p className="text-lg font-black text-primary truncate">{topServicios[0]?.label || '—'}</p>
+          <p className="text-base sm:text-lg font-black text-primary truncate">{topServicios[0]?.label || '—'}</p>
           {topServicios[0] && <p className="text-xs text-slate-400">{topServicios[0].valor} solicitudes</p>}
         </div>
       </div>
 
       {/* ── Solicitudes por mes (gráfica de barras) ── */}
-      <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-5">
-        <h3 className="font-semibold text-primary mb-5 text-sm uppercase tracking-wide">Órdenes por mes — {añoFiltro}</h3>
+      <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-4 sm:p-5">
+        <h3 className="font-semibold text-primary mb-4 sm:mb-5 text-sm uppercase tracking-wide">Órdenes por mes — {añoFiltro}</h3>
         {kpis.total === 0 ? (
           <p className="text-slate-400 text-sm text-center py-6">Sin datos para este año</p>
         ) : (
@@ -223,11 +223,11 @@ export default function Reportes() {
       </div>
 
       {/* ── Fila: Servicios más solicitados + Estado breakdown ── */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-5">
 
         {/* Servicios top */}
-        <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-5">
-          <h3 className="font-semibold text-primary mb-5 text-sm uppercase tracking-wide">Servicios más solicitados</h3>
+        <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-4 sm:p-5">
+          <h3 className="font-semibold text-primary mb-4 sm:mb-5 text-sm uppercase tracking-wide">Servicios más solicitados</h3>
           {topServicios.length === 0 ? (
             <p className="text-slate-400 text-sm text-center py-4">Sin datos</p>
           ) : (
@@ -246,8 +246,8 @@ export default function Reportes() {
         </div>
 
         {/* Breakdown por estado */}
-        <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-5">
-          <h3 className="font-semibold text-primary mb-5 text-sm uppercase tracking-wide">Distribución por estado</h3>
+        <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-4 sm:p-5">
+          <h3 className="font-semibold text-primary mb-4 sm:mb-5 text-sm uppercase tracking-wide">Distribución por estado</h3>
           {kpis.total === 0 ? (
             <p className="text-slate-400 text-sm text-center py-4">Sin datos</p>
           ) : (
@@ -293,43 +293,43 @@ export default function Reportes() {
       </div>
 
       {/* ── Productividad por mecánico ── */}
-      <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-5">
-        <h3 className="font-semibold text-primary mb-5 text-sm uppercase tracking-wide">Productividad por mecánico — {añoFiltro}</h3>
+      <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-4 sm:p-5">
+        <h3 className="font-semibold text-primary mb-4 sm:mb-5 text-sm uppercase tracking-wide">Productividad por mecánico — {añoFiltro}</h3>
         {prodMecanicos.length === 0 ? (
           <p className="text-slate-400 text-sm text-center py-4">Sin mecánicos registrados</p>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full text-sm">
+            <table className="w-full text-sm min-w-[400px]">
               <thead>
                 <tr className="bg-slate-50 text-slate-500 text-xs uppercase tracking-wider">
-                  <th className="text-left px-4 py-3">Mecánico</th>
-                  <th className="text-left px-4 py-3 hidden sm:table-cell">Especialidad</th>
-                  <th className="text-center px-4 py-3">Total</th>
-                  <th className="text-center px-4 py-3">Completadas</th>
-                  <th className="text-center px-4 py-3">En proceso</th>
-                  <th className="text-left px-4 py-3">Tasa</th>
+                  <th className="text-left px-3 sm:px-4 py-3">Mecánico</th>
+                  <th className="text-left px-3 sm:px-4 py-3 hidden sm:table-cell">Especialidad</th>
+                  <th className="text-center px-3 sm:px-4 py-3">Total</th>
+                  <th className="text-center px-3 sm:px-4 py-3">Comp.</th>
+                  <th className="text-center px-3 sm:px-4 py-3 hidden sm:table-cell">En proc.</th>
+                  <th className="text-left px-3 sm:px-4 py-3">Tasa</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
                 {prodMecanicos.map((m, i) => (
                   <tr key={m.id} className="hover:bg-slate-50 transition-colors">
-                    <td className="px-4 py-3.5">
+                    <td className="px-3 sm:px-4 py-3">
                       <div className="flex items-center gap-2">
                         {i === 0 && m.completadas > 0 && (
                           <span className="text-amber-400 text-sm">🏆</span>
                         )}
-                        <span className="font-semibold text-slate-800 text-sm">{m.nombre}</span>
+                        <span className="font-semibold text-slate-800 text-xs sm:text-sm">{m.nombre}</span>
                       </div>
                     </td>
-                    <td className="px-4 py-3.5 text-slate-500 text-xs hidden sm:table-cell">{m.especialidad}</td>
-                    <td className="px-4 py-3.5 text-center font-bold text-slate-700">{m.total}</td>
-                    <td className="px-4 py-3.5 text-center">
-                      <span className="font-bold text-green-600">{m.completadas}</span>
+                    <td className="px-3 sm:px-4 py-3 text-slate-500 text-xs hidden sm:table-cell">{m.especialidad}</td>
+                    <td className="px-3 sm:px-4 py-3 text-center font-bold text-slate-700 text-xs sm:text-sm">{m.total}</td>
+                    <td className="px-3 sm:px-4 py-3 text-center">
+                      <span className="font-bold text-green-600 text-xs sm:text-sm">{m.completadas}</span>
                     </td>
-                    <td className="px-4 py-3.5 text-center">
-                      <span className="font-bold text-orange-500">{m.enProceso}</span>
+                    <td className="px-3 sm:px-4 py-3 text-center hidden sm:table-cell">
+                      <span className="font-bold text-orange-500 text-xs sm:text-sm">{m.enProceso}</span>
                     </td>
-                    <td className="px-4 py-3.5 min-w-[100px]">
+                    <td className="px-3 sm:px-4 py-3 min-w-[80px] sm:min-w-[100px]">
                       <div className="flex items-center gap-2">
                         <div className="flex-1 bg-gray-100 rounded-full h-1.5">
                           <div
@@ -337,7 +337,7 @@ export default function Reportes() {
                             style={{ width: `${m.tasa}%` }}
                           />
                         </div>
-                        <span className="text-xs font-bold text-slate-600 w-8">{m.tasa}%</span>
+                        <span className="text-xs font-bold text-slate-600 w-7 sm:w-8">{m.tasa}%</span>
                       </div>
                     </td>
                   </tr>

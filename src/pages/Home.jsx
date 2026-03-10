@@ -12,14 +12,14 @@ const Icon = ({ path, className = 'w-5 h-5' }) => (
 
 function KpiCard({ label, value, sub, color, icon }) {
   return (
-    <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-5 flex items-center gap-4">
-      <div className={`w-11 h-11 ${color} rounded-xl flex items-center justify-center shrink-0`}>
-        <Icon path={icon} className="w-5 h-5 text-white" />
+    <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-3 sm:p-4 lg:p-5 flex items-center gap-3">
+      <div className={`w-9 h-9 sm:w-11 sm:h-11 ${color} rounded-xl flex items-center justify-center shrink-0`}>
+        <Icon path={icon} className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
       </div>
       <div className="min-w-0">
-        <p className="text-2xl font-black text-primary">{value}</p>
+        <p className="text-xl sm:text-2xl font-black text-primary">{value}</p>
         <p className="text-xs font-semibold text-slate-700 truncate">{label}</p>
-        <p className="text-xs text-slate-400 truncate">{sub}</p>
+        <p className="text-xs text-slate-400 truncate hidden sm:block">{sub}</p>
       </div>
     </div>
   );
@@ -87,7 +87,7 @@ export default function Home() {
       </div>
 
       {/* ── KPIs operativos ── */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
+      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-3 lg:grid-cols-6 gap-3 sm:gap-4">
         <KpiCard label="Total"       value={kpis.total}       sub="todas las órdenes"  color="bg-primary"    icon="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
         <KpiCard label="Hoy"         value={kpis.hoyTotal}    sub="ingresaron hoy"     color="bg-blue-500"   icon="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
         <KpiCard label="Pendientes"  value={kpis.pendientes}  sub="por atender"        color="bg-amber-500"  icon="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -98,7 +98,7 @@ export default function Home() {
 
       {/* ── Alerta sin asignar ── */}
       {kpis.sinAsignar > 0 && (
-        <div className="bg-amber-50 border border-amber-200 rounded-xl px-5 py-3 flex items-center gap-3">
+        <div className="bg-amber-50 border border-amber-200 rounded-xl px-3 sm:px-5 py-3 flex items-center gap-3">
           <Icon path="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" className="w-5 h-5 text-amber-500 flex-shrink-0" />
           <p className="text-sm text-amber-800">
             <span className="font-bold">{kpis.sinAsignar}</span> {kpis.sinAsignar === 1 ? 'solicitud pendiente sin mecánico asignado' : 'solicitudes pendientes sin mecánico asignado'}
@@ -111,40 +111,40 @@ export default function Home() {
 
       {/* ── Solicitudes recientes ── */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-100">
-        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
-          <h3 className="font-semibold text-primary">Solicitudes recientes</h3>
-          <Link to="/solicitudes" className="text-sm text-accent hover:underline font-medium">Ver todas</Link>
+        <div className="flex items-center justify-between px-4 sm:px-6 py-4 border-b border-gray-100">
+          <h3 className="font-semibold text-primary text-sm sm:text-base">Solicitudes recientes</h3>
+          <Link to="/solicitudes" className="text-xs sm:text-sm text-accent hover:underline font-medium">Ver todas</Link>
         </div>
         <div className="overflow-x-auto">
-          <table className="w-full text-sm">
+          <table className="w-full text-sm min-w-[300px]">
             <thead>
               <tr className="bg-slate-50 text-slate-500 text-xs uppercase tracking-wider">
-                <th className="text-left px-6 py-3">ID</th>
-                <th className="text-left px-6 py-3">Cliente</th>
-                <th className="text-left px-6 py-3 hidden md:table-cell">Vehículo</th>
-                <th className="text-left px-6 py-3 hidden sm:table-cell">Servicio</th>
-                <th className="text-left px-6 py-3 hidden lg:table-cell">Mecánico</th>
-                <th className="text-left px-6 py-3">Estado</th>
+                <th className="text-left px-3 sm:px-6 py-3">ID</th>
+                <th className="text-left px-3 sm:px-6 py-3">Cliente</th>
+                <th className="text-left px-3 sm:px-6 py-3 hidden md:table-cell">Vehículo</th>
+                <th className="text-left px-3 sm:px-6 py-3 hidden sm:table-cell">Servicio</th>
+                <th className="text-left px-3 sm:px-6 py-3 hidden lg:table-cell">Mecánico</th>
+                <th className="text-left px-3 sm:px-6 py-3">Estado</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
               {recientes.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="px-6 py-10 text-center text-slate-400 text-sm">No hay solicitudes registradas</td>
+                  <td colSpan={6} className="px-4 py-10 text-center text-slate-400 text-sm">No hay solicitudes registradas</td>
                 </tr>
               ) : recientes.map((s) => (
                 <tr key={s.id} className="hover:bg-slate-50 transition-colors">
-                  <td className="px-6 py-3.5 font-mono text-slate-500 text-xs">#{s.id}</td>
-                  <td className="px-6 py-3.5 font-medium text-slate-800">{s.cliente}</td>
-                  <td className="px-6 py-3.5 text-slate-500 hidden md:table-cell text-xs">{s.vehiculo}</td>
-                  <td className="px-6 py-3.5 text-slate-500 hidden sm:table-cell text-xs">{s.servicio}</td>
-                  <td className="px-6 py-3.5 hidden lg:table-cell">
+                  <td className="px-3 sm:px-6 py-3 font-mono text-slate-500 text-xs">#{s.id}</td>
+                  <td className="px-3 sm:px-6 py-3 font-medium text-slate-800 text-xs sm:text-sm">{s.cliente}</td>
+                  <td className="px-3 sm:px-6 py-3 text-slate-500 hidden md:table-cell text-xs">{s.vehiculo}</td>
+                  <td className="px-3 sm:px-6 py-3 text-slate-500 hidden sm:table-cell text-xs">{s.servicio}</td>
+                  <td className="px-3 sm:px-6 py-3 hidden lg:table-cell">
                     {s.mecanico
                       ? <span className="text-xs text-slate-600">{s.mecanico.name}</span>
                       : <span className="text-xs text-amber-500 font-medium">Sin asignar</span>}
                   </td>
-                  <td className="px-6 py-3.5">
-                    <span className={`px-2.5 py-1 rounded-full text-xs font-semibold ${estadoStyles[s.estado] || 'bg-slate-100 text-slate-600'}`}>
+                  <td className="px-3 sm:px-6 py-3">
+                    <span className={`px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-full text-xs font-semibold ${estadoStyles[s.estado] || 'bg-slate-100 text-slate-600'}`}>
                       {s.estado}
                     </span>
                   </td>
@@ -156,7 +156,7 @@ export default function Home() {
       </div>
 
       {/* ── Accesos rápidos ── */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
         <QuickLink to="/solicitudes"    iconBg="bg-blue-100"   iconColor="text-blue-600"
           icon="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"
           title="Solicitudes" sub="Gestionar órdenes de servicio" />

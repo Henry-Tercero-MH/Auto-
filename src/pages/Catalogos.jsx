@@ -53,8 +53,8 @@ const btnDanger = 'inline-flex items-center justify-center gap-1.5 bg-red-600 ho
 function Modal({ open, onClose, title, width = 'max-w-lg', children }) {
   if (!open) return null;
   return (
-    <div className="fixed inset-0 z-50 flex items-start justify-center pt-[10vh] px-4 bg-black/50 backdrop-blur-[2px]" onClick={onClose}>
-      <div className={`bg-white rounded-lg shadow-2xl w-full ${width}`} onClick={(e) => e.stopPropagation()}>
+    <div className="fixed inset-0 z-50 flex items-start justify-center pt-[5vh] sm:pt-[10vh] px-3 sm:px-4 bg-black/50 backdrop-blur-[2px]" onClick={onClose}>
+      <div className={`bg-white rounded-lg shadow-2xl w-full ${width} max-h-[90vh] overflow-y-auto`} onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center justify-between px-5 py-3.5 border-b border-slate-200 bg-slate-50/80 rounded-t-lg">
           <h3 className="text-sm font-bold text-slate-800 uppercase tracking-wide">{title}</h3>
           <button onClick={onClose} className="p-1 rounded hover:bg-slate-200 text-slate-400 hover:text-slate-600 transition">
@@ -87,8 +87,8 @@ function ConfirmModal({ open, title, message, onConfirm, onCancel }) {
 /* ── Toolbar ───────────────────────────────────────────────────────────────── */
 function Toolbar({ busqueda, onBusqueda, placeholder, count, onAdd, addLabel }) {
   return (
-    <div className="flex items-center gap-3 flex-wrap">
-      <div className="relative flex-1 min-w-[200px]">
+    <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
+      <div className="relative flex-1 min-w-[150px] sm:min-w-[200px]">
         <I d={icons.search} className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
         <input className={`${inputCls} !pl-9`} placeholder={placeholder} value={busqueda} onChange={(e) => onBusqueda(e.target.value)} />
       </div>
@@ -658,10 +658,10 @@ function TabMecanicos() {
         <table className="w-full text-[13px]">
           <thead>
             <tr className="bg-slate-50 border-b border-slate-200">
-              <th className="text-left px-4 py-2.5 font-semibold text-slate-500 uppercase text-[11px] tracking-wider">Código</th>
+              <th className="text-left px-4 py-2.5 font-semibold text-slate-500 uppercase text-[11px] tracking-wider hidden sm:table-cell">Código</th>
               <th className="text-left px-4 py-2.5 font-semibold text-slate-500 uppercase text-[11px] tracking-wider">Nombre</th>
-              <th className="text-left px-4 py-2.5 font-semibold text-slate-500 uppercase text-[11px] tracking-wider">Especialidad</th>
-              <th className="text-left px-4 py-2.5 font-semibold text-slate-500 uppercase text-[11px] tracking-wider">Teléfono</th>
+              <th className="text-left px-4 py-2.5 font-semibold text-slate-500 uppercase text-[11px] tracking-wider hidden md:table-cell">Especialidad</th>
+              <th className="text-left px-4 py-2.5 font-semibold text-slate-500 uppercase text-[11px] tracking-wider hidden lg:table-cell">Teléfono</th>
               <th className="text-left px-4 py-2.5 font-semibold text-slate-500 uppercase text-[11px] tracking-wider w-20">Estado</th>
               <th className="px-4 py-2.5 w-24"></th>
             </tr>
@@ -669,10 +669,10 @@ function TabMecanicos() {
           <tbody className="divide-y divide-slate-100">
             {filtrados.map((m) => (
               <tr key={m.id} className={`hover:bg-slate-50/70 transition-colors ${!m.activo ? 'opacity-50' : ''}`}>
-                <td className="px-4 py-2.5 font-mono text-[11px] text-slate-400">{m.id}</td>
+                <td className="px-4 py-2.5 font-mono text-[11px] text-slate-400 hidden sm:table-cell">{m.id}</td>
                 <td className="px-4 py-2.5 font-medium text-slate-800">{m.nombre}</td>
-                <td className="px-4 py-2.5 text-slate-600">{m.especialidad || '—'}</td>
-                <td className="px-4 py-2.5 text-slate-600">{m.telefono || '—'}</td>
+                <td className="px-4 py-2.5 text-slate-600 hidden md:table-cell">{m.especialidad || '—'}</td>
+                <td className="px-4 py-2.5 text-slate-600 hidden lg:table-cell">{m.telefono || '—'}</td>
                 <td className="px-4 py-2.5">
                   <button onClick={() => toggleActivo(m)}
                     className={`px-2 py-0.5 rounded-full text-[11px] font-semibold ${m.activo ? 'bg-green-100 text-green-700' : 'bg-slate-100 text-slate-400'}`}>
@@ -955,13 +955,13 @@ export default function Catalogos() {
       </div>
 
       {/* KPI */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2 sm:gap-3">
         {kpis.map((k) => (
-          <div key={k.label} className="bg-white rounded-lg border border-slate-200 px-4 py-3 flex items-center gap-3">
-            <div className="w-9 h-9 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0"><I d={k.iconPath} className="w-5 h-5 text-primary" /></div>
-            <div>
-              <p className="text-xl font-bold text-slate-800 leading-none tabular-nums">{k.value}</p>
-              <p className="text-[11px] text-slate-400 font-medium uppercase tracking-wide mt-0.5">{k.label}</p>
+          <div key={k.label} className="bg-white rounded-lg border border-slate-200 px-3 sm:px-4 py-2.5 sm:py-3 flex items-center gap-2 sm:gap-3">
+            <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0"><I d={k.iconPath} className="w-4 h-4 sm:w-5 sm:h-5 text-primary" /></div>
+            <div className="min-w-0">
+              <p className="text-lg sm:text-xl font-bold text-slate-800 leading-none tabular-nums">{k.value}</p>
+              <p className="text-[10px] sm:text-[11px] text-slate-400 font-medium uppercase tracking-wide mt-0.5 truncate">{k.label}</p>
             </div>
           </div>
         ))}

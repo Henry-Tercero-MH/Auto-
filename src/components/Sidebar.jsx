@@ -73,7 +73,7 @@ export default function Sidebar({ open, onToggle, isOverlay }) {
   };
 
   const sidebarClass = isOverlay
-    ? `fixed top-0 left-0 h-full w-72 bg-primary flex flex-col z-40 shadow-2xl transition-transform duration-300 ${
+    ? `fixed top-0 left-0 h-full w-full max-w-[280px] sm:w-72 bg-primary flex flex-col z-40 shadow-2xl transition-transform duration-300 ${
         open ? 'translate-x-0' : '-translate-x-full'
       }`
     : `fixed top-0 left-0 h-full bg-primary flex flex-col z-40 shadow-xl transition-all duration-300 ${

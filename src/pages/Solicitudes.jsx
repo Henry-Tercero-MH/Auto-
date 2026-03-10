@@ -110,7 +110,7 @@ export default function Solicitudes() {
           <button
             key={f}
             onClick={() => setFiltro(f)}
-            className={`px-4 py-1.5 rounded-full text-sm font-medium transition-all ${
+            className={`px-3 sm:px-4 py-2 sm:py-1.5 rounded-full text-xs sm:text-sm font-medium transition-all min-h-[36px] ${
               filtro === f
                 ? 'bg-primary text-white shadow-sm'
                 : 'bg-white border border-gray-200 text-slate-600 hover:border-primary hover:text-primary'
@@ -200,13 +200,14 @@ export default function Solicitudes() {
 
                       {/* Badge "disponible" para mecánico */}
                       {disponibleParaTomar && (
-                        <span className="text-xs bg-blue-100 text-blue-700 font-semibold px-2 py-1 rounded-full flex-shrink-0">
+                        <span className="text-xs bg-blue-100 text-blue-700 font-semibold px-2 py-1 rounded-full flex-shrink-0 hidden xs:inline-flex sm:inline-flex">
                           Disponible
                         </span>
                       )}
 
-                      <span className={`px-2.5 py-1 rounded-full text-xs font-semibold flex-shrink-0 ${cfg.cls}`}>
-                        {s.estado}
+                      <span className={`px-2 py-1 sm:px-2.5 rounded-full text-xs font-semibold flex-shrink-0 ${cfg.cls}`}>
+                        <span className="hidden sm:inline">{s.estado}</span>
+                        <span className="sm:hidden">{s.estado.substring(0, 3)}</span>
                       </span>
                       <svg
                         className={`w-4 h-4 text-slate-400 flex-shrink-0 transition-transform ${abierto ? 'rotate-180' : ''}`}
@@ -242,7 +243,7 @@ export default function Solicitudes() {
 
                       <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
                         {/* Info */}
-                        <div className="sm:col-span-2 grid grid-cols-2 gap-4 text-sm">
+                        <div className="sm:col-span-2 grid grid-cols-1 xs:grid-cols-2 gap-3 sm:gap-4 text-sm">
                           <div>
                             <p className="text-xs text-slate-400 uppercase tracking-wide mb-1">Cliente</p>
                             <p className="font-semibold text-slate-800">{s.cliente}</p>

@@ -746,11 +746,11 @@ export default function NuevaSolicitud() {
   };
 
   return (
-    <div className="flex items-start justify-center px-4 py-6">
+    <div className="flex items-start justify-center px-2 sm:px-4 py-4 sm:py-6">
       <div className="w-full max-w-2xl">
         {/* Header */}
-        <div className="mb-6 text-center">
-          <h2 className="text-2xl font-bold text-primary">Nueva Solicitud</h2>
+        <div className="mb-4 sm:mb-6 text-center">
+          <h2 className="text-xl sm:text-2xl font-bold text-primary">Nueva Solicitud</h2>
           <p className="text-slate-500 text-sm mt-0.5">
             Paso {step} de {STEPS.length} — {STEPS[step - 1].label}
           </p>
@@ -1046,11 +1046,11 @@ export default function NuevaSolicitud() {
         </div>
 
         {/* ── Navegación ── */}
-        <div className={`mt-4 flex ${step > 1 ? 'justify-between' : 'justify-end'}`}>
+        <div className={`mt-4 flex ${step > 1 ? 'justify-between' : 'justify-end'} gap-2`}>
           {step > 1 && (
             <button
               onClick={handleBack}
-              className="flex items-center gap-2 px-5 py-2.5 rounded-xl border border-gray-200 bg-white text-slate-600 hover:bg-slate-50 hover:border-slate-300 font-medium text-sm transition shadow-sm"
+              className="flex items-center gap-1.5 sm:gap-2 px-4 sm:px-5 py-2.5 rounded-xl border border-gray-200 bg-white text-slate-600 hover:bg-slate-50 hover:border-slate-300 font-medium text-sm transition shadow-sm min-h-[44px]"
             >
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
@@ -1062,7 +1062,7 @@ export default function NuevaSolicitud() {
           {step < 5 ? (
             <button
               onClick={handleNext}
-              className="flex items-center gap-2 bg-accent hover:bg-red-700 active:bg-red-800 text-white font-semibold px-6 py-2.5 rounded-xl shadow-sm hover:shadow-md transition-all duration-150"
+              className="flex items-center gap-1.5 sm:gap-2 bg-accent hover:bg-red-700 active:bg-red-800 text-white font-semibold px-5 sm:px-6 py-2.5 rounded-xl shadow-sm hover:shadow-md transition-all duration-150 min-h-[44px]"
             >
               Siguiente
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
@@ -1070,7 +1070,7 @@ export default function NuevaSolicitud() {
               </svg>
             </button>
           ) : (
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 flex-wrap justify-end">
               <button
                 onClick={() => {
                   const prev = document.title;
@@ -1078,7 +1078,7 @@ export default function NuevaSolicitud() {
                   window.print();
                   document.title = prev;
                 }}
-                className="flex items-center gap-2 px-5 py-2.5 rounded-xl border border-gray-200 bg-white text-slate-600 hover:bg-slate-50 hover:border-slate-300 font-medium text-sm transition shadow-sm"
+                className="flex items-center gap-2 px-4 sm:px-5 py-2.5 rounded-xl border border-gray-200 bg-white text-slate-600 hover:bg-slate-50 hover:border-slate-300 font-medium text-sm transition shadow-sm min-h-[44px]"
               >
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M6 9V2h12v7M6 18H4a2 2 0 01-2-2v-5a2 2 0 012-2h16a2 2 0 012 2v5a2 2 0 01-2 2h-2M6 14h12v8H6v-8z" />
@@ -1088,7 +1088,7 @@ export default function NuevaSolicitud() {
               <button
                 onClick={handleSubmit}
                 disabled={guardando}
-                className="flex items-center gap-2 bg-primary hover:bg-[#162048] text-white font-semibold px-6 py-2.5 rounded-xl shadow-sm hover:shadow-md transition-all duration-150 disabled:opacity-60 disabled:cursor-not-allowed"
+                className="flex items-center gap-2 bg-primary hover:bg-[#162048] text-white font-semibold px-5 sm:px-6 py-2.5 rounded-xl shadow-sm hover:shadow-md transition-all duration-150 disabled:opacity-60 disabled:cursor-not-allowed min-h-[44px]"
               >
                 {guardando ? (
                   <>

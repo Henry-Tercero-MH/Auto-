@@ -41,20 +41,20 @@ export default function Seguimiento() {
   const stepIdx = resultado ? getStepIndex(resultado.estado) : -1;
 
   return (
-    <div className="min-h-[70vh] flex flex-col items-center justify-start px-4 py-8">
+    <div className="min-h-[70vh] flex flex-col items-center justify-start px-3 py-6 sm:px-4 sm:py-8">
       <div className="w-full max-w-lg">
 
         {/* Logo + título */}
         <div className="flex flex-col items-center mb-8">
-          <img src={logo} alt="AUTO+" className="h-20 object-contain mb-4" />
-          <h2 className="text-xl font-bold text-primary text-center">Consulta tu orden de servicio</h2>
+          <img src={logo} alt="AUTO+" className="h-14 sm:h-20 object-contain mb-3 sm:mb-4" />
+          <h2 className="text-lg sm:text-xl font-bold text-primary text-center">Consulta tu orden de servicio</h2>
           <p className="text-slate-500 text-sm mt-1 text-center">
             Ingresa tu número de ticket para ver el estado de tu vehículo
           </p>
         </div>
 
         {/* Input de búsqueda */}
-        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-5 mb-5">
+        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 sm:p-5 mb-4 sm:mb-5">
           <label className="block text-sm font-medium text-slate-700 mb-2">Número de ticket</label>
           <div className="flex gap-2">
             <div className="relative flex-1">
@@ -133,8 +133,8 @@ export default function Seguimiento() {
             </div>
 
             {/* Timeline */}
-            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
-              <p className="text-xs font-semibold text-slate-400 uppercase tracking-widest mb-5">Progreso</p>
+            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 sm:p-5">
+              <p className="text-xs font-semibold text-slate-400 uppercase tracking-widest mb-4 sm:mb-5">Progreso</p>
               <div className="relative">
                 {/* Línea de fondo */}
                 <div className="absolute left-4 top-4 bottom-4 w-0.5 bg-gray-200" />
@@ -183,9 +183,9 @@ export default function Seguimiento() {
             </div>
 
             {/* Info vehículo y servicio */}
-            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
+            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 sm:p-5">
               <p className="text-xs font-semibold text-slate-400 uppercase tracking-widest mb-4">Detalle de tu orden</p>
-              <div className="grid grid-cols-2 gap-4 text-sm">
+              <div className="grid grid-cols-1 xs:grid-cols-2 sm:grid-cols-2 gap-3 sm:gap-4 text-sm">
                 <div>
                   <p className="text-slate-400 text-xs">Propietario</p>
                   <p className="font-semibold text-slate-800 mt-0.5">{resultado.cliente}</p>
