@@ -80,10 +80,17 @@ export function CatalogosProvider({ children }) {
           }));
         }
         if (cfg.horario_activo !== undefined) {
+          // Sheets serializa celdas de tiempo como ISO — convertir a HH:MM
+          const isoAHHMM = (val) => {
+            const s = String(val || '');
+            if (!s.includes('T')) return s;
+            const d = new Date(s);
+            return `${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
+          };
           setHorarioAcceso({
             activo:      cfg.horario_activo === 'true' || cfg.horario_activo === true,
-            hora_inicio: cfg.horario_inicio || '08:00',
-            hora_fin:    cfg.horario_fin    || '18:00',
+            hora_inicio: isoAHHMM(cfg.horario_inicio || '08:00'),
+            hora_fin:    isoAHHMM(cfg.horario_fin    || '18:00'),
             dias:        cfg.horario_dias
               ? String(cfg.horario_dias).split(',').map(Number)
               : [1, 2, 3, 4, 5, 6],

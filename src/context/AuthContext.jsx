@@ -33,16 +33,40 @@ export function AuthProvider({ children }) {
   const verificarHorario = async () => {
     try {
       const cfg = await api.getConfig();
-      if (!cfg || (cfg.horario_activo !== 'true' && cfg.horario_activo !== true)) return true;
-      const now  = new Date();
-      const dia  = now.getDay(); // 0=Dom 1=Lun ... 6=Sáb
-      const dias = String(cfg.horario_dias || '1,2,3,4,5,6').split(',').map(Number);
-      if (!dias.includes(dia)) return false;
-      const [hIni, mIni] = (cfg.horario_inicio || '08:00').split(':').map(Number);
-      const [hFin, mFin] = (cfg.horario_fin    || '18:00').split(':').map(Number);
+      console.log('[Horario] cfg completo:', cfg);
+
+      if (!cfg || (cfg.horario_activo !== 'true' && cfg.horario_activo !== true)) {
+        console.log('[Horario] inactivo o sin config → permitido');
+        return true;
+      }
+
+      // Sheets serializa celdas de tiempo como ISO (ej: '1899-12-30T13:00:00.000Z')
+      // parseHM extrae horas/minutos correctamente en ambos formatos
+      const parseHM = (val) => {
+        const s = String(val || '');
+        if (s.includes('T')) { const d = new Date(s); return [d.getHours(), d.getMinutes()]; }
+        const [h, m] = s.split(':').map(Number);
+        return [isNaN(h) ? 0 : h, isNaN(m) ? 0 : m];
+      };
+
+      const now    = new Date();
+      const dia    = now.getDay();
+      const diasRaw = cfg.horario_dias || '1,2,3,4,5,6';
+      const dias   = String(diasRaw).split(',').map(Number);
       const minNow = now.getHours() * 60 + now.getMinutes();
-      return minNow >= hIni * 60 + mIni && minNow < hFin * 60 + mFin;
-    } catch {
+      const [hIni, mIni] = parseHM(cfg.horario_inicio || '08:00');
+      const [hFin, mFin] = parseHM(cfg.horario_fin    || '18:00');
+      const minIni = hIni * 60 + mIni;
+      const minFin = hFin * 60 + mFin;
+
+      console.log('[Horario] dia actual:', dia, '| dias permitidos:', dias);
+      console.log('[Horario] hora actual (min):', minNow, '| rango:', minIni, '-', minFin);
+      console.log('[Horario] diaOk:', dias.includes(dia), '| horaOk:', minNow >= minIni && minNow < minFin);
+
+      if (!dias.includes(dia)) return false;
+      return minNow >= minIni && minNow < minFin;
+    } catch (err) {
+      console.error('[Horario] error → permitido por defecto:', err);
       return true;
     }
   };
