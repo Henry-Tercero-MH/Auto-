@@ -1,6 +1,6 @@
 // ── Google Apps Script Web App — cliente fetch v2 ─────────────────────────
 const BASE_URL =
-  'https://script.google.com/macros/s/AKfycbw5FOCNdQ0pS3uThxsS3nbMhvOfSunUUP7NXsbhdCwQMke8Vu0Ij5ltJlnbNKOzPyYK/exec';
+  'https://script.google.com/macros/s/AKfycbyOtWjrfv1sBfrg7LZtpzdwPrjDpMeZWPWNbF00tiIy_DaM5KKt_ahycdNE-tLsy7PT/exec';
 
 // ── helpers internos ──────────────────────────────────────────────────────
 
@@ -15,8 +15,11 @@ async function get(recurso, id = null) {
 }
 
 async function post(body) {
-  // Sin Content-Type header → no dispara preflight CORS en GAS
-  const res  = await fetch(BASE_URL, { method: 'POST', body: JSON.stringify(body) });
+  // GAS no soporta preflight CORS en POST.
+  // Solución: enviar como GET con el payload en ?payload=... (no dispara preflight)
+  const url = new URL(BASE_URL);
+  url.searchParams.set('payload', JSON.stringify(body));
+  const res  = await fetch(url.toString(), { redirect: 'follow' });
   const json = await res.json();
   if (!json.ok) throw new Error(json.error || `Error en acción: ${body.accion}`);
   return json.data;

@@ -3,6 +3,7 @@ import toast from 'react-hot-toast';
 import logo from '../imagenes/logoMecanica.png';
 import { formatQ } from '../data/servicios';
 import { useCatalogos } from '../context/CatalogosContext';
+import { useSolicitudes } from '../context/SolicitudesContext';
 import imgSuperior from '../imagenes/vista superior.png';
 import imgFrontal  from '../imagenes/carfrente.png';
 import imgTrasera  from '../imagenes/carTrasero.png';
@@ -637,6 +638,7 @@ function loadDraft() {
 
 export default function NuevaSolicitud() {
   const { marcas: MARCAS, servicios: CATEGORIAS_SERVICIOS, preciosMap: PRECIOS, tiposDano, mecanicos } = useCatalogos();
+  const { agregarSolicitud } = useSolicitudes();
   const draft = loadDraft();
   const [step, setStep] = useState(() => draft?.step ?? 1);
   const [form, setForm] = useState(() => draft?.form ?? initialState);
@@ -710,21 +712,37 @@ export default function NuevaSolicitud() {
 
   const handleBack = () => { setErrores({}); setStep((s) => s - 1); };
 
-  const handleSubmit = () => {
-    // Guardar solicitud con su correlativo
-    const solicitudes = JSON.parse(localStorage.getItem('drivebot_solicitudes') || '[]');
-    solicitudes.push({ ...form, ordenNum, fecha: new Date().toISOString() });
-    localStorage.setItem('drivebot_solicitudes', JSON.stringify(solicitudes));
+  const [guardando, setGuardando] = useState(false);
 
-    // Incrementar correlativo para la siguiente orden
-    const current = parseInt(localStorage.getItem('drivebot_next_orden') || '1', 10);
-    localStorage.setItem('drivebot_next_orden', String(current + 1));
-
-    localStorage.removeItem(DRAFT_KEY);
-    setForm(initialState);
-    setOrdenNum(genOrden());
-    setStep(1);
-    toast.success('¡Solicitud registrada exitosamente!');
+  const handleSubmit = async () => {
+    if (guardando) return;
+    setGuardando(true);
+    try {
+      const servicioFinal = [form.tipoServicio, ...form.adicionales].filter(Boolean).join(', ');
+      const datos = {
+        fecha:    new Date().toISOString().slice(0, 10),
+        cliente:  form.nombre,
+        vehiculo: `${form.marca} ${form.modelo} ${form.anio}`,
+        placa:    form.placa,
+        servicio: servicioFinal,
+        estado:   'Pendiente',
+        notas:    form.observaciones || '',
+        precio:   0,
+        mecanico: null,
+      };
+      console.log('[NuevaSolicitud] enviando:', datos);
+      await agregarSolicitud(datos);
+      localStorage.removeItem(DRAFT_KEY);
+      setForm(initialState);
+      setOrdenNum(genOrden());
+      setStep(1);
+      toast.success('¡Solicitud registrada exitosamente!');
+    } catch (err) {
+      console.error('[NuevaSolicitud] error:', err);
+      toast.error(`Error: ${err.message || 'No se pudo guardar la solicitud'}`);
+    } finally {
+      setGuardando(false);
+    }
   };
 
   return (
@@ -1069,12 +1087,25 @@ export default function NuevaSolicitud() {
               </button>
               <button
                 onClick={handleSubmit}
-                className="flex items-center gap-2 bg-primary hover:bg-[#162048] text-white font-semibold px-6 py-2.5 rounded-xl shadow-sm hover:shadow-md transition-all duration-150"
+                disabled={guardando}
+                className="flex items-center gap-2 bg-primary hover:bg-[#162048] text-white font-semibold px-6 py-2.5 rounded-xl shadow-sm hover:shadow-md transition-all duration-150 disabled:opacity-60 disabled:cursor-not-allowed"
               >
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-                </svg>
-                Confirmar registro
+                {guardando ? (
+                  <>
+                    <svg className="animate-spin w-4 h-4" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z" />
+                    </svg>
+                    Guardando...
+                  </>
+                ) : (
+                  <>
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                    </svg>
+                    Confirmar registro
+                  </>
+                )}
               </button>
             </div>
           )}

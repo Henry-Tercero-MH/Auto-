@@ -66,26 +66,22 @@ function LoginModal({ onClose }) {
     </span>
   );
 
-  const handleSubmitAdmin = (e) => {
+  const handleSubmitAdmin = async (e) => {
     e.preventDefault();
     setError('');
     setLoading(true);
-    setTimeout(() => {
-      const ok = login({ email: form.email, password: form.password });
-      if (ok) { navigate('/'); }
-      else { setError('Correo o contraseña incorrectos'); setLoading(false); }
-    }, 600);
+    const ok = await login({ email: form.email, password: form.password });
+    if (ok) { navigate('/'); }
+    else { setError('Correo o contraseña incorrectos'); setLoading(false); }
   };
 
-  const handleSubmitMecanico = (e) => {
+  const handleSubmitMecanico = async (e) => {
     e.preventDefault();
     setError('');
     setLoading(true);
-    setTimeout(() => {
-      const ok = login({ mecanicoId: mecForm.mecanicoId, pin: mecForm.pin });
-      if (ok) { navigate('/solicitudes'); }
-      else { setError('PIN incorrecto o mecánico inactivo'); setLoading(false); }
-    }, 600);
+    const ok = await login({ mecanicoId: mecForm.mecanicoId, pin: mecForm.pin });
+    if (ok) { navigate('/solicitudes'); }
+    else { setError('PIN incorrecto o mecánico inactivo'); setLoading(false); }
   };
 
   return (
@@ -175,7 +171,7 @@ function LoginModal({ onClose }) {
                 >
                   <option value="">— Seleccionar —</option>
                   {mecanicosDemo.filter((m) => m.activo).map((m) => (
-                    <option key={m.id} value={m.id}>{m.nombre} · {m.especialidad}</option>
+                    <option key={m.id} value={m.id}>{m.nombre || m.name} · {m.especialidad}</option>
                   ))}
                 </select>
               </div>
