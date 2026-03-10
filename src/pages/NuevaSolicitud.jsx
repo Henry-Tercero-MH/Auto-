@@ -744,9 +744,10 @@ export default function NuevaSolicitud() {
     const e = {};
     if (paso === 2) {
       if (!form.nombre.trim()) e.nombre = 'Nombre requerido';
-      if (!form.telefono.trim()) {
+      const tel = String(form.telefono ?? '').replace(/\D/g, '');
+      if (!tel) {
         e.telefono = 'Teléfono requerido';
-      } else if (!/^\d{8}$/.test(form.telefono.trim())) {
+      } else if (tel.length !== 8) {
         e.telefono = 'El teléfono debe tener exactamente 8 dígitos';
       }
     }
@@ -758,7 +759,19 @@ export default function NuevaSolicitud() {
         e.anio = 'Año no válido';
       }
       if (!form.modelo) e.modelo = 'Modelo requerido';
-      if (!form.placa.trim()) e.placa = 'Placa requerida';
+      if (!form.placa.trim()) {
+        e.placa = 'Placa requerida';
+      } else {
+        // Normalizar: quitar guiones, espacios y pasar a mayúsculas
+        const placaNorm = form.placa.trim().replace(/[\s-]/g, '').toUpperCase();
+        // Formatos válidos Guatemala:
+        //   Estándar civil:   3 letras + 3 dígitos  → ABC123
+        //   Con año:         3 letras + 4 dígitos   → ABC1234
+        //   Moto / especial: 1–2 letras + 3–6 díg  → P123456, M1234
+        if (!/^[A-Z]{1,3}\d{3,6}$/.test(placaNorm)) {
+          e.placa = 'Placa no válida — ej: ABC123 o ABC-1234';
+        }
+      }
       if (!form.kilometraje) {
         e.kilometraje = 'Kilometraje requerido';
       } else if (isNaN(form.kilometraje) || +form.kilometraje < 0) {
@@ -825,14 +838,15 @@ export default function NuevaSolicitud() {
     setGuardando(true);
     try {
       const servicioFinal = [form.tipoServicio, ...form.adicionales].filter(Boolean).join(', ');
+      const lc = (s) => (s || '').toLowerCase();
       const datos = {
         fecha:    new Date().toISOString().slice(0, 10),
-        cliente:  form.nombre,
-        vehiculo: `${form.marca} ${form.modelo} ${form.anio}`,
-        placa:    form.placa,
-        servicio: servicioFinal,
+        cliente:  lc(form.nombre),
+        vehiculo: lc(`${form.marca} ${form.modelo} ${form.anio}`),
+        placa:    form.placa.trim().replace(/[\s-]/g, '').toUpperCase(),
+        servicio: lc(servicioFinal),
         estado:   'Pendiente',
-        notas:    form.observaciones || '',
+        notas:    lc(form.observaciones || ''),
         precio:   0,
         mecanico: null,
       };
@@ -885,7 +899,11 @@ export default function NuevaSolicitud() {
                   <ClienteCombobox
                     clientes={clientes}
                     onSelect={(c) => {
-                      setForm(p => ({ ...p, nombre: c.nombre, telefono: c.telefono }));
+                      setForm(p => ({
+                        ...p,
+                        nombre:   c.nombre ?? '',
+                        telefono: String(c.telefono ?? '').replace(/\D/g, '').slice(0, 8),
+                      }));
                       setClienteSeleccionado(true);
                       setErrores({});
                     }}
@@ -1025,7 +1043,17 @@ export default function NuevaSolicitud() {
                 })()}
                 <div>
                   <label htmlFor="placa" className="block text-sm font-medium text-slate-700 mb-1">Placa</label>
-                  <input id="placa" name="placa" type="text" value={form.placa} onChange={handleChange} placeholder="ABC-1234" className={inputCls(errores.placa)} />
+                  <input
+                    id="placa" name="placa" type="text"
+                    value={form.placa}
+                    onChange={e => {
+                      const v = e.target.value.toUpperCase();
+                      setForm(p => ({ ...p, placa: v }));
+                      if (errores.placa) setErrores(p => ({ ...p, placa: '' }));
+                    }}
+                    placeholder="ABC-1234"
+                    className={inputCls(errores.placa)}
+                  />
                   {errores.placa && <p className="mt-1 text-xs text-red-500">{errores.placa}</p>}
                 </div>
                 <div>

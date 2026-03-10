@@ -1,5 +1,4 @@
 import { useState, useMemo } from 'react';
-import logo from '../imagenes/logoMecanica.png';
 import { useSolicitudes } from '../context/SolicitudesContext';
 import { useCatalogos } from '../context/CatalogosContext';
 
@@ -41,17 +40,8 @@ export default function Seguimiento() {
   const stepIdx = resultado ? getStepIndex(resultado.estado) : -1;
 
   return (
-    <div className="min-h-[70vh] flex flex-col items-center justify-start px-3 py-6 sm:px-4 sm:py-8">
+    <div className="flex flex-col items-center px-3 py-2 sm:px-4">
       <div className="w-full max-w-lg">
-
-        {/* Logo + título */}
-        <div className="flex flex-col items-center mb-8">
-          <img src={logo} alt="AUTO+" className="h-14 sm:h-20 object-contain mb-3 sm:mb-4" />
-          <h2 className="text-lg sm:text-xl font-bold text-primary text-center">Consulta tu orden de servicio</h2>
-          <p className="text-slate-500 text-sm mt-1 text-center">
-            Ingresa tu número de ticket para ver el estado de tu vehículo
-          </p>
-        </div>
 
         {/* Input de búsqueda */}
         <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 sm:p-5 mb-4 sm:mb-5">

@@ -3,14 +3,6 @@ import { api } from '../services/sheetsApi';
 
 const AuthContext = createContext(null);
 
-// ── Mecánicos fallback ────────────────────────────────────────────────────
-const MECANICOS_FALLBACK = [
-  { id: 'M001', nombre: 'Pedro Hernández',   especialidad: 'Motor y transmisión', pin: '1234', activo: true },
-  { id: 'M002', nombre: 'Juan Carlos López', especialidad: 'Frenos y suspensión', pin: '2345', activo: true },
-  { id: 'M003', nombre: 'Marco Tulio Reyes', especialidad: 'Sistema eléctrico',   pin: '3456', activo: true },
-  { id: 'M004', nombre: 'José Alfredo Ruiz', especialidad: 'Tren delantero',      pin: '4567', activo: true },
-];
-
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(() => {
     try { return JSON.parse(localStorage.getItem('drivebot_user')); }
@@ -18,7 +10,7 @@ export function AuthProvider({ children }) {
   });
 
   // Lista de mecánicos cargada desde Sheets (con PIN)
-  const [mecanicosLogin, setMecanicosLogin] = useState(MECANICOS_FALLBACK);
+  const [mecanicosLogin, setMecanicosLogin] = useState([]);
 
   useEffect(() => {
     // Cargar mecánicos con PIN desde hoja Mecanicos

@@ -40,7 +40,6 @@ function AppRoutes() {
       <Route path="/login" element={<PublicRoute><Login /></PublicRoute>} />
       {/* Ruta pública — sin autenticación */}
       <Route path="/scaner" element={<Scaner />} />
-      <Route path="/seguimiento" element={<Seguimiento />} />
       <Route element={<ProtectedLayout />}>
         <Route path="/" element={<HomeRoute />} />
         <Route path="/solicitudes" element={<Solicitudes />} />
@@ -48,6 +47,7 @@ function AppRoutes() {
         <Route path="/servicios" element={<Servicios />} />
         <Route path="/catalogos" element={<Catalogos />} />
         <Route path="/reportes" element={<Reportes />} />
+        <Route path="/seguimiento" element={<Seguimiento />} />
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
