@@ -224,19 +224,23 @@ export default function Login() {
 
       {/* ── Navbar ── */}
       <header className="bg-primary shadow-lg sticky top-0 z-40 overflow-hidden">
-        {/* Panel blanco diagonal izquierdo (fondo para el logo PNG) */}
+        {/* Panel blanco diagonal — solo visible al hacer scroll, máx 40% del ancho */}
         <div
-          className="absolute inset-y-0 left-0 bg-white transition-opacity duration-500"
-          style={{ width: '640px', clipPath: 'polygon(0 0, 100% 0, 78% 100%, 0 100%)', opacity: scrolled ? 1 : 0 }}
+          className="absolute inset-y-0 left-0 bg-white transition-opacity duration-500 pointer-events-none"
+          style={{
+            width: 'min(40%, 360px)',
+            clipPath: 'polygon(0 0, 100% 0, 82% 100%, 0 100%)',
+            opacity: scrolled ? 1 : 0,
+          }}
         />
-        <div className="relative z-10 max-w-6xl mx-auto px-4 sm:px-6 h-24 flex items-center justify-between">
+        <div className="relative z-10 max-w-6xl mx-auto px-4 sm:px-6 h-20 flex items-center justify-between gap-4">
           {/* Logo — aparece al hacer scroll */}
-          <div className={`flex items-center gap-3 transition-all duration-500 ${scrolled ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-2 pointer-events-none'}`}>
-            <img src={logo} alt="AUTO+" className="h-10 object-contain" />
+          <div className={`flex items-center gap-2 flex-shrink-0 transition-all duration-500 ${scrolled ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-2 pointer-events-none'}`}>
+            <img src={logo} alt="AUTO+" className="h-9 object-contain" />
           </div>
 
           {/* Nav desktop */}
-          <nav className="hidden md:flex items-center gap-6 text-sm">
+          <nav className="hidden md:flex items-center gap-6 text-sm flex-1 justify-center">
             <button onClick={() => scrollTo('servicios')} className="text-white/70 hover:text-white transition font-medium">
               Servicios
             </button>
@@ -246,7 +250,7 @@ export default function Login() {
           </nav>
 
           {/* Acciones */}
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-3 flex-shrink-0">
             <button
               onClick={() => setSeguimientoModalOpen(true)}
               className="hidden md:flex items-center gap-1.5 text-white/70 hover:text-white text-sm font-medium transition"
