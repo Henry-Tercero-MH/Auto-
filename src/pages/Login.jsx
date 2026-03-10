@@ -34,26 +34,57 @@ function SeguimientoModal({ onClose }) {
   );
 }
 
+/* ─── ErrorBox helper ─── */
+function ErrorBox({ msg }) {
+  return (
+    <div className="bg-red-50 border border-red-200 text-red-600 rounded-xl px-4 py-2.5 text-sm flex items-center gap-2">
+      <svg className="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+      </svg>
+      {msg}
+    </div>
+  );
+}
+
 /* ─── Modal de login ─── */
 function LoginModal({ onClose }) {
-  const { login } = useAuth();
+  const { login, mecanicosDemo } = useAuth();
   const navigate = useNavigate();
+  const [tab, setTab] = useState('admin'); // 'admin' | 'mecanico'
   const [form, setForm] = useState({ email: '', password: '' });
+  const [mecForm, setMecForm] = useState({ mecanicoId: '', pin: '' });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
-  const handleSubmit = (e) => {
+  const spinnerIcon = (
+    <span className="flex items-center justify-center gap-2">
+      <svg className="animate-spin w-4 h-4" fill="none" viewBox="0 0 24 24">
+        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z" />
+      </svg>
+      Ingresando...
+    </span>
+  );
+
+  const handleSubmitAdmin = (e) => {
     e.preventDefault();
     setError('');
     setLoading(true);
     setTimeout(() => {
-      const ok = login(form.email, form.password);
-      if (ok) {
-        navigate('/');
-      } else {
-        setError('Correo o contraseña incorrectos');
-        setLoading(false);
-      }
+      const ok = login({ email: form.email, password: form.password });
+      if (ok) { navigate('/'); }
+      else { setError('Correo o contraseña incorrectos'); setLoading(false); }
+    }, 600);
+  };
+
+  const handleSubmitMecanico = (e) => {
+    e.preventDefault();
+    setError('');
+    setLoading(true);
+    setTimeout(() => {
+      const ok = login({ mecanicoId: mecForm.mecanicoId, pin: mecForm.pin });
+      if (ok) { navigate('/solicitudes'); }
+      else { setError('PIN incorrecto o mecánico inactivo'); setLoading(false); }
     }, 600);
   };
 
@@ -79,53 +110,98 @@ function LoginModal({ onClose }) {
           </button>
         </div>
 
-        {/* Formulario */}
+        {/* Tabs */}
+        <div className="flex border-b border-gray-100">
+          <button
+            onClick={() => { setTab('admin'); setError(''); }}
+            className={`flex-1 py-3 text-sm font-semibold transition-colors ${tab === 'admin' ? 'text-accent border-b-2 border-accent' : 'text-slate-400 hover:text-slate-600'}`}
+          >
+            Administrador
+          </button>
+          <button
+            onClick={() => { setTab('mecanico'); setError(''); }}
+            className={`flex-1 py-3 text-sm font-semibold transition-colors ${tab === 'mecanico' ? 'text-accent border-b-2 border-accent' : 'text-slate-400 hover:text-slate-600'}`}
+          >
+            Mecánico
+          </button>
+        </div>
+
         <div className="px-6 py-6">
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div>
-              <label htmlFor="email" className="block text-sm font-medium text-slate-700 mb-1.5">Correo electrónico</label>
-              <input
-                id="email" type="email" value={form.email}
-                onChange={(e) => setForm({ ...form, email: e.target.value })}
-                className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-accent focus:border-accent transition bg-slate-50"
-                placeholder="admin@drivebot.com" required
-              />
-            </div>
-            <div>
-              <label htmlFor="password" className="block text-sm font-medium text-slate-700 mb-1.5">Contraseña</label>
-              <input
-                id="password" type="password" value={form.password}
-                onChange={(e) => setForm({ ...form, password: e.target.value })}
-                className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-accent focus:border-accent transition bg-slate-50"
-                placeholder="••••••••" required
-              />
-            </div>
 
-            {error && (
-              <div className="bg-red-50 border border-red-200 text-red-600 rounded-xl px-4 py-2.5 text-sm flex items-center gap-2">
-                <svg className="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-                {error}
+          {/* ── Admin ── */}
+          {tab === 'admin' && (
+            <form onSubmit={handleSubmitAdmin} className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1.5">Correo electrónico</label>
+                <input
+                  type="email" value={form.email}
+                  onChange={(e) => setForm({ ...form, email: e.target.value })}
+                  className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-accent focus:border-accent transition bg-slate-50"
+                  placeholder="admin@drivebot.com" required
+                />
               </div>
-            )}
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1.5">Contraseña</label>
+                <input
+                  type="password" value={form.password}
+                  onChange={(e) => setForm({ ...form, password: e.target.value })}
+                  className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-accent focus:border-accent transition bg-slate-50"
+                  placeholder="••••••••" required
+                />
+              </div>
+              {error && <ErrorBox msg={error} />}
+              <button type="submit" disabled={loading}
+                className="w-full bg-accent hover:bg-red-700 text-white font-semibold py-3 rounded-xl shadow-sm transition-all disabled:opacity-60 disabled:cursor-not-allowed">
+                {loading ? spinnerIcon : 'Ingresar al sistema'}
+              </button>
+              <div className="p-3 bg-slate-50 rounded-xl border border-slate-100 text-xs text-slate-400 space-y-0.5">
+                <p className="font-semibold text-slate-500">Demo:</p>
+                <p>Email: <span className="font-mono text-slate-600">admin@drivebot.com</span></p>
+                <p>Contraseña: <span className="font-mono text-slate-600">admin123</span></p>
+              </div>
+            </form>
+          )}
 
-            <button
-              type="submit" disabled={loading}
-              className="w-full bg-accent hover:bg-red-700 active:bg-red-800 text-white font-semibold py-3 rounded-xl shadow-sm hover:shadow-md transition-all duration-150 disabled:opacity-60 disabled:cursor-not-allowed"
-            >
-              {loading ? (
-                <span className="flex items-center justify-center gap-2">
-                  <svg className="animate-spin w-4 h-4" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" /><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z" /></svg>
-                  Ingresando...
-                </span>
-              ) : 'Ingresar al sistema'}
-            </button>
-          </form>
+          {/* ── Mecánico ── */}
+          {tab === 'mecanico' && (
+            <form onSubmit={handleSubmitMecanico} className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1.5">Selecciona tu nombre</label>
+                <select
+                  value={mecForm.mecanicoId}
+                  onChange={(e) => setMecForm({ ...mecForm, mecanicoId: e.target.value })}
+                  className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-slate-800 bg-slate-50 focus:outline-none focus:ring-2 focus:ring-accent focus:border-accent transition"
+                  required
+                >
+                  <option value="">— Seleccionar —</option>
+                  {mecanicosDemo.filter((m) => m.activo).map((m) => (
+                    <option key={m.id} value={m.id}>{m.nombre} · {m.especialidad}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1.5">PIN de acceso</label>
+                <input
+                  type="password" inputMode="numeric" maxLength={6}
+                  value={mecForm.pin}
+                  onChange={(e) => setMecForm({ ...mecForm, pin: e.target.value })}
+                  className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-accent focus:border-accent transition bg-slate-50 tracking-widest text-center text-lg"
+                  placeholder="••••" required
+                />
+              </div>
+              {error && <ErrorBox msg={error} />}
+              <button type="submit" disabled={loading}
+                className="w-full bg-accent hover:bg-red-700 text-white font-semibold py-3 rounded-xl shadow-sm transition-all disabled:opacity-60 disabled:cursor-not-allowed">
+                {loading ? spinnerIcon : 'Ingresar como mecánico'}
+              </button>
+              <div className="p-3 bg-slate-50 rounded-xl border border-slate-100 text-xs text-slate-400 space-y-1">
+                <p className="font-semibold text-slate-500">Demo (PINs):</p>
+                <p>Pedro Hernández → <span className="font-mono text-slate-600">1234</span></p>
+                <p>Juan Carlos López → <span className="font-mono text-slate-600">2345</span></p>
+              </div>
+            </form>
+          )}
 
-          <div className="mt-4 p-3 bg-slate-50 rounded-xl border border-slate-100 text-xs text-slate-400 space-y-0.5">
-            <p className="font-semibold text-slate-500">Demo:</p>
-            <p>Email: <span className="font-mono text-slate-600">admin@drivebot.com</span></p>
-            <p>Contraseña: <span className="font-mono text-slate-600">admin123</span></p>
-          </div>
         </div>
       </div>
     </div>

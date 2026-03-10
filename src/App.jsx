@@ -10,12 +10,20 @@ import Solicitudes from './pages/Solicitudes';
 import Seguimiento from './pages/Seguimiento';
 import Scaner from './pages/Scaner';
 import Catalogos from './pages/Catalogos';
+import Reportes from './pages/Reportes';
 import { CatalogosProvider } from './context/CatalogosContext';
 
 function ProtectedLayout() {
   const { user } = useAuth();
   if (!user) return <Navigate to="/login" replace />;
   return <Layout />;
+}
+
+// El mecánico no tiene dashboard — va directo a solicitudes
+function HomeRoute() {
+  const { esMecanico } = useAuth();
+  if (esMecanico) return <Navigate to="/solicitudes" replace />;
+  return <Home />;
 }
 
 function PublicRoute({ children }) {
@@ -32,12 +40,12 @@ function AppRoutes() {
       <Route path="/scaner" element={<Scaner />} />
       <Route path="/seguimiento" element={<Seguimiento />} />
       <Route element={<ProtectedLayout />}>
-        <Route path="/" element={<Home />} />
+        <Route path="/" element={<HomeRoute />} />
         <Route path="/solicitudes" element={<Solicitudes />} />
         <Route path="/nueva-solicitud" element={<NuevaSolicitud />} />
         <Route path="/servicios" element={<Servicios />} />
         <Route path="/catalogos" element={<Catalogos />} />
-        <Route path="/reportes" element={<div className="text-center py-20 text-slate-400 text-lg">Módulo en desarrollo...</div>} />
+        <Route path="/reportes" element={<Reportes />} />
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
