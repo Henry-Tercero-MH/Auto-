@@ -1,6 +1,6 @@
 // ── Google Apps Script Web App — cliente fetch v2 ─────────────────────────
 const BASE_URL =
-  'https://script.google.com/macros/s/AKfycbySAdeeNuPfVMhvnJEFuOYhPELVJiNhB_EOkhnVK5IFAXgRV8lZgK9z5EJA9LVndBe4/exec';
+  'https://script.google.com/macros/s/AKfycbygG5z_OTbdmixKVt2qFVYChGq_qXfmT3FkMVp8O1_isJcIpr2SAMYr7RJD022kH3K6/exec';
 
 // ── helpers internos ──────────────────────────────────────────────────────
 
@@ -22,6 +22,19 @@ async function post(body) {
   const res  = await fetch(url.toString(), { redirect: 'follow' });
   const json = await res.json();
   if (!json.ok) throw new Error(json.error || `Error en acción: ${body.accion}`);
+  return json.data;
+}
+
+// Para archivos grandes (fotos): usa POST real con body text/plain (sin preflight CORS)
+async function postArchivo(body) {
+  const res  = await fetch(BASE_URL, {
+    method:   'POST',
+    redirect: 'follow',
+    body:     JSON.stringify(body),
+    // Sin Content-Type explícito → text/plain → no dispara preflight CORS
+  });
+  const json = await res.json();
+  if (!json.ok) throw new Error(json.error || 'Error al subir archivo');
   return json.data;
 }
 
@@ -50,6 +63,12 @@ export const api = {
   crearCliente:    (datos)     => post({ accion: 'crearCliente',    datos }),
   editarCliente:   (id, datos) => post({ accion: 'editarCliente',   id, datos }),
   eliminarCliente: (id)        => post({ accion: 'eliminarCliente', id }),
+
+  // ── Vehículos ─────────────────────────────────────────────────────────
+  getVehiculos:     ()          => get('vehiculos'),
+  crearVehiculo:    (datos)     => post({ accion: 'crearVehiculo',    datos }),
+  editarVehiculo:   (id, datos) => post({ accion: 'editarVehiculo',   id, datos }),
+  eliminarVehiculo: (id)        => post({ accion: 'eliminarVehiculo', id }),
 
   // ── Servicios ─────────────────────────────────────────────────────────
   getServicios:     ()          => get('servicios'),
@@ -99,6 +118,32 @@ export const api = {
   editarRepuesto:   (id, datos)     => post({ accion: 'editarRepuesto',   id, datos }),
   eliminarRepuesto: (id)            => post({ accion: 'eliminarRepuesto', id }),
   ajustarStock:     (id, cantidad)  => post({ accion: 'ajustarStock',     id, cantidad }),
+
+  // ── Archivos / Fotos (Drive) ──────────────────────────────────────────
+  // archivo: File object del input[type=file]
+  // Retorna: { url, id, nombre }
+  subirFoto: async (archivo) => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = async (e) => {
+        try {
+          // Quitar el prefijo "data:image/jpeg;base64," y dejar solo el base64
+          const base64 = e.target.result.split(',')[1];
+          const data = await postArchivo({
+            accion: 'subirArchivo',
+            base64,
+            nombre: archivo.name || `foto_${Date.now()}.jpg`,
+            tipo:   archivo.type || 'image/jpeg',
+          });
+          resolve(data);
+        } catch (err) {
+          reject(err);
+        }
+      };
+      reader.onerror = reject;
+      reader.readAsDataURL(archivo);
+    });
+  },
 
   // ── Bitácora ──────────────────────────────────────────────────────────
   getBitacora: ()      => get('bitacora'),

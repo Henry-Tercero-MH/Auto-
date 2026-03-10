@@ -116,6 +116,7 @@ const VISTAS = [
 const initialState = {
   nombre: '',
   telefono: '',
+  cliente_id: '',
   marca: '',
   modelo: '',
   anio: '',
@@ -700,7 +701,7 @@ function ClienteCombobox({ clientes, onSelect }) {
 }
 
 export default function NuevaSolicitud() {
-  const { marcas: MARCAS, servicios: CATEGORIAS_SERVICIOS, preciosMap: PRECIOS, tiposDano, mecanicos, clientes, agregarCliente } = useCatalogos();
+  const { marcas: MARCAS, servicios: CATEGORIAS_SERVICIOS, preciosMap: PRECIOS, tiposDano, mecanicos, clientes, agregarCliente, vehiculosPorCliente, agregarVehiculo } = useCatalogos();
   const { agregarSolicitud } = useSolicitudes();
   const draft = loadDraft();
   const [step, setStep] = useState(() => draft?.step ?? 1);
@@ -901,8 +902,9 @@ export default function NuevaSolicitud() {
                     onSelect={(c) => {
                       setForm(p => ({
                         ...p,
-                        nombre:   c.nombre ?? '',
-                        telefono: String(c.telefono ?? '').replace(/\D/g, '').slice(0, 8),
+                        nombre:     c.nombre ?? '',
+                        telefono:   String(c.telefono ?? '').replace(/\D/g, '').slice(0, 8),
+                        cliente_id: c.id ?? '',
                       }));
                       setClienteSeleccionado(true);
                       setErrores({});
@@ -968,6 +970,41 @@ export default function NuevaSolicitud() {
           {step === 3 && (
             <div className="px-6 sm:px-8 py-7 space-y-4">
               <h3 className="text-xs font-semibold uppercase tracking-widest text-accent mb-4">Datos del vehículo</h3>
+
+              {/* Picker de vehículos anteriores del cliente */}
+              {form.cliente_id && vehiculosPorCliente(form.cliente_id).length > 0 && (
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">
+                    Vehículos registrados del cliente
+                  </label>
+                  <div className="flex flex-col gap-2">
+                    {vehiculosPorCliente(form.cliente_id).map((v) => (
+                      <button
+                        key={v.id}
+                        type="button"
+                        onClick={() => setForm(p => ({
+                          ...p,
+                          marca:       v.marca  ?? '',
+                          modelo:      v.modelo ?? '',
+                          anio:        v.anio   ? String(v.anio) : '',
+                          placa:       v.placa  ?? '',
+                          kilometraje: v.km     ? String(v.km)   : '',
+                        }))}
+                        className="flex items-center justify-between w-full rounded-lg border border-gray-200 bg-slate-50 px-4 py-2.5 text-sm hover:border-accent hover:bg-red-50 transition text-left"
+                      >
+                        <span className="font-medium text-gray-800">{v.marca} {v.modelo} {v.anio}</span>
+                        <span className="text-xs text-gray-400 ml-2">{v.placa}</span>
+                      </button>
+                    ))}
+                  </div>
+                  <div className="flex items-center gap-3 mt-3">
+                    <div className="flex-1 border-t border-slate-200" />
+                    <span className="text-xs text-slate-400 whitespace-nowrap">o ingresa manualmente</span>
+                    <div className="flex-1 border-t border-slate-200" />
+                  </div>
+                </div>
+              )}
+
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 {/* 1. Marca */}
                 <div>

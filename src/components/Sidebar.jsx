@@ -1,6 +1,8 @@
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { useAuth } from '../context/AuthContext';
+import { isFeatureEnabled, getFeatureLabel } from '../config/rbac';
+import { useLockedModal } from '../hooks/useLockedModal.jsx';
 
 const Icon = ({ path, className = 'w-5 h-5' }) => (
   <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.8}>
@@ -58,6 +60,7 @@ export default function Sidebar({ open, onToggle, isOverlay }) {
   const location = useLocation();
   const navigate = useNavigate();
   const { user, logout } = useAuth();
+  const { showLocked, LockedModal } = useLockedModal();
 
   const rol = user?.rol ?? 'admin';
 
@@ -119,6 +122,40 @@ export default function Sidebar({ open, onToggle, isOverlay }) {
       <nav className="flex-1 py-4 px-2 space-y-1 overflow-y-auto">
         {navItems.map((item) => {
           const isActive = location.pathname === item.path;
+          const enabled = isFeatureEnabled(item.path);
+
+          // ── Item bloqueado ──
+          if (!enabled) {
+            return (
+              <button
+                key={item.path}
+                type="button"
+                onClick={() => showLocked(item.name)}
+                title={!open && !isOverlay ? `${item.name} (bloqueado)` : undefined}
+                className="w-full flex items-center gap-3 px-3 py-3 md:py-2.5 rounded-lg transition-colors text-slate-500 hover:bg-slate-700/50 cursor-not-allowed opacity-60 group"
+              >
+                <div className="relative flex-shrink-0">
+                  <Icon path={item.icon} className="w-5 h-5" />
+                  <svg
+                    className="w-3 h-3 absolute -top-1 -right-1 text-amber-400"
+                    fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2.5}
+                  >
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                  </svg>
+                </div>
+                {(open || isOverlay) && (
+                  <span className="text-sm font-medium whitespace-nowrap overflow-hidden flex items-center gap-2">
+                    {item.name}
+                    <span className="text-[10px] px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-400 font-semibold leading-none group-hover:bg-amber-500/30">
+                      PRO
+                    </span>
+                  </span>
+                )}
+              </button>
+            );
+          }
+
+          // ── Item habilitado ──
           return (
             <Link
               key={item.path}
@@ -169,6 +206,8 @@ export default function Sidebar({ open, onToggle, isOverlay }) {
           {(open || isOverlay) && <span className="text-sm font-medium">Cerrar sesión</span>}
         </button>
       </div>
+      {/* Modal de módulo bloqueado */}
+      <LockedModal />
     </aside>
   );
 }

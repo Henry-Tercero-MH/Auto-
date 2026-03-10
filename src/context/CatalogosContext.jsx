@@ -50,6 +50,7 @@ export function CatalogosProvider({ children }) {
   const [mecanicos, setMecanicos] = useState([]);
   const [marcas,    setMarcas]    = useState(MARCAS_INICIAL);
   const [servicios, setServicios] = useState([]);
+  const [vehiculos, setVehiculos] = useState([]);
 
   // ── Carga inicial desde Google Sheets ─────────────────────────────────
   useEffect(() => {
@@ -97,6 +98,11 @@ export function CatalogosProvider({ children }) {
           });
         }
       })
+      .catch(() => {});
+
+    // Vehículos
+    api.getVehiculos()
+      .then((data) => { if (data?.length) setVehiculos(data); })
       .catch(() => {});
 
     // Servicios desde Sheets — si está vacío se auto-sube el catálogo local (primera vez)
@@ -168,6 +174,35 @@ export function CatalogosProvider({ children }) {
     setClientes((prev) => prev.filter((c) => c.id !== id));
     try { await api.eliminarCliente(id); } catch {}
   }, []);
+
+  // ─────────────────────────────────────────────────────────────────────
+  // VEHÍCULOS — CRUD con Sheets
+  // ─────────────────────────────────────────────────────────────────────
+  const agregarVehiculo = useCallback(async (v) => {
+    try {
+      const { id } = await api.crearVehiculo(v);
+      setVehiculos((prev) => [...prev, { ...v, id }]);
+      return id;
+    } catch {
+      const id = `V${String(Date.now()).slice(-6)}`;
+      setVehiculos((prev) => [...prev, { ...v, id }]);
+      return id;
+    }
+  }, []);
+
+  const editarVehiculoCat = useCallback(async (id, data) => {
+    setVehiculos((prev) => prev.map((v) => (v.id === id ? { ...v, ...data } : v)));
+    try { await api.editarVehiculo(id, data); } catch {}
+  }, []);
+
+  const eliminarVehiculoCat = useCallback(async (id) => {
+    setVehiculos((prev) => prev.filter((v) => v.id !== id));
+    try { await api.eliminarVehiculo(id); } catch {}
+  }, []);
+
+  const vehiculosPorCliente = useCallback((clienteId) =>
+    vehiculos.filter((v) => v.cliente_id === clienteId),
+  [vehiculos]);
 
   // ─────────────────────────────────────────────────────────────────────
   // MECÁNICOS — CRUD con Sheets
@@ -364,6 +399,7 @@ export function CatalogosProvider({ children }) {
     <CatalogosContext.Provider
       value={{
         clientes, marcas, servicios, preciosMap, estados, mecanicos, tiposDano, configNegocio, horarioAcceso,
+        vehiculos, agregarVehiculo, editarVehiculoCat, eliminarVehiculoCat, vehiculosPorCliente,
         agregarCliente, editarCliente, eliminarCliente,
         agregarMarca, eliminarMarca, agregarModelo, eliminarModelo,
         agregarCategoria, editarCategoria, eliminarCategoria,
