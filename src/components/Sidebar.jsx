@@ -1,6 +1,8 @@
+import { useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { useAuth } from '../context/AuthContext';
+import { useNotificaciones } from '../context/NotificacionesContext';
 
 const Icon = ({ path, className = 'w-5 h-5' }) => (
   <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.8}>
@@ -54,10 +56,56 @@ const NAV_ITEMS = [
   },
 ];
 
+// ── Panel de notificaciones ─────────────────────────────────────────────────
+function NotifPanel({ notificaciones, noLeidas, marcarLeida, marcarTodasLeidas, onClose, onGoTo }) {
+  return (
+    <div className="absolute left-full top-0 ml-2 w-80 max-h-[70vh] bg-white rounded-xl shadow-2xl border border-gray-200 z-50 flex flex-col overflow-hidden">
+      <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100 bg-slate-50">
+        <span className="text-sm font-bold text-slate-800">Notificaciones</span>
+        <div className="flex items-center gap-2">
+          {noLeidas > 0 && (
+            <button onClick={marcarTodasLeidas} className="text-xs text-accent hover:underline font-medium">Marcar todas</button>
+          )}
+          <button onClick={onClose} className="p-1 rounded hover:bg-slate-200 transition">
+            <svg className="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
+          </button>
+        </div>
+      </div>
+      <div className="flex-1 overflow-y-auto">
+        {notificaciones.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-10 text-slate-400">
+            <svg className="w-10 h-10 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" /></svg>
+            <span className="text-sm">Sin notificaciones</span>
+          </div>
+        ) : (
+          notificaciones.map((n) => (
+            <button
+              key={n.id}
+              onClick={() => { marcarLeida(n.id); onGoTo(n.solicitudId); }}
+              className={`w-full text-left px-4 py-3 border-b border-gray-50 hover:bg-slate-50 transition ${!n.leida ? 'bg-red-50/60' : ''}`}
+            >
+              <div className="flex items-start gap-2">
+                {!n.leida && <span className="w-2 h-2 rounded-full bg-accent mt-1.5 flex-shrink-0" />}
+                <div className="min-w-0 flex-1">
+                  <p className={`text-xs font-semibold truncate ${!n.leida ? 'text-slate-800' : 'text-slate-500'}`}>{n.titulo}</p>
+                  <p className="text-xs text-slate-500 truncate">{n.mensaje}</p>
+                  <p className="text-[10px] text-slate-400 mt-0.5">{new Date(n.fecha).toLocaleTimeString('es-GT', { hour: '2-digit', minute: '2-digit' })}</p>
+                </div>
+              </div>
+            </button>
+          ))
+        )}
+      </div>
+    </div>
+  );
+}
+
 export default function Sidebar({ open, onToggle, isOverlay }) {
   const location = useLocation();
   const navigate = useNavigate();
-  const { user, logout } = useAuth();
+  const { user, logout, esAdmin } = useAuth();
+  const { notificaciones, noLeidas, marcarLeida, marcarTodasLeidas } = useNotificaciones();
+  const [showNotif, setShowNotif] = useState(false);
 
   const rol = user?.rol ?? 'admin';
 
@@ -114,6 +162,36 @@ export default function Sidebar({ open, onToggle, isOverlay }) {
           </button>
         )}
       </div>
+
+      {/* Notification bell — solo admin */}
+      {esAdmin && (open || isOverlay) && (
+        <div className="relative px-2 pt-3">
+          <button
+            onClick={() => setShowNotif(!showNotif)}
+            className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-300 hover:bg-slate-700 hover:text-white transition-colors relative"
+          >
+            <svg className="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.8}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+            </svg>
+            <span className="text-sm font-medium">Notificaciones</span>
+            {noLeidas > 0 && (
+              <span className="absolute top-1.5 left-8 min-w-[18px] h-[18px] flex items-center justify-center rounded-full bg-accent text-white text-[10px] font-bold px-1 animate-pulse">
+                {noLeidas > 9 ? '9+' : noLeidas}
+              </span>
+            )}
+          </button>
+          {showNotif && (
+            <NotifPanel
+              notificaciones={notificaciones}
+              noLeidas={noLeidas}
+              marcarLeida={marcarLeida}
+              marcarTodasLeidas={marcarTodasLeidas}
+              onClose={() => setShowNotif(false)}
+              onGoTo={(id) => { setShowNotif(false); navigate(`/solicitudes`); }}
+            />
+          )}
+        </div>
+      )}
 
       {/* Navigation */}
       <nav className="flex-1 py-4 px-2 space-y-1 overflow-y-auto">

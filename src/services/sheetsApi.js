@@ -1,6 +1,6 @@
 // ── Google Apps Script Web App — cliente fetch v2 ─────────────────────────
 const BASE_URL =
-  'https://script.google.com/macros/s/AKfycbyOtWjrfv1sBfrg7LZtpzdwPrjDpMeZWPWNbF00tiIy_DaM5KKt_ahycdNE-tLsy7PT/exec';
+  'https://script.google.com/macros/s/AKfycbySAdeeNuPfVMhvnJEFuOYhPELVJiNhB_EOkhnVK5IFAXgRV8lZgK9z5EJA9LVndBe4/exec';
 
 // ── helpers internos ──────────────────────────────────────────────────────
 

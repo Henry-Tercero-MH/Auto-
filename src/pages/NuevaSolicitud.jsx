@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import toast from 'react-hot-toast';
 import logo from '../imagenes/logoMecanica.png';
-import { formatQ } from '../data/servicios';
+import { formatQ, CategoryIcon } from '../data/servicios';
 import { useCatalogos } from '../context/CatalogosContext';
 import { useSolicitudes } from '../context/SolicitudesContext';
 import imgSuperior from '../imagenes/vista superior.png';
@@ -1063,7 +1063,7 @@ export default function NuevaSolicitud() {
                     return (
                       <details key={cat.categoria} className="group">
                         <summary className="flex items-center gap-2 cursor-pointer text-sm font-semibold text-primary select-none py-1.5 px-2 rounded-lg hover:bg-slate-100 transition">
-                          <span>{cat.icon}</span>
+                          <CategoryIcon name={cat.icon} className="w-4 h-4" />
                           <span>{cat.categoria}</span>
                           <span className="ml-auto text-xs text-slate-400 group-open:hidden">{selCount > 0 ? `${selCount} sel.` : ''}</span>
                           <svg className="w-4 h-4 text-slate-400 transition-transform group-open:rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" /></svg>

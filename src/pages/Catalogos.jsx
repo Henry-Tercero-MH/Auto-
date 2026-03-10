@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react';
 import { useCatalogos } from '../context/CatalogosContext';
-import { formatQ } from '../data/servicios';
+import { formatQ, CategoryIcon, ICON_MAP } from '../data/servicios';
 import toast from 'react-hot-toast';
 
 /* ═══════════════════════════════════════════════════════════════════════════════
@@ -388,7 +388,7 @@ function TabServicios() {
             <div key={cat.categoria} className="bg-white rounded-lg border border-slate-200 overflow-hidden">
               <div className="flex items-center justify-between px-4 py-2.5 cursor-pointer hover:bg-slate-50 transition-colors" onClick={() => setCatAbierta(isOpen ? null : cat.categoria)}>
                 <div className="flex items-center gap-3">
-                  <div className="w-7 h-7 rounded bg-primary/10 flex items-center justify-center flex-shrink-0 text-[13px]">{cat.icon}</div>
+                  <div className="w-7 h-7 rounded bg-primary/10 flex items-center justify-center flex-shrink-0"><CategoryIcon name={cat.icon} className="w-4 h-4 text-primary" /></div>
                   <span className="text-[13px] font-semibold text-slate-800">{cat.categoria}</span>
                   <span className="text-[11px] font-medium text-slate-400 bg-slate-100 px-1.5 py-0.5 rounded">{cat.servicios.length}</span>
                 </div>
@@ -450,8 +450,14 @@ function TabServicios() {
 
       <Modal open={modal === 'cat'} onClose={() => setModal(null)} title="Nueva categoría">
         <div className="space-y-4">
-          <div className="grid grid-cols-[64px_1fr] gap-3">
-            <div><label className={labelCls}>Icono</label><input className={`${inputCls} text-center`} placeholder="📋" maxLength={3} value={formCat.icon} onChange={(e) => setFormCat({ ...formCat, icon: e.target.value })} /></div>
+          <div className="grid grid-cols-[90px_1fr] gap-3">
+            <div>
+              <label className={labelCls}>Icono</label>
+              <select className={`${inputCls} text-center`} value={formCat.icon} onChange={(e) => setFormCat({ ...formCat, icon: e.target.value })}>
+                {Object.keys(ICON_MAP).map((k) => <option key={k} value={k}>{k}</option>)}
+              </select>
+              <div className="flex justify-center mt-1.5"><CategoryIcon name={formCat.icon || 'ClipboardList'} className="w-6 h-6 text-primary" /></div>
+            </div>
             <div><label className={labelCls}>Nombre *</label><input className={inputCls} placeholder="Ej: Mantenimiento General" value={formCat.nombre} onChange={(e) => setFormCat({ ...formCat, nombre: e.target.value })} autoFocus /></div>
           </div>
           <div><label className={labelCls}>Descripción</label><input className={inputCls} placeholder="Breve descripción (opcional)" value={formCat.descripcion} onChange={(e) => setFormCat({ ...formCat, descripcion: e.target.value })} /></div>
@@ -467,7 +473,7 @@ function TabServicios() {
           <div><label className={labelCls}>Categoría *</label>
             <select className={inputCls} value={formServ.categoria} onChange={(e) => setFormServ({ ...formServ, categoria: e.target.value })}>
               <option value="">Seleccionar…</option>
-              {servicios.map((c) => <option key={c.categoria} value={c.categoria}>{c.icon} {c.categoria}</option>)}
+              {servicios.map((c) => <option key={c.categoria} value={c.categoria}>{c.categoria}</option>)}
             </select>
           </div>
           <div><label className={labelCls}>Nombre del servicio *</label><input className={inputCls} placeholder="Ej: Cambio de aceite motor" value={formServ.nombre} onChange={(e) => setFormServ({ ...formServ, nombre: e.target.value })} /></div>

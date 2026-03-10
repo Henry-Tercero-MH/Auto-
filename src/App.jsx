@@ -1,6 +1,7 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { SolicitudesProvider } from './context/SolicitudesContext';
+import { NotificacionesProvider } from './context/NotificacionesContext';
 import Layout from './components/Layout';
 import Login from './pages/Login';
 import Home from './pages/Home';
@@ -57,9 +58,11 @@ export default function App() {
     <AuthProvider>
       <SolicitudesProvider>
         <CatalogosProvider>
-          <Router>
-            <AppRoutes />
-          </Router>
+          <NotificacionesProvider>
+            <Router>
+              <AppRoutes />
+            </Router>
+          </NotificacionesProvider>
         </CatalogosProvider>
       </SolicitudesProvider>
     </AuthProvider>

@@ -86,14 +86,21 @@ export function CatalogosProvider({ children }) {
           }
           return; // mantiene estado vacío
         }
+        // Lookup nombre→categoría desde catálogo local (por si Sheets no tiene categoría)
+        const nombreToCat = {};
+        SERV_INICIAL.forEach(cat => {
+          (cat.servicios || []).forEach(sv => { nombreToCat[sv.nombre] = cat.categoria; });
+        });
+
         // Reconstruir categorías preservando metadata visual del catálogo local
         const catMap = {};
         data.forEach((s) => {
-          if (!catMap[s.categoria]) {
-            const local = SERV_INICIAL.find(c => c.categoria === s.categoria);
-            catMap[s.categoria] = {
-              categoria:   s.categoria,
-              icon:        local?.icon        || '📋',
+          const cat = s.categoria || nombreToCat[s.nombre] || 'Sin categoría';
+          if (!catMap[cat]) {
+            const local = SERV_INICIAL.find(c => c.categoria === cat);
+            catMap[cat] = {
+              categoria:   cat,
+              icon:        local?.icon        || 'ClipboardList',
               color:       local?.color       || 'border-gray-200 hover:border-gray-400',
               badgeColor:  local?.badgeColor  || 'bg-gray-100 text-gray-700',
               descripcion: local?.descripcion || '',
@@ -101,7 +108,7 @@ export function CatalogosProvider({ children }) {
               servicios:   [],
             };
           }
-          catMap[s.categoria].servicios.push({ nombre: s.nombre, precio: s.precio });
+          catMap[cat].servicios.push({ nombre: s.nombre, precio: s.precio });
         });
         console.log('[Servicios] catMap keys:', Object.keys(catMap));
         setServicios(Object.values(catMap));
@@ -194,7 +201,7 @@ export function CatalogosProvider({ children }) {
       ...prev,
       {
         categoria: categoria.nombre,
-        icon: categoria.icon || '📋',
+        icon: categoria.icon || 'ClipboardList',
         color: 'border-gray-200 hover:border-gray-400',
         badgeColor: 'bg-gray-100 text-gray-700',
         descripcion: categoria.descripcion || '',
