@@ -96,7 +96,7 @@ function Toolbar({ busqueda, onBusqueda, placeholder, count, onAdd, addLabel }) 
       {onAdd && (
         <button onClick={onAdd} className={btnPrimary}>
           <I d={icons.plus} className="w-4 h-4" />
-          {addLabel}
+          <span className="hidden sm:inline">{addLabel}</span>
         </button>
       )}
     </div>
@@ -139,18 +139,21 @@ function TabClientes() {
         <table className="w-full text-[13px]">
           <thead>
             <tr className="bg-slate-50 border-b border-slate-200">
-              <th className="text-left px-4 py-2.5 font-semibold text-slate-500 uppercase text-[11px] tracking-wider">Código</th>
+              <th className="text-left px-4 py-2.5 font-semibold text-slate-500 uppercase text-[11px] tracking-wider hidden sm:table-cell">Código</th>
               <th className="text-left px-4 py-2.5 font-semibold text-slate-500 uppercase text-[11px] tracking-wider">Nombre</th>
-              <th className="text-left px-4 py-2.5 font-semibold text-slate-500 uppercase text-[11px] tracking-wider">Teléfono</th>
+              <th className="text-left px-4 py-2.5 font-semibold text-slate-500 uppercase text-[11px] tracking-wider hidden sm:table-cell">Teléfono</th>
               <th className="px-4 py-2.5 w-24"></th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100">
             {filtrados.map((c) => (
               <tr key={c.id} className="hover:bg-slate-50/70 transition-colors">
-                <td className="px-4 py-2.5 font-mono text-[11px] text-slate-400">{c.id}</td>
-                <td className="px-4 py-2.5 font-medium text-slate-800">{c.nombre}</td>
-                <td className="px-4 py-2.5 text-slate-600">{c.telefono || '—'}</td>
+                <td className="px-4 py-2.5 font-mono text-[11px] text-slate-400 hidden sm:table-cell">{c.id}</td>
+                <td className="px-4 py-2.5 font-medium text-slate-800">
+                  <span>{c.nombre}</span>
+                  <span className="sm:hidden block text-[11px] text-slate-400">{c.telefono || ''}</span>
+                </td>
+                <td className="px-4 py-2.5 text-slate-600 hidden sm:table-cell">{c.telefono || '—'}</td>
                 <td className="px-4 py-2.5">
                   <div className="flex justify-end gap-1">
                     <button onClick={() => openEdit(c)} title="Editar" className="p-1.5 rounded hover:bg-blue-50 text-slate-400 hover:text-blue-600 transition"><I d={icons.edit} className="w-4 h-4" /></button>
@@ -232,7 +235,11 @@ function TabVehiculos() {
       <Toolbar busqueda={busqueda} onBusqueda={setBusqueda} placeholder="Buscar marca…" count={`${marcasList.length} marcas · ${totalModelos} modelos`} onAdd={openMarca} addLabel="Nueva marca" />
 
       <div className="flex justify-end">
-        <button onClick={() => openModelo('')} className={btnSecondary}><I d={icons.plus} className="w-4 h-4" />Agregar modelo</button>
+        <button onClick={() => openModelo('')} className={btnSecondary}>
+          <I d={icons.plus} className="w-4 h-4" />
+          <span className="hidden sm:inline">Agregar modelo</span>
+          <span className="sm:hidden">Modelo</span>
+        </button>
       </div>
 
       <div className="space-y-1">
@@ -329,13 +336,13 @@ function TabServicios() {
   const [confirm, setConfirm] = useState(null);
 
   const filteredCats = useMemo(
-    () => servicios.filter((c) =>
+    () => servicios.filter((c) => c?.categoria).filter((c) =>
       c.categoria.toLowerCase().includes(busqueda.toLowerCase()) ||
-      c.servicios.some((s) => s.nombre.toLowerCase().includes(busqueda.toLowerCase()))
+      c.servicios?.some((s) => s.nombre?.toLowerCase().includes(busqueda.toLowerCase()))
     ),
     [servicios, busqueda]
   );
-  const totalServicios = servicios.reduce((a, c) => a + c.servicios.length, 0);
+  const totalServicios = servicios.reduce((a, c) => a + (c.servicios?.length ?? 0), 0);
 
   const openCat = () => { setFormCat({ nombre: '', icon: '', descripcion: '' }); setModal('cat'); };
   const openServ = (preselect) => { setFormServ({ categoria: preselect || '', nombre: '', precio: '' }); setModal('serv'); };
@@ -367,7 +374,11 @@ function TabServicios() {
       <Toolbar busqueda={busqueda} onBusqueda={setBusqueda} placeholder="Buscar categoría o servicio…" count={`${filteredCats.length} categorías · ${totalServicios} servicios`} onAdd={openCat} addLabel="Nueva categoría" />
 
       <div className="flex justify-end">
-        <button onClick={() => openServ('')} className={btnSecondary}><I d={icons.plus} className="w-4 h-4" />Agregar servicio</button>
+        <button onClick={() => openServ('')} className={btnSecondary}>
+          <I d={icons.plus} className="w-4 h-4" />
+          <span className="hidden sm:inline">Agregar servicio</span>
+          <span className="sm:hidden">Servicio</span>
+        </button>
       </div>
 
       <div className="space-y-1">
@@ -537,27 +548,32 @@ function TabEstados() {
         <table className="w-full text-[13px]">
           <thead>
             <tr className="bg-slate-50 border-b border-slate-200">
-              <th className="text-left px-4 py-2.5 font-semibold text-slate-500 uppercase text-[11px] tracking-wider w-12">Orden</th>
+              <th className="text-left px-4 py-2.5 font-semibold text-slate-500 uppercase text-[11px] tracking-wider w-12 hidden sm:table-cell">Orden</th>
               <th className="text-left px-4 py-2.5 font-semibold text-slate-500 uppercase text-[11px] tracking-wider">Nombre</th>
-              <th className="text-left px-4 py-2.5 font-semibold text-slate-500 uppercase text-[11px] tracking-wider">Color</th>
-              <th className="text-left px-4 py-2.5 font-semibold text-slate-500 uppercase text-[11px] tracking-wider">Timeline</th>
-              <th className="text-left px-4 py-2.5 font-semibold text-slate-500 uppercase text-[11px] tracking-wider">Vista previa</th>
+              <th className="text-left px-4 py-2.5 font-semibold text-slate-500 uppercase text-[11px] tracking-wider hidden md:table-cell">Color</th>
+              <th className="text-left px-4 py-2.5 font-semibold text-slate-500 uppercase text-[11px] tracking-wider hidden sm:table-cell">Timeline</th>
+              <th className="text-left px-4 py-2.5 font-semibold text-slate-500 uppercase text-[11px] tracking-wider hidden lg:table-cell">Vista previa</th>
               <th className="px-4 py-2.5 w-24"></th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100">
             {estados.map((e, i) => (
               <tr key={e.id} className="hover:bg-slate-50/70 transition-colors">
-                <td className="px-4 py-2.5 font-mono text-[11px] text-slate-400 text-center">{i + 1}</td>
-                <td className="px-4 py-2.5 font-medium text-slate-800">{e.nombre}</td>
-                <td className="px-4 py-2.5">
+                <td className="px-4 py-2.5 font-mono text-[11px] text-slate-400 text-center hidden sm:table-cell">{i + 1}</td>
+                <td className="px-4 py-2.5 font-medium text-slate-800">
+                  <div className="flex items-center gap-2">
+                    <div className="w-3 h-3 rounded-full flex-shrink-0 md:hidden" style={{ backgroundColor: e.color }}></div>
+                    {e.nombre}
+                  </div>
+                </td>
+                <td className="px-4 py-2.5 hidden md:table-cell">
                   <div className="flex items-center gap-2">
                     <div className="w-4 h-4 rounded-full border border-slate-200" style={{ backgroundColor: e.color }}></div>
                     <span className="text-[11px] text-slate-400">{e.color}</span>
                   </div>
                 </td>
-                <td className="px-4 py-2.5 text-slate-600 text-[12px]">{e.timelineLabel}</td>
-                <td className="px-4 py-2.5">
+                <td className="px-4 py-2.5 text-slate-600 text-[12px] hidden sm:table-cell">{e.timelineLabel}</td>
+                <td className="px-4 py-2.5 hidden lg:table-cell">
                   <span className={`px-2.5 py-1 rounded-full text-[11px] font-semibold ${e.bgClass}`}>{e.nombre}</span>
                 </td>
                 <td className="px-4 py-2.5">
@@ -752,26 +768,26 @@ function TabTiposDano() {
         <table className="w-full text-[13px]">
           <thead>
             <tr className="bg-slate-50 border-b border-slate-200">
-              <th className="text-left px-4 py-2.5 font-semibold text-slate-500 uppercase text-[11px] tracking-wider">Clave</th>
+              <th className="text-left px-4 py-2.5 font-semibold text-slate-500 uppercase text-[11px] tracking-wider hidden sm:table-cell">Clave</th>
               <th className="text-left px-4 py-2.5 font-semibold text-slate-500 uppercase text-[11px] tracking-wider">Nombre</th>
-              <th className="text-left px-4 py-2.5 font-semibold text-slate-500 uppercase text-[11px] tracking-wider">Colores</th>
-              <th className="text-left px-4 py-2.5 font-semibold text-slate-500 uppercase text-[11px] tracking-wider">Vista previa</th>
+              <th className="text-left px-4 py-2.5 font-semibold text-slate-500 uppercase text-[11px] tracking-wider hidden md:table-cell">Colores</th>
+              <th className="text-left px-4 py-2.5 font-semibold text-slate-500 uppercase text-[11px] tracking-wider hidden sm:table-cell">Vista previa</th>
               <th className="px-4 py-2.5 w-24"></th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100">
             {tiposDano.map((t) => (
               <tr key={t.id} className="hover:bg-slate-50/70 transition-colors">
-                <td className="px-4 py-2.5 font-mono text-[11px] text-slate-400">{t.clave}</td>
+                <td className="px-4 py-2.5 font-mono text-[11px] text-slate-400 hidden sm:table-cell">{t.clave}</td>
                 <td className="px-4 py-2.5 font-medium text-slate-800">{t.label}</td>
-                <td className="px-4 py-2.5">
+                <td className="px-4 py-2.5 hidden md:table-cell">
                   <div className="flex items-center gap-1.5">
                     <div className="w-5 h-5 rounded border border-slate-200" style={{ backgroundColor: t.fill }} title="Fill"></div>
                     <div className="w-5 h-5 rounded border border-slate-200" style={{ backgroundColor: t.stroke }} title="Stroke"></div>
                     <div className="w-5 h-5 rounded-full border border-slate-200" style={{ backgroundColor: t.dot }} title="Dot"></div>
                   </div>
                 </td>
-                <td className="px-4 py-2.5">
+                <td className="px-4 py-2.5 hidden sm:table-cell">
                   <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-semibold" style={{ backgroundColor: t.fill, color: t.stroke, border: `1px solid ${t.stroke}` }}>
                     <div className="w-2 h-2 rounded-full" style={{ backgroundColor: t.dot }}></div>
                     {t.label}
@@ -935,7 +951,7 @@ export default function Catalogos() {
 
   const totalMarcas  = Object.keys(marcas).length;
   const totalModelos = Object.values(marcas).reduce((a, m) => a + Object.keys(m).length, 0);
-  const totalServ    = servicios.reduce((a, c) => a + c.servicios.length, 0);
+  const totalServ    = servicios.reduce((a, c) => a + (c.servicios?.length ?? 0), 0);
   const kpis = [
     { label: 'Clientes',  value: clientes.length,  iconPath: icons.users  },
     { label: 'Marcas',    value: totalMarcas,       iconPath: icons.car    },

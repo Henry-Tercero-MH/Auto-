@@ -57,6 +57,19 @@ export const api = {
   editarServicio:   (id, datos) => post({ accion: 'editarServicio',   id, datos }),
   eliminarServicio: (id)        => post({ accion: 'eliminarServicio', id }),
 
+  // Sube todas las categorías+servicios en lotes de 5 (primera carga)
+  sincronizarCatalogoServicios: async (categorias) => {
+    const planos = categorias.flatMap(cat =>
+      cat.servicios.map(s => ({ nombre: s.nombre, precio: s.precio, categoria: cat.categoria }))
+    );
+    const TAM = 5;
+    for (let i = 0; i < planos.length; i += TAM) {
+      await Promise.all(
+        planos.slice(i, i + TAM).map(s => post({ accion: 'crearServicio', datos: s }))
+      );
+    }
+  },
+
   // ── Marcas ────────────────────────────────────────────────────────────
   getMarcas: () => get('marcas'),
 

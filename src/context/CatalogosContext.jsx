@@ -29,22 +29,6 @@ const CONFIG_NEGOCIO_INICIAL = {
   slogan:    'Servicio automotriz profesional',
 };
 
-// ── Datos demo usados como fallback cuando Sheets no responde ──────────────
-const CLIENTES_DEMO = [
-  { id: 'C001', nombre: 'Carlos Medina',  telefono: '555-1001' },
-  { id: 'C002', nombre: 'María López',    telefono: '555-1002' },
-  { id: 'C003', nombre: 'Roberto García', telefono: '555-1003' },
-  { id: 'C004', nombre: 'Ana Torres',     telefono: '555-1004' },
-  { id: 'C005', nombre: 'Luis Ramírez',   telefono: '555-1005' },
-];
-
-const MECANICOS_DEMO = [
-  { id: 'M001', nombre: 'Pedro Hernández',   especialidad: 'Motor y transmisión', telefono: '555-2001', activo: true },
-  { id: 'M002', nombre: 'Juan Carlos López', especialidad: 'Frenos y suspensión', telefono: '555-2002', activo: true },
-  { id: 'M003', nombre: 'Marco Tulio Reyes', especialidad: 'Sistema eléctrico',   telefono: '555-2003', activo: true },
-  { id: 'M004', nombre: 'José Alfredo Ruiz', especialidad: 'Tren delantero',      telefono: '555-2004', activo: true },
-];
-
 // ── Provider ──────────────────────────────────────────────────────────────
 export function CatalogosProvider({ children }) {
   // ── Estado local: algunos datos siguen siendo locales (estados, tiposDano, marcas)
@@ -53,17 +37,17 @@ export function CatalogosProvider({ children }) {
   const [configNegocio,  setConfigNegocio]  = useState(CONFIG_NEGOCIO_INICIAL);
 
   // ── Estado conectado a Sheets ──────────────────────────────────────────
-  const [clientes,  setClientes]  = useState(CLIENTES_DEMO);
-  const [mecanicos, setMecanicos] = useState(MECANICOS_DEMO);
+  const [clientes,  setClientes]  = useState([]);
+  const [mecanicos, setMecanicos] = useState([]);
   const [marcas,    setMarcas]    = useState(MARCAS_INICIAL);
-  const [servicios, setServicios] = useState(SERV_INICIAL);
+  const [servicios, setServicios] = useState([]);
 
   // ── Carga inicial desde Google Sheets ─────────────────────────────────
   useEffect(() => {
     // Clientes
     api.getClientes()
       .then((data) => { if (data?.length) setClientes(data); })
-      .catch(() => {}); // fallback: mantiene CLIENTES_DEMO
+      .catch(() => {});
 
     // Mecánicos
     api.getMecanicos()
@@ -88,30 +72,41 @@ export function CatalogosProvider({ children }) {
       })
       .catch(() => {});
 
-    // Servicios desde Sheets (hoja plana) — si tiene datos los usa,
-    // si no, mantiene los de servicios.js
+    // Servicios desde Sheets — si está vacío se auto-sube el catálogo local (primera vez)
+    const SYNC_KEY = 'drivebot_servicios_sync';
     api.getServicios()
       .then((data) => {
-        if (!data?.length) return;
-        // Reconstruir estructura por categorías
+        console.log('[Servicios] data recibida:', data);
+        console.log('[Servicios] primer item completo:', JSON.stringify(data[0]));
+        if (!data?.length) {
+          // Auto-subir catálogo si aún no se ha hecho
+          if (!localStorage.getItem(SYNC_KEY)) {
+            localStorage.setItem(SYNC_KEY, '1');
+            api.sincronizarCatalogoServicios(SERV_INICIAL).catch(() => {});
+          }
+          return; // mantiene estado vacío
+        }
+        // Reconstruir categorías preservando metadata visual del catálogo local
         const catMap = {};
         data.forEach((s) => {
           if (!catMap[s.categoria]) {
+            const local = SERV_INICIAL.find(c => c.categoria === s.categoria);
             catMap[s.categoria] = {
-              categoria: s.categoria,
-              icon: '📋',
-              color: 'border-gray-200 hover:border-gray-400',
-              badgeColor: 'bg-gray-100 text-gray-700',
-              descripcion: '',
-              duracion: '',
-              servicios: [],
+              categoria:   s.categoria,
+              icon:        local?.icon        || '📋',
+              color:       local?.color       || 'border-gray-200 hover:border-gray-400',
+              badgeColor:  local?.badgeColor  || 'bg-gray-100 text-gray-700',
+              descripcion: local?.descripcion || '',
+              duracion:    local?.duracion    || '',
+              servicios:   [],
             };
           }
           catMap[s.categoria].servicios.push({ nombre: s.nombre, precio: s.precio });
         });
+        console.log('[Servicios] catMap keys:', Object.keys(catMap));
         setServicios(Object.values(catMap));
       })
-      .catch(() => {});
+      .catch((err) => console.error('[Servicios] error:', err));
   }, []);
 
   // ─────────────────────────────────────────────────────────────────────
@@ -302,11 +297,11 @@ export function CatalogosProvider({ children }) {
   // RESET
   // ─────────────────────────────────────────────────────────────────────
   const resetCatalogos = useCallback(() => {
-    setClientes(CLIENTES_DEMO);
+    setClientes([]);
     setMarcas(MARCAS_INICIAL);
-    setServicios(SERV_INICIAL);
+    setServicios([]);
     setEstados(ESTADOS_INICIAL);
-    setMecanicos(MECANICOS_DEMO);
+    setMecanicos([]);
     setTiposDano(TIPOS_DANO_INICIAL);
     setConfigNegocio(CONFIG_NEGOCIO_INICIAL);
   }, []);

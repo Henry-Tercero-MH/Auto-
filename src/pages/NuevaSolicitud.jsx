@@ -636,14 +636,78 @@ function loadDraft() {
   } catch { return null; }
 }
 
+// ── ClienteCombobox ──────────────────────────────────────────────────────────
+function ClienteCombobox({ clientes, onSelect }) {
+  const [query, setQuery] = useState('');
+  const [open, setOpen]   = useState(false);
+  const ref = useRef(null);
+
+  useEffect(() => {
+    const handler = (e) => { if (ref.current && !ref.current.contains(e.target)) setOpen(false); };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, []);
+
+  const filtered = query.trim()
+    ? clientes.filter(c =>
+        c.nombre.toLowerCase().includes(query.toLowerCase()) ||
+        c.telefono.includes(query)
+      )
+    : clientes;
+
+  const select = (c) => {
+    onSelect(c);
+    setQuery('');
+    setOpen(false);
+  };
+
+  return (
+    <div ref={ref} className="relative">
+      <div className="relative">
+        <svg className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+          <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-4.35-4.35M17 11A6 6 0 1 1 5 11a6 6 0 0 1 12 0z" />
+        </svg>
+        <input
+          type="text"
+          autoComplete="off"
+          placeholder="Buscar por nombre o teléfono…"
+          value={query}
+          onFocus={() => setOpen(true)}
+          onChange={e => { setQuery(e.target.value); setOpen(true); }}
+          className="w-full rounded-lg pl-9 pr-3 py-2.5 bg-slate-50 border border-gray-200 text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-accent focus:border-accent transition"
+        />
+      </div>
+      {open && (
+        <ul className="absolute z-50 mt-1 w-full bg-white border border-gray-200 rounded-lg shadow-lg max-h-52 overflow-y-auto">
+          {filtered.length === 0 ? (
+            <li className="px-3 py-2 text-sm text-gray-400 italic">Sin resultados</li>
+          ) : (
+            filtered.map(c => (
+              <li
+                key={c.id}
+                onMouseDown={() => select(c)}
+                className="flex items-center justify-between px-3 py-2 text-sm cursor-pointer hover:bg-slate-100"
+              >
+                <span className="font-medium text-gray-800">{c.nombre}</span>
+                <span className="text-xs text-gray-400 ml-2">{c.telefono}</span>
+              </li>
+            ))
+          )}
+        </ul>
+      )}
+    </div>
+  );
+}
+
 export default function NuevaSolicitud() {
-  const { marcas: MARCAS, servicios: CATEGORIAS_SERVICIOS, preciosMap: PRECIOS, tiposDano, mecanicos } = useCatalogos();
+  const { marcas: MARCAS, servicios: CATEGORIAS_SERVICIOS, preciosMap: PRECIOS, tiposDano, mecanicos, clientes, agregarCliente } = useCatalogos();
   const { agregarSolicitud } = useSolicitudes();
   const draft = loadDraft();
   const [step, setStep] = useState(() => draft?.step ?? 1);
   const [form, setForm] = useState(() => draft?.form ?? initialState);
   const [errores, setErrores] = useState({});
   const [ordenNum, setOrdenNum] = useState(() => draft?.ordenNum ?? genOrden());
+  const [clienteSeleccionado, setClienteSeleccionado] = useState(false);
 
   // Persistir borrador en cada cambio
   useEffect(() => {
@@ -680,7 +744,11 @@ export default function NuevaSolicitud() {
     const e = {};
     if (paso === 2) {
       if (!form.nombre.trim()) e.nombre = 'Nombre requerido';
-      if (!form.telefono.trim()) e.telefono = 'Teléfono requerido';
+      if (!form.telefono.trim()) {
+        e.telefono = 'Teléfono requerido';
+      } else if (!/^\d{8}$/.test(form.telefono.trim())) {
+        e.telefono = 'El teléfono debe tener exactamente 8 dígitos';
+      }
     }
     if (paso === 3) {
       if (!form.marca) e.marca = 'Marca requerida';
@@ -707,6 +775,44 @@ export default function NuevaSolicitud() {
     const e = validarPaso(step);
     if (Object.keys(e).length > 0) { setErrores(e); return; }
     setErrores({});
+
+    if (step === 2 && !clienteSeleccionado) {
+      const existe = clientes.some(
+        c => c.nombre.trim().toLowerCase() === form.nombre.trim().toLowerCase()
+      );
+      if (!existe) {
+        toast((t) => (
+          <div className="flex flex-col gap-3" style={{ minWidth: 240 }}>
+            <div>
+              <p className="font-bold text-slate-800 text-sm">¿Guardar como nuevo cliente?</p>
+              <p className="text-xs text-slate-500 mt-0.5">{form.nombre.trim()} · {form.telefono.trim()}</p>
+            </div>
+            <div className="flex gap-2">
+              <button
+                onMouseDown={() => {
+                  agregarCliente({ nombre: form.nombre.trim(), telefono: form.telefono.trim() });
+                  toast.dismiss(t.id);
+                  toast.success('Cliente guardado en el catálogo');
+                  setClienteSeleccionado(true);
+                  setStep(s => s + 1);
+                }}
+                className="flex-1 bg-primary text-white text-xs font-semibold py-1.5 px-3 rounded-lg hover:bg-[#162048] transition"
+              >
+                Sí, guardar
+              </button>
+              <button
+                onMouseDown={() => { toast.dismiss(t.id); setStep(s => s + 1); }}
+                className="flex-1 border border-gray-200 text-slate-600 text-xs font-semibold py-1.5 px-3 rounded-lg hover:bg-slate-50 transition"
+              >
+                Solo esta vez
+              </button>
+            </div>
+          </div>
+        ), { duration: Infinity });
+        return;
+      }
+    }
+
     setStep((s) => s + 1);
   };
 
@@ -767,18 +873,74 @@ export default function NuevaSolicitud() {
 
           {/* ── PASO 2: Cliente ── */}
           {step === 2 && (
-            <div className="px-6 sm:px-8 py-7 space-y-4">
-              <h3 className="text-xs font-semibold uppercase tracking-widest text-accent mb-4">Datos del cliente</h3>
+            <div className="px-6 sm:px-8 py-7 space-y-5">
+              <h3 className="text-xs font-semibold uppercase tracking-widest text-accent">Datos del cliente</h3>
+
+              {/* Búsqueda de cliente existente */}
+              {clientes.length > 0 && (
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">
+                    Buscar cliente existente
+                  </label>
+                  <ClienteCombobox
+                    clientes={clientes}
+                    onSelect={(c) => {
+                      setForm(p => ({ ...p, nombre: c.nombre, telefono: c.telefono }));
+                      setClienteSeleccionado(true);
+                      setErrores({});
+                    }}
+                  />
+                  {clienteSeleccionado && (
+                    <p className="mt-1.5 text-xs text-green-600 font-medium flex items-center gap-1">
+                      <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2.5}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                      </svg>
+                      Cliente cargado del catálogo
+                    </p>
+                  )}
+                </div>
+              )}
+
+              {/* Separador */}
+              {clientes.length > 0 && (
+                <div className="flex items-center gap-3">
+                  <div className="flex-1 border-t border-slate-200" />
+                  <span className="text-xs text-slate-400 whitespace-nowrap">o ingresa manualmente</span>
+                  <div className="flex-1 border-t border-slate-200" />
+                </div>
+              )}
+
+              {/* Campos manuales */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="sm:col-span-2">
                   <label htmlFor="nombre" className="block text-sm font-medium text-slate-700 mb-1">Nombre completo</label>
-                  <input id="nombre" name="nombre" type="text" value={form.nombre} onChange={handleChange} placeholder="Juan García" className={inputCls(errores.nombre)} />
+                  <input
+                    id="nombre" name="nombre" type="text"
+                    value={form.nombre}
+                    onChange={e => { handleChange(e); setClienteSeleccionado(false); }}
+                    placeholder="Juan García"
+                    className={inputCls(errores.nombre)}
+                  />
                   {errores.nombre && <p className="mt-1 text-xs text-red-500">{errores.nombre}</p>}
                 </div>
                 <div className="sm:col-span-2">
                   <label htmlFor="telefono" className="block text-sm font-medium text-slate-700 mb-1">Teléfono</label>
-                  <input id="telefono" name="telefono" type="tel" value={form.telefono} onChange={handleChange} placeholder="+52 000 000 0000" className={inputCls(errores.telefono)} />
-                  {errores.telefono && <p className="mt-1 text-xs text-red-500">{errores.telefono}</p>}
+                  <input
+                    id="telefono" name="telefono" type="number"
+                    value={form.telefono}
+                    onChange={e => {
+                      const val = e.target.value.replace(/\D/g, '').slice(0, 8);
+                      setForm(p => ({ ...p, telefono: val }));
+                      setClienteSeleccionado(false);
+                      if (errores.telefono) setErrores(p => ({ ...p, telefono: '' }));
+                    }}
+                    placeholder="12345678"
+                    className={inputCls(errores.telefono)}
+                  />
+                  {errores.telefono
+                    ? <p className="mt-1 text-xs text-red-500">{errores.telefono}</p>
+                    : <p className="mt-1 text-xs text-slate-400">8 dígitos sin espacios ni guiones</p>
+                  }
                 </div>
               </div>
             </div>
