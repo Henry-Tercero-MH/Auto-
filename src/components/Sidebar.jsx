@@ -1,8 +1,6 @@
-import { useState, useRef, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { useAuth } from '../context/AuthContext';
-import { useNotificaciones } from '../context/NotificacionesContext';
 
 const Icon = ({ path, className = 'w-5 h-5' }) => (
   <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.8}>
@@ -56,136 +54,10 @@ const NAV_ITEMS = [
   },
 ];
 
-// ── Panel de notificaciones ─────────────────────────────────────────────────
-function NotifPanel({ notificaciones, noLeidas, toggleLeida, marcarTodasLeidas, marcarTodasNoLeidas, eliminarNotificacion, limpiarNotificaciones, onClose, onGoTo }) {
-  const panelRef = useRef(null);
-
-  // Cerrar al hacer click fuera
-  useEffect(() => {
-    const handler = (e) => {
-      if (panelRef.current && !panelRef.current.contains(e.target)) onClose();
-    };
-    document.addEventListener('mousedown', handler);
-    return () => document.removeEventListener('mousedown', handler);
-  }, [onClose]);
-
-  const totalLeidas = notificaciones.filter((n) => n.leida).length;
-
-  return (
-    <div ref={panelRef} className="absolute left-full top-0 ml-2 w-[340px] max-h-[75vh] bg-white rounded-xl shadow-2xl border border-gray-200 z-50 flex flex-col overflow-hidden">
-      {/* Header */}
-      <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100 bg-slate-50">
-        <div className="flex items-center gap-2">
-          <span className="text-sm font-bold text-slate-800">Notificaciones</span>
-          {noLeidas > 0 && (
-            <span className="min-w-[20px] h-5 flex items-center justify-center rounded-full bg-accent text-white text-[10px] font-bold px-1.5">
-              {noLeidas}
-            </span>
-          )}
-        </div>
-        <button onClick={onClose} className="p-1 rounded hover:bg-slate-200 transition">
-          <svg className="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
-        </button>
-      </div>
-
-      {/* Actions bar */}
-      {notificaciones.length > 0 && (
-        <div className="flex items-center gap-1 px-3 py-2 border-b border-gray-100 bg-gray-50/50">
-          {noLeidas > 0 ? (
-            <button onClick={marcarTodasLeidas} className="text-[11px] text-blue-600 hover:text-blue-800 font-medium px-2 py-1 rounded hover:bg-blue-50 transition">
-              ✓ Marcar todas leídas
-            </button>
-          ) : (
-            <button onClick={marcarTodasNoLeidas} className="text-[11px] text-slate-500 hover:text-slate-700 font-medium px-2 py-1 rounded hover:bg-slate-100 transition">
-              ○ Marcar todas no leídas
-            </button>
-          )}
-          <span className="text-slate-300">·</span>
-          <button onClick={() => { limpiarNotificaciones(); onClose(); }} className="text-[11px] text-red-500 hover:text-red-700 font-medium px-2 py-1 rounded hover:bg-red-50 transition">
-            Limpiar todo
-          </button>
-        </div>
-      )}
-
-      {/* List */}
-      <div className="flex-1 overflow-y-auto">
-        {notificaciones.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-12 text-slate-400">
-            <svg className="w-12 h-12 mb-3 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.2}><path strokeLinecap="round" strokeLinejoin="round" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" /></svg>
-            <span className="text-sm font-medium">Sin notificaciones</span>
-            <span className="text-xs text-slate-300 mt-1">Las nuevas solicitudes aparecerán aquí</span>
-          </div>
-        ) : (
-          notificaciones.map((n) => (
-            <div
-              key={n.id}
-              className={`group flex items-start gap-2 px-4 py-3 border-b border-gray-50 hover:bg-slate-50/80 transition ${
-                !n.leida ? 'bg-blue-50/40' : ''
-              }`}
-            >
-              {/* Dot indicador */}
-              <button
-                onClick={() => toggleLeida(n.id)}
-                title={n.leida ? 'Marcar como no leída' : 'Marcar como leída'}
-                className="mt-1 flex-shrink-0 p-0.5"
-              >
-                <span className={`block w-2.5 h-2.5 rounded-full border-2 transition ${
-                  !n.leida
-                    ? 'bg-accent border-accent'
-                    : 'bg-transparent border-slate-300 group-hover:border-slate-400'
-                }`} />
-              </button>
-
-              {/* Content — click to navigate */}
-              <button
-                onClick={() => onGoTo(n.solicitudId)}
-                className="flex-1 min-w-0 text-left"
-              >
-                <p className={`text-xs font-semibold truncate ${
-                  !n.leida ? 'text-slate-800' : 'text-slate-500'
-                }`}>{n.titulo}</p>
-                <p className="text-xs text-slate-500 truncate">{n.mensaje}</p>
-                {n.detalle && <p className="text-[10px] text-slate-400 truncate mt-0.5">{n.detalle}</p>}
-                <p className="text-[10px] text-slate-400 mt-0.5">
-                  {new Date(n.fecha).toLocaleString('es-GT', {
-                    day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit',
-                  })}
-                </p>
-              </button>
-
-              {/* Delete */}
-              <button
-                onClick={() => eliminarNotificacion(n.id)}
-                title="Eliminar"
-                className="opacity-0 group-hover:opacity-100 p-1 rounded hover:bg-red-50 text-slate-400 hover:text-red-500 transition flex-shrink-0 mt-0.5"
-              >
-                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                </svg>
-              </button>
-            </div>
-          ))
-        )}
-      </div>
-
-      {/* Footer */}
-      {notificaciones.length > 0 && (
-        <div className="px-4 py-2 border-t border-gray-100 bg-slate-50">
-          <p className="text-[10px] text-slate-400 text-center">
-            {notificaciones.length} notificación{notificaciones.length !== 1 ? 'es' : ''} · {totalLeidas} leída{totalLeidas !== 1 ? 's' : ''}
-          </p>
-        </div>
-      )}
-    </div>
-  );
-}
-
 export default function Sidebar({ open, onToggle, isOverlay }) {
   const location = useLocation();
   const navigate = useNavigate();
-  const { user, logout, esAdmin } = useAuth();
-  const { notificaciones, noLeidas, toggleLeida, marcarTodasLeidas, marcarTodasNoLeidas, eliminarNotificacion, limpiarNotificaciones } = useNotificaciones();
-  const [showNotif, setShowNotif] = useState(false);
+  const { user, logout } = useAuth();
 
   const rol = user?.rol ?? 'admin';
 
@@ -242,39 +114,6 @@ export default function Sidebar({ open, onToggle, isOverlay }) {
           </button>
         )}
       </div>
-
-      {/* Notification bell — solo admin */}
-      {esAdmin && (open || isOverlay) && (
-        <div className="relative px-2 pt-3">
-          <button
-            onClick={() => setShowNotif(!showNotif)}
-            className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-300 hover:bg-slate-700 hover:text-white transition-colors relative"
-          >
-            <svg className="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.8}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
-            </svg>
-            <span className="text-sm font-medium">Notificaciones</span>
-            {noLeidas > 0 && (
-              <span className="absolute top-1.5 left-8 min-w-[18px] h-[18px] flex items-center justify-center rounded-full bg-accent text-white text-[10px] font-bold px-1 animate-pulse">
-                {noLeidas > 9 ? '9+' : noLeidas}
-              </span>
-            )}
-          </button>
-          {showNotif && (
-            <NotifPanel
-              notificaciones={notificaciones}
-              noLeidas={noLeidas}
-              toggleLeida={toggleLeida}
-              marcarTodasLeidas={marcarTodasLeidas}
-              marcarTodasNoLeidas={marcarTodasNoLeidas}
-              eliminarNotificacion={eliminarNotificacion}
-              limpiarNotificaciones={limpiarNotificaciones}
-              onClose={() => setShowNotif(false)}
-              onGoTo={(id) => { setShowNotif(false); navigate('/solicitudes'); }}
-            />
-          )}
-        </div>
-      )}
 
       {/* Navigation */}
       <nav className="flex-1 py-4 px-2 space-y-1 overflow-y-auto">

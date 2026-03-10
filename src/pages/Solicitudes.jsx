@@ -36,11 +36,11 @@ export default function Solicitudes() {
       const q = busqueda.toLowerCase();
       const matchBusqueda =
         !q ||
-        s.cliente.toLowerCase().includes(q) ||
-        s.vehiculo.toLowerCase().includes(q) ||
-        s.placa.toLowerCase().includes(q) ||
-        s.servicio.toLowerCase().includes(q) ||
-        s.id.includes(q);
+        (s.cliente || '').toLowerCase().includes(q) ||
+        (s.vehiculo || '').toLowerCase().includes(q) ||
+        (s.placa || '').toLowerCase().includes(q) ||
+        (s.servicio || '').toLowerCase().includes(q) ||
+        (s.id || '').includes(q);
       return matchFiltro && matchBusqueda;
     });
   }, [solicitudes, filtro, busqueda, esMecanico, user]);
@@ -190,7 +190,7 @@ export default function Solicitudes() {
                               <svg className="w-3.5 h-3.5 text-primary flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
                                 <path strokeLinecap="round" strokeLinejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
                               </svg>
-                              <span className="truncate">{s.mecanico.name}</span>
+                              <span className="truncate">{s.mecanico?.name ?? s.mecanico?.nombre ?? 'Asignado'}</span>
                             </>
                           ) : (
                             <span className="text-amber-500 font-medium">Sin asignar</span>
@@ -268,9 +268,9 @@ export default function Solicitudes() {
                             {s.mecanico ? (
                               <div className="flex items-center gap-2">
                                 <div className="w-6 h-6 rounded-full bg-primary flex items-center justify-center text-white text-xs font-bold flex-shrink-0">
-                                  {s.mecanico.name.charAt(0)}
+                                  {(s.mecanico?.name ?? s.mecanico?.nombre ?? '?').charAt(0)}
                                 </div>
-                                <p className="font-semibold text-slate-800">{s.mecanico.name}</p>
+                                <p className="font-semibold text-slate-800">{s.mecanico?.name ?? s.mecanico?.nombre ?? 'Sin nombre'}</p>
                               </div>
                             ) : (
                               <p className="text-amber-600 font-medium text-sm">Sin asignar</p>
