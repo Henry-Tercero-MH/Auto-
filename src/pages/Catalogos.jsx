@@ -984,12 +984,13 @@ export default function Catalogos() {
       </div>
 
       {/* Tabs */}
-      <div className="border-b border-slate-200 overflow-x-auto">
-        <nav className="flex gap-0 -mb-px min-w-max">
+      <div className="border-b border-slate-200">
+        <nav className="flex gap-0 -mb-px">
           {TABS.map((t) => (
-            <button key={t.key} onClick={() => setTab(t.key)}
-              className={`flex items-center gap-2 px-4 py-2.5 text-[13px] font-semibold border-b-2 transition-colors whitespace-nowrap ${tab === t.key ? 'border-primary text-primary' : 'border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300'}`}>
-              <I d={t.iconPath} className="w-4 h-4" />{t.label}
+            <button key={t.key} onClick={() => setTab(t.key)} title={t.label}
+              className={`flex flex-1 sm:flex-none items-center justify-center sm:justify-start gap-0 sm:gap-2 px-2 sm:px-4 py-2.5 text-[13px] font-semibold border-b-2 transition-colors ${tab === t.key ? 'border-primary text-primary' : 'border-transparent text-slate-400 hover:text-slate-700 hover:border-slate-300'}`}>
+              <I d={t.iconPath} className="w-4 h-4 flex-shrink-0" />
+              <span className="hidden sm:inline whitespace-nowrap">{t.label}</span>
             </button>
           ))}
         </nav>
