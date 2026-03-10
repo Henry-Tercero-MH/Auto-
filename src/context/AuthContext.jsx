@@ -63,8 +63,6 @@ export function AuthProvider({ children }) {
           (u) => u.email === email && String(u.password) === String(password) && u.activo
         );
         if (found) {
-          const permitido = await verificarHorario();
-          if (!permitido) return 'horario';
           const u = { id: found.id, email, name: found.nombre, rol: found.rol };
           setUser(u);
           localStorage.setItem('drivebot_user', JSON.stringify(u));
@@ -86,20 +84,32 @@ export function AuthProvider({ children }) {
       if (!lista.length) {
         try {
           const data = await api.getMecanicos();
+          console.log('[Login Mec] data cruda desde Sheets:', data);
           lista = data.filter((m) => {
-            const activo = m.activo === true || m.activo === 'true' || m.activo === 1 || m.activo === '1';
+            const activo = m.activo == null || m.activo === true || m.activo === 'true' || m.activo === 1 || m.activo === '1' || String(m.activo).toUpperCase() === 'TRUE';
             return activo && m.pin;
           });
           if (lista.length) setMecanicosLogin(lista);
-        } catch {}
+        } catch (err) {
+          console.error('[Login Mec] error al obtener mecánicos:', err);
+        }
       }
 
-      const esActivoSheet = (m) => m.activo === true || m.activo === 'true' || m.activo === 1 || m.activo === '1';
+      console.log('[Login Mec] lista disponible:', lista);
+      console.log('[Login Mec] buscando nombre:', nombreLower, '| pin:', pin);
+      lista.forEach((m, i) => {
+        console.log(`  [${i}] nombre="${m.nombre}" activo=${m.activo} pin="${m.pin}"`);
+      });
+
+      const esActivoSheet = (m) =>
+        m.activo === true || m.activo === 'true' || m.activo === 1 || m.activo === '1'
+        || String(m.activo).toUpperCase() === 'TRUE';
       const mec = lista.find(
         (m) => (m.nombre || m.name || '').trim().toLowerCase() === nombreLower
           && String(m.pin).trim() === String(pin).trim()
           && esActivoSheet(m)
       );
+      console.log('[Login Mec] resultado find:', mec);
       if (mec) {
         const permitido = await verificarHorario();
         if (!permitido) return 'horario';
