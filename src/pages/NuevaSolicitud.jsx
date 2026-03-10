@@ -1,5 +1,6 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import toast from 'react-hot-toast';
+import { api } from '../services/sheetsApi';
 import logo from '../imagenes/logoMecanica.png';
 import { formatQ, CategoryIcon } from '../data/servicios';
 import { useCatalogos } from '../context/CatalogosContext';
@@ -127,6 +128,7 @@ const initialState = {
   observaciones: '',
   inspeccion: {},
   mecanico: '',
+  fotos: [],
 };
 
 // Las marcas y servicios ahora vienen del CatalogosContext
@@ -633,8 +635,106 @@ function loadDraft() {
   try {
     const raw = localStorage.getItem(DRAFT_KEY);
     if (!raw) return null;
-    return JSON.parse(raw);
+    const parsed = JSON.parse(raw);
+    // Merge con initialState para asegurar campos nuevos en borradores viejos
+    if (parsed?.form) parsed.form = { ...initialState, ...parsed.form };
+    return parsed;
   } catch { return null; }
+}
+
+// ── FotoUploader ─────────────────────────────────────────────────────────────
+function FotoUploader({ fotos = [], onChange }) {
+  const [subiendo, setSubiendo] = useState({});
+  const inputGaleriaRef = useRef(null);
+  const inputCamaraRef  = useRef(null);
+
+  const handleFiles = useCallback(async (files) => {
+    const nuevas = Array.from(files).filter(f => f.type.startsWith('image/'));
+    if (!nuevas.length) return;
+    for (const file of nuevas) {
+      const key = `${file.name}_${file.size}`;
+      setSubiendo(p => ({ ...p, [key]: true }));
+      try {
+        const { url } = await api.subirFoto(file);
+        onChange(prev => [...prev, { nombre: file.name, url }]);
+      } catch {
+        toast.error(`No se pudo subir ${file.name}`);
+      } finally {
+        setSubiendo(p => { const n = { ...p }; delete n[key]; return n; });
+      }
+    }
+  }, [onChange]);
+
+  const eliminar = (url) => onChange(prev => prev.filter(f => f.url !== url));
+
+  const haySubiendo = Object.keys(subiendo).length > 0;
+
+  return (
+    <div className="space-y-3">
+      {/* Botones de acción */}
+      <div className="grid grid-cols-2 gap-2">
+        {/* Tomar foto con cámara */}
+        <button
+          type="button"
+          onClick={() => inputCamaraRef.current?.click()}
+          disabled={haySubiendo}
+          className="flex items-center justify-center gap-2 border border-gray-200 bg-slate-50 rounded-xl px-3 py-3 text-sm font-medium text-slate-700 hover:border-accent hover:bg-red-50 hover:text-accent transition disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          <svg className="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.8}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M6.827 6.175A2.31 2.31 0 015.186 7.23c-.38.054-.757.112-1.134.175C2.999 7.58 2.25 8.507 2.25 9.574V18a2.25 2.25 0 002.25 2.25h15A2.25 2.25 0 0021.75 18V9.574c0-1.067-.75-1.994-1.802-2.169a47.865 47.865 0 00-1.134-.175 2.31 2.31 0 01-1.64-1.055l-.822-1.316a2.192 2.192 0 00-1.736-1.039 48.774 48.774 0 00-5.232 0 2.192 2.192 0 00-1.736 1.039l-.821 1.316z" />
+            <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 12.75a4.5 4.5 0 11-9 0 4.5 4.5 0 019 0zM18.75 10.5h.008v.008h-.008V10.5z" />
+          </svg>
+          Tomar foto
+        </button>
+
+        {/* Seleccionar de galería */}
+        <button
+          type="button"
+          onClick={() => inputGaleriaRef.current?.click()}
+          disabled={haySubiendo}
+          className="flex items-center justify-center gap-2 border border-gray-200 bg-slate-50 rounded-xl px-3 py-3 text-sm font-medium text-slate-700 hover:border-accent hover:bg-red-50 hover:text-accent transition disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          <svg className="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.8}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 15.75l5.159-5.159a2.25 2.25 0 013.182 0l5.159 5.159m-1.5-1.5l1.409-1.409a2.25 2.25 0 013.182 0l2.909 2.909m-18 3.75h16.5a1.5 1.5 0 001.5-1.5V6a1.5 1.5 0 00-1.5-1.5H3.75A1.5 1.5 0 002.25 6v12a1.5 1.5 0 001.5 1.5zm10.5-11.25h.008v.008h-.008V8.25zm.375 0a.375.375 0 11-.75 0 .375.375 0 01.75 0z" />
+          </svg>
+          Galería / Archivo
+        </button>
+      </div>
+
+      {/* Inputs ocultos */}
+      <input ref={inputCamaraRef}  type="file" accept="image/*" capture="environment" className="hidden"
+        onChange={e => { handleFiles(e.target.files); e.target.value = ''; }} />
+      <input ref={inputGaleriaRef} type="file" accept="image/*" multiple className="hidden"
+        onChange={e => { handleFiles(e.target.files); e.target.value = ''; }} />
+
+      {/* Estado de subida */}
+      {haySubiendo && (
+        <p className="text-xs text-accent font-semibold animate-pulse text-center">
+          Subiendo {Object.keys(subiendo).length} foto{Object.keys(subiendo).length > 1 ? 's' : ''}…
+        </p>
+      )}
+
+      {/* Miniaturas */}
+      {fotos.length > 0 && (
+        <div className="flex flex-wrap gap-2">
+          {fotos.map((f) => (
+            <div key={f.url} className="relative group w-16 h-16 rounded-lg overflow-hidden border border-gray-200 bg-slate-100 flex-shrink-0">
+              <img src={f.url} alt={f.nombre} className="w-full h-full object-cover" />
+              <button
+                type="button"
+                onClick={() => eliminar(f.url)}
+                className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition flex items-center justify-center"
+              >
+                <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2.5}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
 }
 
 // ── ClienteCombobox ──────────────────────────────────────────────────────────
@@ -838,25 +938,43 @@ export default function NuevaSolicitud() {
     if (guardando) return;
     setGuardando(true);
     try {
+      const placaNorm = form.placa.trim().replace(/[\s-]/g, '').toUpperCase();
+
+      // Guardar vehículo en hoja Vehiculos si hay cliente_id
+      if (form.cliente_id) {
+        await agregarVehiculo({
+          cliente_id: form.cliente_id,
+          marca:      form.marca,
+          modelo:     form.modelo,
+          anio:       form.anio,
+          placa:      placaNorm,
+          km:         form.kilometraje || 0,
+        });
+      }
+
       const servicioFinal = [form.tipoServicio, ...form.adicionales].filter(Boolean).join(', ');
       const lc = (s) => (s || '').toLowerCase();
       const datos = {
-        fecha:    new Date().toISOString().slice(0, 10),
-        cliente:  lc(form.nombre),
-        vehiculo: lc(`${form.marca} ${form.modelo} ${form.anio}`),
-        placa:    form.placa.trim().replace(/[\s-]/g, '').toUpperCase(),
-        servicio: lc(servicioFinal),
-        estado:   'Pendiente',
-        notas:    lc(form.observaciones || ''),
-        precio:   0,
-        mecanico: null,
+        fecha:       new Date().toISOString().slice(0, 10),
+        cliente:     lc(form.nombre),
+        telefono:    form.telefono,
+        cliente_id:  form.cliente_id || '',
+        vehiculo:    lc(`${form.marca} ${form.modelo} ${form.anio}`),
+        placa:       placaNorm,
+        kilometraje: form.kilometraje || 0,
+        servicio:    lc(servicioFinal),
+        estado:      'Pendiente',
+        notas:       lc(form.observaciones || ''),
+        precio:      0,
+        mecanico:    null,
+        fotos:       form.fotos.map(f => f.url).join(','),
       };
-      console.log('[NuevaSolicitud] enviando:', datos);
       await agregarSolicitud(datos);
       localStorage.removeItem(DRAFT_KEY);
       setForm(initialState);
       setOrdenNum(genOrden());
       setStep(1);
+      setClienteSeleccionado(false);
       toast.success('¡Solicitud registrada exitosamente!');
     } catch (err) {
       console.error('[NuevaSolicitud] error:', err);
@@ -1098,6 +1216,17 @@ export default function NuevaSolicitud() {
                   <input id="kilometraje" name="kilometraje" type="number" min="0" value={form.kilometraje} onChange={handleChange} placeholder="45000" className={inputCls(errores.kilometraje)} />
                   {errores.kilometraje && <p className="mt-1 text-xs text-red-500">{errores.kilometraje}</p>}
                 </div>
+              </div>
+
+              {/* Fotos del vehículo (opcional) */}
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">
+                  Fotos del vehículo <span className="text-gray-400 font-normal">(opcional)</span>
+                </label>
+                <FotoUploader
+                  fotos={form.fotos}
+                  onChange={(updater) => setForm(p => ({ ...p, fotos: typeof updater === 'function' ? updater(p.fotos) : updater }))}
+                />
               </div>
             </div>
           )}

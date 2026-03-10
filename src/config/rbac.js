@@ -14,8 +14,9 @@ const FEATURES = {
   '/nueva-solicitud': { enabled: true,  label: 'Nueva Solicitud' },
   '/servicios':       { enabled: true,  label: 'Servicios' },
   '/seguimiento':     { enabled: true,  label: 'Seguimiento' },
-  '/catalogos':       { enabled: false, label: 'Catálogos' },
-  '/reportes':        { enabled: false, label: 'Reportes' },
+  '/catalogos':       { enabled:true, label: 'Catálogos' },
+  '/reportes':        { enabled: true, label: 'Reportes' },
+  'notificaciones':   { enabled: true, label: 'Notificaciones' },
 };
 
 // ── Datos de contacto del desarrollador (se muestran en el modal) ──────────

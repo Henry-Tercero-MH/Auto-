@@ -14,6 +14,7 @@ import Scaner from './pages/Scaner';
 import Catalogos from './pages/Catalogos';
 import Reportes from './pages/Reportes';
 import { CatalogosProvider } from './context/CatalogosContext';
+import FeatureGuard from './components/FeatureGuard';
 
 function ProtectedLayout() {
   const { user } = useAuth();
@@ -41,13 +42,13 @@ function AppRoutes() {
       {/* Ruta pública — sin autenticación */}
       <Route path="/scaner" element={<Scaner />} />
       <Route element={<ProtectedLayout />}>
-        <Route path="/" element={<HomeRoute />} />
-        <Route path="/solicitudes" element={<Solicitudes />} />
-        <Route path="/nueva-solicitud" element={<NuevaSolicitud />} />
-        <Route path="/servicios" element={<Servicios />} />
-        <Route path="/catalogos" element={<Catalogos />} />
-        <Route path="/reportes" element={<Reportes />} />
-        <Route path="/seguimiento" element={<Seguimiento />} />
+        <Route path="/" element={<FeatureGuard path="/"><HomeRoute /></FeatureGuard>} />
+        <Route path="/solicitudes" element={<FeatureGuard path="/solicitudes"><Solicitudes /></FeatureGuard>} />
+        <Route path="/nueva-solicitud" element={<FeatureGuard path="/nueva-solicitud"><NuevaSolicitud /></FeatureGuard>} />
+        <Route path="/servicios" element={<FeatureGuard path="/servicios"><Servicios /></FeatureGuard>} />
+        <Route path="/catalogos" element={<FeatureGuard path="/catalogos"><Catalogos /></FeatureGuard>} />
+        <Route path="/reportes" element={<FeatureGuard path="/reportes"><Reportes /></FeatureGuard>} />
+        <Route path="/seguimiento" element={<FeatureGuard path="/seguimiento"><Seguimiento /></FeatureGuard>} />
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
