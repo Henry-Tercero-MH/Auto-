@@ -989,7 +989,7 @@ export default function NuevaSolicitud() {
                 <div>
                   <label htmlFor="anio" className="block text-sm font-medium text-slate-700 mb-1">Año</label>
                   <input
-                    id="anio" name="anio" type="number"
+                    id="anio" name="anio" type="number" inputMode="numeric"
                     min="1900" max={new Date().getFullYear() + 1}
                     value={form.anio}
                     onChange={e => {
