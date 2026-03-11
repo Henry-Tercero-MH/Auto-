@@ -243,8 +243,8 @@ export default function Login() {
         </div>
 
         <div className="relative z-10 max-w-6xl mx-auto px-4 sm:px-6 h-20 flex items-center gap-4">
-          {/* Spacer para compensar el logo absoluto */}
-          <div className="w-12 flex-shrink-0" />
+          {/* Spacer solo en desktop para compensar el logo absoluto */}
+          <div className="hidden md:block w-12 flex-shrink-0" />
 
           {/* Nav desktop */}
           <nav className="hidden md:flex items-center gap-6 text-sm flex-1 justify-center">
@@ -257,7 +257,7 @@ export default function Login() {
           </nav>
 
           {/* Acciones */}
-          <div className="flex items-center gap-3 flex-shrink-0">
+          <div className="flex items-center gap-3 flex-shrink-0 ml-auto md:ml-0">
             <button
               onClick={() => setSeguimientoModalOpen(true)}
               className="hidden md:flex items-center gap-1.5 text-white/70 hover:text-white text-sm font-medium transition"
