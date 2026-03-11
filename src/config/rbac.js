@@ -14,10 +14,10 @@ const FEATURES = {
   '/nueva-solicitud': { enabled: true,  label: 'Nueva Solicitud' },
   '/servicios':       { enabled: true,  label: 'Servicios' },
   '/seguimiento':     { enabled: true,  label: 'Seguimiento' },
-  '/catalogos':       { enabled:false, label: 'Catálogos' },
-  '/reportes':        { enabled: false, label: 'Reportes' },
-  'notificaciones':   { enabled: false,  label: 'Notificaciones' },
-  'fotos':            { enabled: false,  label: 'Fotos de solicitud' },
+  '/catalogos':       { enabled: false, label: 'Catálogos',       description: 'Gestiona clientes, vehículos y mecánicos del taller.' },
+  '/reportes':        { enabled: false, label: 'Reportes',         description: 'Genera reportes de ingresos, servicios y rendimiento del taller.' },
+  'notificaciones':   { enabled: false, label: 'Notificaciones',   description: 'Recibe alertas en tiempo real sobre el estado de las solicitudes.' },
+  'fotos':            { enabled: false, label: 'Fotos de solicitud', description: 'Adjunta y visualiza fotos del vehículo en cada solicitud.' },
 };
 
 // ── Datos de contacto del desarrollador (se muestran en el modal) ──────────
@@ -39,6 +39,11 @@ export function isFeatureEnabled(path) {
 /** Devuelve la etiqueta legible de un módulo */
 export function getFeatureLabel(path) {
   return FEATURES[path]?.label ?? path;
+}
+
+/** Devuelve la descripción de un módulo bloqueado */
+export function getFeatureDescription(path) {
+  return FEATURES[path]?.description ?? '';
 }
 
 /** Devuelve el mapa completo (útil para un panel de admin futuro) */
