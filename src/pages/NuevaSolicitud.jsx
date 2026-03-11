@@ -1049,6 +1049,9 @@ export default function NuevaSolicitud() {
 
       const servicioFinal = [form.tipoServicio, ...form.adicionales].filter(Boolean).join(', ');
       const lc = (s) => (s || '').toLowerCase();
+      const totalOrden = [form.tipoServicio, ...form.adicionales]
+        .filter(Boolean)
+        .reduce((sum, n) => sum + (PRECIOS[n] || 0), 0);
       const datos = {
         fecha:       new Date().toISOString().slice(0, 10),
         cliente:     lc(form.nombre),
@@ -1060,7 +1063,7 @@ export default function NuevaSolicitud() {
         servicio:    lc(servicioFinal),
         estado:      'Pendiente',
         notas:       lc(form.observaciones || ''),
-        precio:      0,
+        precio:      totalOrden,
         mecanico:    null,
         fotos:       form.fotos.map(f => f.url).join(','),
       };

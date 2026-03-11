@@ -23,9 +23,8 @@ const FEATURES = {
 // ── Datos de contacto del desarrollador (se muestran en el modal) ──────────
 export const DEV_CONTACT = {
   nombre: 'Henry Tercero',
-  telefono: '+502 0000-0000',        // ← actualizar con el número real
-  correo: 'contacto@drivebot.app',   // ← actualizar con el correo real
-  whatsapp: 'https://wa.me/50200000000', // ← actualizar con el link real
+  telefono: '+502 4070-5002',
+  whatsapp: 'https://wa.me/50240705002',
 };
 
 // ── Helpers ────────────────────────────────────────────────────────────────

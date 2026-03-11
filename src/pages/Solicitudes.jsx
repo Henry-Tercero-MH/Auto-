@@ -1,14 +1,124 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { useSolicitudes } from '../context/SolicitudesContext';
 import { useCatalogos } from '../context/CatalogosContext';
 import { useAuth } from '../context/AuthContext';
+import { isFeatureEnabled } from '../config/rbac';
+
+// Extrae el FILE_ID de una URL de Google Drive y devuelve URL de thumbnail
+function driveThumb(url = '', size = 200) {
+  const m = url.match(/\/file\/d\/([^/]+)/);
+  if (m) return `https://drive.google.com/thumbnail?id=${m[1]}&sz=w${size}`;
+  const m2 = url.match(/[?&]id=([^&]+)/);
+  if (m2) return `https://drive.google.com/thumbnail?id=${m2[1]}&sz=w${size}`;
+  return url;
+}
+
+const fotosEnabled = isFeatureEnabled('fotos');
+
+// ── Modal carrusel de fotos ──────────────────────────────────────────────────
+function CarruselModal({ urls, inicial = 0, onClose }) {
+  const [idx, setIdx] = useState(inicial);
+  const prev = useCallback(() => setIdx((i) => (i - 1 + urls.length) % urls.length), [urls.length]);
+  const next = useCallback(() => setIdx((i) => (i + 1) % urls.length), [urls.length]);
+
+  useEffect(() => {
+    const onKey = (e) => {
+      if (e.key === 'ArrowLeft')  prev();
+      if (e.key === 'ArrowRight') next();
+      if (e.key === 'Escape')     onClose();
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [prev, next, onClose]);
+
+  return (
+    <div
+      className="fixed inset-0 z-50 bg-black/90 flex flex-col items-center justify-center"
+      onClick={(e) => e.target === e.currentTarget && onClose()}
+    >
+      {/* Cerrar */}
+      <button
+        onClick={onClose}
+        className="absolute top-4 right-4 text-white/70 hover:text-white transition"
+      >
+        <svg className="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+          <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+        </svg>
+      </button>
+
+      {/* Contador */}
+      <p className="absolute top-5 left-1/2 -translate-x-1/2 text-white/60 text-sm font-medium">
+        {idx + 1} / {urls.length}
+      </p>
+
+      {/* Imagen */}
+      <div className="relative flex items-center justify-center w-full max-w-3xl px-14">
+        {urls.length > 1 && (
+          <button
+            onClick={prev}
+            className="absolute left-2 w-10 h-10 rounded-full bg-white/10 hover:bg-white/25 flex items-center justify-center text-white transition"
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2.5}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
+            </svg>
+          </button>
+        )}
+
+        <img
+          key={idx}
+          src={driveThumb(urls[idx], 1200)}
+          alt={`Foto ${idx + 1}`}
+          className="max-h-[75vh] max-w-full rounded-xl object-contain shadow-2xl"
+          onError={(e) => { e.currentTarget.src = driveThumb(urls[idx], 400); }}
+        />
+
+        {urls.length > 1 && (
+          <button
+            onClick={next}
+            className="absolute right-2 w-10 h-10 rounded-full bg-white/10 hover:bg-white/25 flex items-center justify-center text-white transition"
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2.5}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+            </svg>
+          </button>
+        )}
+      </div>
+
+      {/* Miniaturas */}
+      {urls.length > 1 && (
+        <div className="flex gap-2 mt-5 overflow-x-auto max-w-full px-4">
+          {urls.map((url, i) => (
+            <button
+              key={i}
+              onClick={() => setIdx(i)}
+              className={`flex-shrink-0 w-14 h-14 rounded-lg overflow-hidden border-2 transition ${i === idx ? 'border-white' : 'border-transparent opacity-50 hover:opacity-80'}`}
+            >
+              <img src={driveThumb(url, 100)} alt="" className="w-full h-full object-cover" />
+            </button>
+          ))}
+        </div>
+      )}
+
+      {/* Abrir en Drive */}
+      <a
+        href={urls[idx]}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="mt-4 text-xs text-white/40 hover:text-white/70 transition underline"
+      >
+        Abrir en Google Drive
+      </a>
+    </div>
+  );
+}
 
 export default function Solicitudes() {
   const { solicitudes, cambiarEstado, tomarSolicitud } = useSolicitudes();
   const { estados } = useCatalogos();
   const { user, esAdmin, esMecanico } = useAuth();
+  const [carrusel, setCarrusel] = useState(null); // { urls, idx }
 
   // Config de estados dinámicos
   const estadoConfig = useMemo(() => {
@@ -311,6 +421,38 @@ export default function Solicitudes() {
                           </div>
                         )}
                       </div>
+
+                      {/* ── Fotos ── */}
+                      {fotosEnabled && s.fotos && s.fotos.trim() !== '' && (() => {
+                        const urls = s.fotos.split(',').map(u => u.trim()).filter(Boolean);
+                        return urls.length > 0 ? (
+                          <div className="mt-5 pt-4 border-t border-slate-200">
+                            <p className="text-xs text-slate-400 uppercase tracking-wide mb-3">
+                              Fotos ({urls.length})
+                            </p>
+                            <div className="flex flex-wrap gap-2">
+                              {urls.map((url, i) => (
+                                <button
+                                  key={i}
+                                  onClick={() => setCarrusel({ urls, idx: i })}
+                                  className="relative w-20 h-20 rounded-lg overflow-hidden border border-gray-200 bg-slate-100 flex-shrink-0 hover:opacity-80 hover:scale-105 transition-all"
+                                  title="Ver foto"
+                                >
+                                  <img
+                                    src={driveThumb(url, 200)}
+                                    alt={`Foto ${i + 1}`}
+                                    className="w-full h-full object-cover"
+                                    onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                                  />
+                                  <span className="absolute bottom-0 right-0 bg-black/40 text-white text-[9px] px-1 py-0.5 rounded-tl">
+                                    #{i + 1}
+                                  </span>
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+                        ) : null;
+                      })()}
                     </div>
                   )}
                 </div>
@@ -323,6 +465,15 @@ export default function Solicitudes() {
       <p className="text-xs text-slate-400 text-right">
         Mostrando {datosFiltrados.length} de {solicitudes.length} solicitudes
       </p>
+
+      {/* ── Carrusel modal ── */}
+      {carrusel && (
+        <CarruselModal
+          urls={carrusel.urls}
+          inicial={carrusel.idx}
+          onClose={() => setCarrusel(null)}
+        />
+      )}
     </div>
   );
 }

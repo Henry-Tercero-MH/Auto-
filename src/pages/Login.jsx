@@ -469,7 +469,7 @@ export default function Login() {
 
       {/* ── Footer ── */}
       <footer className="bg-primary mt-auto py-6 text-center">
-        <p className="text-white/50 text-xs">© {new Date().getFullYear()} AUTO+ · Todos los derechos reservados</p>
+        <p className="text-white/50 text-xs">© 2026 AUTO+ · Todos los derechos reservados, by Hemisterhe</p>
       </footer>
 
       {/* ── Modal login ── */}

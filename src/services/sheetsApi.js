@@ -77,7 +77,9 @@ async function postArchivo(body) {
 export const api = {
 
   // ── Solicitudes ───────────────────────────────────────────────────────
-  getSolicitudes:    ()             => get('solicitudes'),
+  getSolicitudes: () => get('solicitudes').then((data) =>
+    data.map((s) => ({ ...s, fecha: (s.fecha || '').slice(0, 10) }))
+  ),
   getSolicitud:      (id)           => get('solicitudes', id),
   crearSolicitud:    (datos)        => post({ accion: 'crearSolicitud',    datos }),
   editarSolicitud:   (id, datos)    => post({ accion: 'editarSolicitud',   id, datos }),

@@ -4,6 +4,9 @@ import { useAuth } from '../context/AuthContext';
 import { useCatalogos } from '../context/CatalogosContext';
 import { useSolicitudes } from '../context/SolicitudesContext';
 
+const formatQ = (n) => `Q ${Number(n || 0).toLocaleString('es-GT', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+
+
 const Icon = ({ path, className = 'w-5 h-5' }) => (
   <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.8}>
     <path strokeLinecap="round" strokeLinejoin="round" d={path} />
@@ -39,7 +42,7 @@ function QuickLink({ to, iconBg, iconColor, icon, title, sub }) {
 
 export default function Home() {
   const { user } = useAuth();
-  const { estados } = useCatalogos();
+  const { estados, preciosMap } = useCatalogos();
   const { solicitudes } = useSolicitudes();
 
   const today = new Date().toLocaleDateString('es-GT', {
@@ -58,6 +61,27 @@ export default function Home() {
     const hoyTotal    = solicitudes.filter((s) => s.fecha === hoy).length;
     return { total, pendientes, enProceso, completadas, sinAsignar, hoyTotal };
   }, [solicitudes, hoy]);
+
+  // ── KPIs financieros ──────────────────────────────────────────────────────
+  const finanzas = useMemo(() => {
+    const mes = new Date().toISOString().slice(0, 7); // 'YYYY-MM'
+    const precio = (s) => {
+      if (s.precio && Number(s.precio) > 0) return Number(s.precio);
+      return (s.servicio || '').split(',').map((n) => n.trim())
+        .reduce((sum, n) => sum + (preciosMap[n] || 0), 0);
+    };
+    const completadas  = solicitudes.filter((s) => s.estado === 'Completada');
+    const porCobrar    = solicitudes.filter((s) => s.estado === 'Pendiente' || s.estado === 'En proceso');
+    const hoyFact      = solicitudes.filter((s) => s.fecha === hoy);
+    const mesFact      = solicitudes.filter((s) => (s.fecha || '').startsWith(mes));
+    const sum = (arr) => arr.reduce((t, s) => t + precio(s), 0);
+    return {
+      totalCompletado: sum(completadas),
+      porCobrar:       sum(porCobrar),
+      hoy:             sum(hoyFact),
+      mes:             sum(mesFact),
+    };
+  }, [solicitudes, preciosMap, hoy]);
 
   // ── Últimas 6 solicitudes ─────────────────────────────────────────────────
   const recientes = solicitudes.slice(0, 6);
@@ -152,6 +176,38 @@ export default function Home() {
               ))}
             </tbody>
           </table>
+        </div>
+      </div>
+
+      {/* ── Finanzas ── */}
+      <div className="bg-white rounded-xl shadow-sm border border-gray-100">
+        <div className="px-4 sm:px-6 py-4 border-b border-gray-100 flex items-center gap-2">
+          <div className="w-7 h-7 bg-emerald-100 rounded-lg flex items-center justify-center">
+            <Icon path="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" className="w-4 h-4 text-emerald-600" />
+          </div>
+          <h3 className="font-semibold text-primary text-sm sm:text-base">Finanzas</h3>
+        </div>
+        <div className="grid grid-cols-2 lg:grid-cols-4 divide-x divide-y lg:divide-y-0 divide-gray-100">
+          <div className="p-4 sm:p-5">
+            <p className="text-xs text-slate-400 font-medium uppercase tracking-wide mb-1">Hoy facturado</p>
+            <p className="text-xl font-black text-primary">{formatQ(finanzas.hoy)}</p>
+            <p className="text-xs text-slate-400 mt-0.5">órdenes de hoy</p>
+          </div>
+          <div className="p-4 sm:p-5">
+            <p className="text-xs text-slate-400 font-medium uppercase tracking-wide mb-1">Este mes</p>
+            <p className="text-xl font-black text-primary">{formatQ(finanzas.mes)}</p>
+            <p className="text-xs text-slate-400 mt-0.5">todas las órdenes del mes</p>
+          </div>
+          <div className="p-4 sm:p-5">
+            <p className="text-xs text-slate-400 font-medium uppercase tracking-wide mb-1">Completado</p>
+            <p className="text-xl font-black text-emerald-600">{formatQ(finanzas.totalCompletado)}</p>
+            <p className="text-xs text-slate-400 mt-0.5">órdenes finalizadas</p>
+          </div>
+          <div className="p-4 sm:p-5">
+            <p className="text-xs text-slate-400 font-medium uppercase tracking-wide mb-1">Por cobrar</p>
+            <p className="text-xl font-black text-amber-500">{formatQ(finanzas.porCobrar)}</p>
+            <p className="text-xs text-slate-400 mt-0.5">pendientes + en proceso</p>
+          </div>
         </div>
       </div>
 
