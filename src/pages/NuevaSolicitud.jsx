@@ -5,6 +5,8 @@ import logo from '../imagenes/logoMecanica.png';
 import { formatQ, CategoryIcon } from '../data/servicios';
 import { useCatalogos } from '../context/CatalogosContext';
 import { useSolicitudes } from '../context/SolicitudesContext';
+import { isFeatureEnabled } from '../config/rbac';
+import { useLockedModal } from '../hooks/useLockedModal';
 import imgSuperior from '../imagenes/vista superior.png';
 import imgFrontal  from '../imagenes/carfrente.png';
 import imgTrasera  from '../imagenes/carTrasero.png';
@@ -644,6 +646,9 @@ function loadDraft() {
 
 // ── FotoUploader ─────────────────────────────────────────────────────────────
 function FotoUploader({ fotos = [], onChange }) {
+  const fotosEnabled = isFeatureEnabled('fotos');
+  const { showLocked, LockedModal } = useLockedModal();
+
   const [subiendo, setSubiendo] = useState({});
   const inputGaleriaRef = useRef(null);
   const inputCamaraRef  = useRef(null);
@@ -668,6 +673,24 @@ function FotoUploader({ fotos = [], onChange }) {
   const eliminar = (url) => onChange(prev => prev.filter(f => f.url !== url));
 
   const haySubiendo = Object.keys(subiendo).length > 0;
+
+  if (!fotosEnabled) {
+    return (
+      <>
+        <LockedModal />
+        <button
+          type="button"
+          onClick={() => showLocked('Fotos de solicitud')}
+          className="w-full flex items-center justify-center gap-3 border-2 border-dashed border-gray-200 rounded-xl py-5 text-gray-400 hover:border-accent hover:text-accent transition bg-gray-50"
+        >
+          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.8}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 10-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 002.25-2.25v-6.75a2.25 2.25 0 00-2.25-2.25H6.75a2.25 2.25 0 00-2.25 2.25v6.75a2.25 2.25 0 002.25 2.25z" />
+          </svg>
+          <span className="text-sm font-medium">Fotos de solicitud — función premium</span>
+        </button>
+      </>
+    );
+  }
 
   return (
     <div className="space-y-3">
