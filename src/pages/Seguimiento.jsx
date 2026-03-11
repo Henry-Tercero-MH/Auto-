@@ -97,7 +97,7 @@ export default function Seguimiento() {
               <div className="flex-1">
                 <p className="text-xs font-semibold uppercase tracking-widest opacity-70 mb-0.5">Estado actual</p>
                 <p className="text-xl font-black">{resultado.estado}</p>
-                <p className="text-xs mt-0.5 opacity-70">Ticket #{resultado.id} · {resultado.fecha}</p>
+                <p className="text-xs mt-0.5 opacity-70">Ticket #{resultado.id} · {resultado.fecha}{resultado.horaEntrada ? ` · ${resultado.horaEntrada}` : ''}</p>
               </div>
               {resultado.estado === 'Completada' && (
                 <div className="w-12 h-12 rounded-full bg-green-500 flex items-center justify-center flex-shrink-0">

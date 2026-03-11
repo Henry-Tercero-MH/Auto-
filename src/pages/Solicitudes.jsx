@@ -371,6 +371,7 @@ export default function Solicitudes() {
                           <div>
                             <p className="text-xs text-slate-400 uppercase tracking-wide mb-1">Fecha ingreso</p>
                             <p className="font-semibold text-slate-800">{s.fecha}</p>
+                            {s.horaEntrada && <p className="text-xs text-slate-500 mt-0.5">{s.horaEntrada}</p>}
                           </div>
                           {/* Mecánico asignado */}
                           <div className="col-span-2">

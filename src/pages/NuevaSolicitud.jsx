@@ -132,6 +132,7 @@ const initialState = {
   inspeccion: {},
   mecanico: '',
   fotos: [],
+  preciosManuales: {},
 };
 
 // Las marcas y servicios ahora vienen del CatalogosContext
@@ -471,10 +472,11 @@ function InspeccionVehiculo({ inspeccion, onChange, tiposDano }) {
 }
 
 // ── OrdenTrabajo ─────────────────────────────────────────────────────────────
-function OrdenTrabajo({ form, ordenNum, preciosMap, tiposDano }) {
+function OrdenTrabajo({ form, ordenNum, tiposDano, onPrecioChange }) {
   const fecha = new Date().toLocaleDateString('es-MX', { day: '2-digit', month: '2-digit', year: 'numeric' });
+  const horaEntrada = new Date().toLocaleTimeString('es-GT', { hour: '2-digit', minute: '2-digit', hour12: true });
   const serviciosNombres = [form.tipoServicio, ...form.adicionales].filter(Boolean);
-  const serviciosConPrecio = serviciosNombres.map((n) => ({ nombre: n, precio: preciosMap[n] || 0 }));
+  const serviciosConPrecio = serviciosNombres.map((n) => ({ nombre: n, precio: form.preciosManuales[n] || 0 }));
   const subtotal = serviciosConPrecio.reduce((sum, s) => sum + s.precio, 0);
   const total = subtotal;
   const danos = Object.entries(form.inspeccion).filter(([, v]) => v);
@@ -494,6 +496,7 @@ function OrdenTrabajo({ form, ordenNum, preciosMap, tiposDano }) {
           <p className="thermal-label text-[10px] text-gray-500 uppercase tracking-wider">Orden de Trabajo</p>
           <p className="thermal-orden-num text-accent font-black text-2xl tracking-wide leading-tight">No. {ordenNum}</p>
           <p className="thermal-label text-gray-500 text-[10px]">Fecha: {fecha}</p>
+          <p className="thermal-label text-gray-500 text-[10px]">Hora entrada: {horaEntrada}</p>
         </div>
       </div>
 
@@ -580,11 +583,22 @@ function OrdenTrabajo({ form, ordenNum, preciosMap, tiposDano }) {
         {serviciosConPrecio.map((s, i) => (
           <div
             key={i}
-            className={`grid grid-cols-12 px-4 py-1.5 border-b border-dotted border-gray-200 ${i % 2 === 0 ? 'bg-white' : 'bg-gray-50'}`}
+            className={`grid grid-cols-12 px-4 py-1.5 border-b border-dotted border-gray-200 items-center ${i % 2 === 0 ? 'bg-white' : 'bg-gray-50'}`}
           >
             <div className="col-span-1 text-center font-bold text-gray-700">1</div>
-            <div className="col-span-8 pl-2 text-gray-800 font-medium">{s.nombre}</div>
-            <div className="col-span-3 text-right pr-1 font-bold text-gray-700">{formatQ(s.precio)}</div>
+            <div className="col-span-7 pl-2 text-gray-800 font-medium">{s.nombre}</div>
+            <div className="col-span-4 flex items-center justify-end pr-1 gap-0.5">
+              <span className="text-gray-400 text-[10px]">Q</span>
+              <input
+                type="number"
+                min="0"
+                step="0.01"
+                value={s.precio || ''}
+                onChange={(e) => onPrecioChange(s.nombre, parseFloat(e.target.value) || 0)}
+                placeholder="0.00"
+                className="w-20 text-right font-bold text-gray-700 bg-transparent border-b border-dashed border-gray-400 focus:border-accent focus:outline-none py-0.5 text-xs print:border-none"
+              />
+            </div>
           </div>
         ))}
         {Array.from({ length: Math.max(0, 3 - serviciosConPrecio.length) }).map((_, i) => (
@@ -1051,9 +1065,12 @@ export default function NuevaSolicitud() {
       const lc = (s) => (s || '').toLowerCase();
       const totalOrden = [form.tipoServicio, ...form.adicionales]
         .filter(Boolean)
-        .reduce((sum, n) => sum + (PRECIOS[n] || 0), 0);
+        .reduce((sum, n) => sum + (form.preciosManuales[n] || 0), 0);
+      const ahora = new Date();
+      const horaEntrada = ahora.toLocaleTimeString('es-GT', { hour: '2-digit', minute: '2-digit', hour12: true });
       const datos = {
-        fecha:       new Date().toISOString().slice(0, 10),
+        fecha:       ahora.toISOString().slice(0, 10),
+        horaEntrada,
         cliente:     lc(form.nombre),
         telefono:    form.telefono,
         cliente_id:  form.cliente_id || '',
@@ -1371,7 +1388,7 @@ export default function NuevaSolicitud() {
                   <option value="">Selecciona una opción</option>
                   {CATEGORIAS_SERVICIOS.map((cat) => (
                     <optgroup key={cat.categoria} label={cat.categoria}>
-                      {cat.servicios.map((s) => <option key={s.nombre} value={s.nombre}>{s.nombre} — {formatQ(s.precio)}</option>)}
+                      {cat.servicios.map((s) => <option key={s.nombre} value={s.nombre}>{s.nombre}</option>)}
                     </optgroup>
                   ))}
                 </select>
@@ -1397,7 +1414,6 @@ export default function NuevaSolicitud() {
                             <label key={serv.nombre} className={`flex items-center gap-2.5 px-3 py-2 rounded-lg border cursor-pointer transition text-xs ${form.adicionales.includes(serv.nombre) ? 'border-accent bg-red-50 text-red-700' : 'border-gray-200 bg-slate-50 text-gray-600 hover:border-red-300'}`}>
                               <input type="checkbox" name="adicionales" value={serv.nombre} checked={form.adicionales.includes(serv.nombre)} onChange={handleChange} className="w-3.5 h-3.5 accent-red-600 flex-shrink-0" />
                               <span className="font-medium leading-tight flex-1">{serv.nombre}</span>
-                              <span className="text-[10px] font-bold text-slate-400 whitespace-nowrap">{formatQ(serv.precio)}</span>
                             </label>
                           ))}
                         </div>
@@ -1422,30 +1438,7 @@ export default function NuevaSolicitud() {
                 <textarea id="observaciones" name="observaciones" value={form.observaciones} onChange={handleChange} rows={3} placeholder="Describe cualquier detalle adicional..." className="w-full rounded-lg px-3 py-2.5 bg-slate-50 border border-gray-200 text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-accent focus:border-accent transition resize-none" />
               </div>
 
-              {/* ── Resumen de precio en vivo ── */}
-              {(() => {
-                const selNombres = [form.tipoServicio, ...form.adicionales].filter(Boolean);
-                if (selNombres.length === 0) return null;
-                const items = selNombres.map((n) => ({ nombre: n, precio: PRECIOS[n] || 0 }));
-                const sub = items.reduce((s, i) => s + i.precio, 0);
-                return (
-                  <div className="bg-slate-50 border border-gray-200 rounded-xl p-4 space-y-2">
-                    <p className="text-xs font-semibold text-slate-400 uppercase tracking-widest">Resumen de servicios</p>
-                    <div className="space-y-1">
-                      {items.map((it, idx) => (
-                        <div key={idx} className="flex justify-between text-sm">
-                          <span className="text-slate-600 truncate mr-2">{it.nombre}</span>
-                          <span className="font-semibold text-slate-700 whitespace-nowrap">{formatQ(it.precio)}</span>
-                        </div>
-                      ))}
-                    </div>
-                    <div className="flex justify-between pt-2 border-t border-gray-300 text-sm">
-                      <span className="font-bold text-primary uppercase">Total estimado:</span>
-                      <span className="font-black text-accent text-lg">{formatQ(sub)}</span>
-                    </div>
-                  </div>
-                );
-              })()}
+
             </div>
           )}
 
@@ -1526,7 +1519,7 @@ export default function NuevaSolicitud() {
                   }
                 }
               `}</style>
-              <OrdenTrabajo form={form} ordenNum={ordenNum} preciosMap={PRECIOS} tiposDano={tiposDano} />
+              <OrdenTrabajo form={form} ordenNum={ordenNum} tiposDano={tiposDano} onPrecioChange={(nombre, precio) => setForm(prev => ({ ...prev, preciosManuales: { ...prev.preciosManuales, [nombre]: precio } }))} />
             </div>
           )}
         </div>
