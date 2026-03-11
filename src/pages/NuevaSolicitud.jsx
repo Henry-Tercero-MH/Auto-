@@ -120,6 +120,7 @@ const initialState = {
   nombre: '',
   telefono: '',
   cliente_id: '',
+  vehiculo_id: '', // id del vehículo existente seleccionado; '' = vehículo nuevo
   marca: '',
   modelo: '',
   anio: '',
@@ -761,9 +762,12 @@ function FotoUploader({ fotos = [], onChange }) {
 }
 
 // ── ClienteCombobox ──────────────────────────────────────────────────────────
-function ClienteCombobox({ clientes, onSelect }) {
-  const [query, setQuery] = useState('');
-  const [open, setOpen]   = useState(false);
+function ClienteCombobox({ clientes, onSelect, onCrear }) {
+  const [query, setQuery]       = useState('');
+  const [open, setOpen]         = useState(false);
+  const [creando, setCreando]   = useState(false);
+  const [nuevo, setNuevo]       = useState({ nombre: '', telefono: '', email: '' });
+  const [guardando, setGuardando] = useState(false);
   const ref = useRef(null);
 
   useEffect(() => {
@@ -775,49 +779,117 @@ function ClienteCombobox({ clientes, onSelect }) {
   const filtered = query.trim()
     ? clientes.filter(c =>
         c.nombre.toLowerCase().includes(query.toLowerCase()) ||
-        c.telefono.includes(query)
+        String(c.telefono).includes(query)
       )
     : clientes;
 
-  const select = (c) => {
-    onSelect(c);
-    setQuery('');
+  const select = (c) => { onSelect(c); setQuery(''); setOpen(false); setCreando(false); };
+
+  const abrirNuevo = () => {
+    setNuevo({ nombre: query.trim(), telefono: '', email: '' });
+    setCreando(true);
     setOpen(false);
+  };
+
+  const guardarNuevo = async () => {
+    if (!nuevo.nombre.trim()) return;
+    setGuardando(true);
+    try {
+      const creado = await onCrear({ nombre: nuevo.nombre.trim(), telefono: nuevo.telefono.trim(), email: nuevo.email.trim() });
+      select(creado);
+      setCreando(false);
+      setNuevo({ nombre: '', telefono: '', email: '' });
+    } catch { /* toast handled upstream */ }
+    finally { setGuardando(false); }
   };
 
   return (
     <div ref={ref} className="relative">
-      <div className="relative">
-        <svg className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
-          <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-4.35-4.35M17 11A6 6 0 1 1 5 11a6 6 0 0 1 12 0z" />
-        </svg>
-        <input
-          type="text"
-          autoComplete="off"
-          placeholder="Buscar por nombre o teléfono…"
-          value={query}
-          onFocus={() => setOpen(true)}
-          onChange={e => { setQuery(e.target.value); setOpen(true); }}
-          className="w-full rounded-lg pl-9 pr-3 py-2.5 bg-slate-50 border border-gray-200 text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-accent focus:border-accent transition"
-        />
-      </div>
-      {open && (
-        <ul className="absolute z-50 mt-1 w-full bg-white border border-gray-200 rounded-lg shadow-lg max-h-52 overflow-y-auto">
-          {filtered.length === 0 ? (
-            <li className="px-3 py-2 text-sm text-gray-400 italic">Sin resultados</li>
-          ) : (
-            filtered.map(c => (
+      {/* ── Mini-form de nuevo cliente ── */}
+      {creando ? (
+        <div className="rounded-xl border border-accent/30 bg-red-50 p-4 space-y-3">
+          <p className="text-xs font-semibold text-accent uppercase tracking-wide">Nuevo cliente</p>
+          <input
+            autoFocus
+            type="text"
+            placeholder="Nombre completo *"
+            value={nuevo.nombre}
+            onChange={e => setNuevo(p => ({ ...p, nombre: e.target.value }))}
+            className="w-full rounded-lg px-3 py-2 text-sm border border-gray-200 bg-white focus:outline-none focus:ring-2 focus:ring-accent"
+          />
+          <input
+            type="tel"
+            placeholder="Teléfono"
+            value={nuevo.telefono}
+            onChange={e => setNuevo(p => ({ ...p, telefono: e.target.value }))}
+            className="w-full rounded-lg px-3 py-2 text-sm border border-gray-200 bg-white focus:outline-none focus:ring-2 focus:ring-accent"
+          />
+          <input
+            type="email"
+            placeholder="Email (opcional)"
+            value={nuevo.email}
+            onChange={e => setNuevo(p => ({ ...p, email: e.target.value }))}
+            className="w-full rounded-lg px-3 py-2 text-sm border border-gray-200 bg-white focus:outline-none focus:ring-2 focus:ring-accent"
+          />
+          <div className="flex gap-2">
+            <button
+              type="button"
+              onMouseDown={guardarNuevo}
+              disabled={!nuevo.nombre.trim() || guardando}
+              className="flex-1 rounded-lg bg-accent py-2 text-sm font-semibold text-white hover:bg-red-700 disabled:opacity-50 transition"
+            >
+              {guardando ? 'Guardando…' : 'Guardar cliente'}
+            </button>
+            <button
+              type="button"
+              onMouseDown={() => setCreando(false)}
+              className="px-3 rounded-lg border border-gray-200 bg-white text-sm text-gray-500 hover:bg-slate-100 transition"
+            >
+              Cancelar
+            </button>
+          </div>
+        </div>
+      ) : (
+        <>
+          <div className="relative">
+            <svg className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-4.35-4.35M17 11A6 6 0 1 1 5 11a6 6 0 0 1 12 0z" />
+            </svg>
+            <input
+              type="text"
+              autoComplete="off"
+              placeholder="Buscar por nombre o teléfono…"
+              value={query}
+              onFocus={() => setOpen(true)}
+              onChange={e => { setQuery(e.target.value); setOpen(true); }}
+              className="w-full rounded-lg pl-9 pr-3 py-2.5 bg-slate-50 border border-gray-200 text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-accent focus:border-accent transition"
+            />
+          </div>
+          {open && (
+            <ul className="absolute z-50 mt-1 w-full bg-white border border-gray-200 rounded-lg shadow-lg max-h-52 overflow-y-auto">
+              {filtered.map(c => (
+                <li
+                  key={c.id}
+                  onMouseDown={() => select(c)}
+                  className="flex items-center justify-between px-3 py-2 text-sm cursor-pointer hover:bg-slate-100"
+                >
+                  <span className="font-medium text-gray-800">{c.nombre}</span>
+                  <span className="text-xs text-gray-400 ml-2">{c.telefono}</span>
+                </li>
+              ))}
+              {/* Siempre al final: opción de crear nuevo */}
               <li
-                key={c.id}
-                onMouseDown={() => select(c)}
-                className="flex items-center justify-between px-3 py-2 text-sm cursor-pointer hover:bg-slate-100"
+                onMouseDown={abrirNuevo}
+                className="flex items-center gap-2 px-3 py-2.5 text-sm cursor-pointer border-t border-gray-100 text-accent hover:bg-red-50 font-medium"
               >
-                <span className="font-medium text-gray-800">{c.nombre}</span>
-                <span className="text-xs text-gray-400 ml-2">{c.telefono}</span>
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+                </svg>
+                {query.trim() ? `Agregar "${query.trim()}" como nuevo cliente` : 'Agregar nuevo cliente'}
               </li>
-            ))
+            </ul>
           )}
-        </ul>
+        </>
       )}
     </div>
   );
@@ -963,8 +1035,8 @@ export default function NuevaSolicitud() {
     try {
       const placaNorm = form.placa.trim().replace(/[\s-]/g, '').toUpperCase();
 
-      // Guardar vehículo en hoja Vehiculos si hay cliente_id
-      if (form.cliente_id) {
+      // Guardar vehículo: solo crear si es nuevo (sin vehiculo_id)
+      if (form.cliente_id && !form.vehiculo_id) {
         await agregarVehiculo({
           cliente_id: form.cliente_id,
           marca:      form.marca,
@@ -1032,44 +1104,55 @@ export default function NuevaSolicitud() {
             <div className="px-6 sm:px-8 py-7 space-y-5">
               <h3 className="text-xs font-semibold uppercase tracking-widest text-accent">Datos del cliente</h3>
 
-              {/* Búsqueda de cliente existente */}
-              {clientes.length > 0 && (
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">
-                    Buscar cliente existente
-                  </label>
-                  <ClienteCombobox
-                    clientes={clientes}
-                    onSelect={(c) => {
-                      setForm(p => ({
-                        ...p,
-                        nombre:     c.nombre ?? '',
-                        telefono:   String(c.telefono ?? '').replace(/\D/g, '').slice(0, 8),
-                        cliente_id: c.id ?? '',
-                      }));
-                      setClienteSeleccionado(true);
-                      setErrores({});
-                    }}
-                  />
-                  {clienteSeleccionado && (
-                    <p className="mt-1.5 text-xs text-green-600 font-medium flex items-center gap-1">
-                      <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2.5}>
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-                      </svg>
-                      Cliente cargado del catálogo
-                    </p>
-                  )}
-                </div>
-              )}
+              {/* Búsqueda / creación de cliente */}
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">
+                  Buscar o crear cliente
+                </label>
+                <ClienteCombobox
+                  clientes={clientes}
+                  onSelect={(c) => {
+                    setForm(p => ({
+                      ...p,
+                      nombre:      c.nombre ?? '',
+                      telefono:    String(c.telefono ?? '').replace(/\D/g, '').slice(0, 8),
+                      cliente_id:  c.id ?? '',
+                      vehiculo_id: '', // limpiar vehículo al cambiar cliente
+                    }));
+                    setClienteSeleccionado(true);
+                    setErrores({});
+                  }}
+                  onCrear={async (datos) => {
+                    const id = await agregarCliente(datos);
+                    const creado = { ...datos, id };
+                    setForm(p => ({
+                      ...p,
+                      nombre:      creado.nombre,
+                      telefono:    String(creado.telefono ?? '').replace(/\D/g, '').slice(0, 8),
+                      cliente_id:  id,
+                      vehiculo_id: '',
+                    }));
+                    setClienteSeleccionado(true);
+                    setErrores({});
+                    return creado;
+                  }}
+                />
+                {clienteSeleccionado && (
+                  <p className="mt-1.5 text-xs text-green-600 font-medium flex items-center gap-1">
+                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2.5}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                    </svg>
+                    Cliente seleccionado
+                  </p>
+                )}
+              </div>
 
               {/* Separador */}
-              {clientes.length > 0 && (
-                <div className="flex items-center gap-3">
-                  <div className="flex-1 border-t border-slate-200" />
-                  <span className="text-xs text-slate-400 whitespace-nowrap">o ingresa manualmente</span>
-                  <div className="flex-1 border-t border-slate-200" />
-                </div>
-              )}
+              <div className="flex items-center gap-3">
+                <div className="flex-1 border-t border-slate-200" />
+                <span className="text-xs text-slate-400 whitespace-nowrap">o ingresa manualmente</span>
+                <div className="flex-1 border-t border-slate-200" />
+              </div>
 
               {/* Campos manuales */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -1119,28 +1202,49 @@ export default function NuevaSolicitud() {
                     Vehículos registrados del cliente
                   </label>
                   <div className="flex flex-col gap-2">
-                    {vehiculosPorCliente(form.cliente_id).map((v) => (
-                      <button
-                        key={v.id}
-                        type="button"
-                        onClick={() => setForm(p => ({
-                          ...p,
-                          marca:       v.marca  ?? '',
-                          modelo:      v.modelo ?? '',
-                          anio:        v.anio   ? String(v.anio) : '',
-                          placa:       v.placa  ?? '',
-                          kilometraje: v.km     ? String(v.km)   : '',
-                        }))}
-                        className="flex items-center justify-between w-full rounded-lg border border-gray-200 bg-slate-50 px-4 py-2.5 text-sm hover:border-accent hover:bg-red-50 transition text-left"
-                      >
-                        <span className="font-medium text-gray-800">{v.marca} {v.modelo} {v.anio}</span>
-                        <span className="text-xs text-gray-400 ml-2">{v.placa}</span>
-                      </button>
-                    ))}
+                    {vehiculosPorCliente(form.cliente_id).map((v) => {
+                      const seleccionado = form.vehiculo_id === v.id;
+                      return (
+                        <button
+                          key={v.id}
+                          type="button"
+                          onClick={() => setForm(p => ({
+                            ...p,
+                            vehiculo_id: v.id,
+                            marca:       v.marca  ?? '',
+                            modelo:      v.modelo ?? '',
+                            anio:        v.anio   ? String(v.anio) : '',
+                            placa:       v.placa  ?? '',
+                            kilometraje: v.km     ? String(v.km)   : '',
+                          }))}
+                          className={`flex items-center justify-between w-full rounded-lg border px-4 py-2.5 text-sm transition text-left ${
+                            seleccionado
+                              ? 'border-accent bg-red-50 ring-1 ring-accent'
+                              : 'border-gray-200 bg-slate-50 hover:border-accent hover:bg-red-50'
+                          }`}
+                        >
+                          <span className="font-medium text-gray-800">{v.marca} {v.modelo} {v.anio}</span>
+                          <div className="flex items-center gap-2 ml-2">
+                            <span className="text-xs text-gray-400">{v.placa}</span>
+                            {seleccionado && (
+                              <svg className="w-4 h-4 text-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2.5}>
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                              </svg>
+                            )}
+                          </div>
+                        </button>
+                      );
+                    })}
                   </div>
                   <div className="flex items-center gap-3 mt-3">
                     <div className="flex-1 border-t border-slate-200" />
-                    <span className="text-xs text-slate-400 whitespace-nowrap">o ingresa manualmente</span>
+                    <button
+                      type="button"
+                      onClick={() => setForm(p => ({ ...p, vehiculo_id: '', marca: '', modelo: '', anio: '', placa: '', kilometraje: '' }))}
+                      className="text-xs text-slate-400 whitespace-nowrap hover:text-accent transition"
+                    >
+                      + Usar otro vehículo
+                    </button>
                     <div className="flex-1 border-t border-slate-200" />
                   </div>
                 </div>

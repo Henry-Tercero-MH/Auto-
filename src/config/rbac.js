@@ -9,15 +9,15 @@
 // ────────────────────────────────────────────────────────────────────────────
 
 const FEATURES = {
-  '/':                { enabled: false,  label: 'Dashboard' },
+  '/':                { enabled: true,  label: 'Dashboard' },
   '/solicitudes':     { enabled: true,  label: 'Solicitudes' },
   '/nueva-solicitud': { enabled: true,  label: 'Nueva Solicitud' },
   '/servicios':       { enabled: true,  label: 'Servicios' },
   '/seguimiento':     { enabled: true,  label: 'Seguimiento' },
-  '/catalogos':       { enabled:true, label: 'Catálogos' },
-  '/reportes':        { enabled: true, label: 'Reportes' },
-  'notificaciones':   { enabled: true,  label: 'Notificaciones' },
-  'fotos':            { enabled: true,  label: 'Fotos de solicitud' },
+  '/catalogos':       { enabled:false, label: 'Catálogos' },
+  '/reportes':        { enabled: false, label: 'Reportes' },
+  'notificaciones':   { enabled: false,  label: 'Notificaciones' },
+  'fotos':            { enabled: false,  label: 'Fotos de solicitud' },
 };
 
 // ── Datos de contacto del desarrollador (se muestran en el modal) ──────────

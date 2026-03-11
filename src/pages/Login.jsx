@@ -95,7 +95,9 @@ function LoginModal({ onClose }) {
         {/* Header modal */}
         <div className="bg-primary px-6 py-5 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <img src={logo} alt="AUTO+" className="h-10 object-contain" />
+            <div className="w-11 h-11 bg-white rounded-full flex items-center justify-center flex-shrink-0 shadow">
+              <img src={logo} alt="AUTO+" className="h-9 object-contain" />
+            </div>
             <div>
               <p className="text-white font-bold text-sm">Panel de gestión</p>
               <p className="text-white/60 text-xs">Acceso para personal del taller</p>
@@ -233,11 +235,16 @@ export default function Login() {
             opacity: scrolled ? 1 : 0,
           }}
         />
-        <div className="relative z-10 max-w-6xl mx-auto px-4 sm:px-6 h-20 flex items-center justify-between gap-4">
-          {/* Logo — aparece al hacer scroll */}
-          <div className={`flex items-center gap-2 flex-shrink-0 transition-all duration-500 ${scrolled ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-2 pointer-events-none'}`}>
+        {/* Logo — absolutamente en la parte blanca del header */}
+        <div className={`absolute left-4 sm:left-8 top-1/2 -translate-y-1/2 z-20 transition-all duration-500 ${scrolled ? 'opacity-100 translate-y-[-50%]' : 'opacity-0 pointer-events-none'}`}>
+          <div className="w-12 h-12 bg-white rounded-full flex items-center justify-center shadow-md">
             <img src={logo} alt="AUTO+" className="h-9 object-contain" />
           </div>
+        </div>
+
+        <div className="relative z-10 max-w-6xl mx-auto px-4 sm:px-6 h-20 flex items-center gap-4">
+          {/* Spacer para compensar el logo absoluto */}
+          <div className="w-12 flex-shrink-0" />
 
           {/* Nav desktop */}
           <nav className="hidden md:flex items-center gap-6 text-sm flex-1 justify-center">
@@ -338,10 +345,12 @@ export default function Login() {
 
             {/* Diagnóstico / Scaner */}
             <div className="rounded-2xl overflow-hidden border border-gray-100 shadow-sm hover:shadow-md transition-all group">
-              <div className="bg-gradient-to-br from-blue-600 to-blue-800 p-6 flex items-center justify-center h-36">
-                <svg className="w-14 h-14 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M9 17.25v1.007a3 3 0 01-.879 2.122L7.5 21h9l-.621-.621A3 3 0 0115 18.257V17.25m6-12V15a2.25 2.25 0 01-2.25 2.25H5.25A2.25 2.25 0 013 15V5.25m18 0A2.25 2.25 0 0018.75 3H5.25A2.25 2.25 0 003 5.25m18 0H3" />
-                </svg>
+              <div className="h-36 overflow-hidden">
+                <img
+                  src="https://images.unsplash.com/photo-1615906655593-ad0386982a0f?q=80&w=687&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D"
+                  alt="Scaner"
+                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                />
               </div>
               <div className="p-4 bg-white">
                 <p className="font-bold text-primary text-sm">Scaner</p>
@@ -396,10 +405,12 @@ export default function Login() {
 
             {/* Ruido delantero */}
             <div className="rounded-2xl overflow-hidden border border-gray-100 shadow-sm hover:shadow-md transition-all group">
-              <div className="bg-gradient-to-br from-purple-600 to-purple-800 p-6 flex items-center justify-center h-36">
-                <svg className="w-14 h-14 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M19.114 5.636a9 9 0 010 12.728M16.463 8.288a5.25 5.25 0 010 7.424M6.75 8.25l4.72-4.72a.75.75 0 011.28.53v15.88a.75.75 0 01-1.28.53l-4.72-4.72H4.51c-.88 0-1.704-.507-1.938-1.354A9.01 9.01 0 012.25 12c0-.83.112-1.633.322-2.396C2.806 8.756 3.63 8.25 4.51 8.25H6.75z" />
-                </svg>
+              <div className="h-36 overflow-hidden">
+                <img
+                  src="https://images.unsplash.com/photo-1645445522156-9ac06bc7a767?w=500&auto=format&fit=crop&q=60&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxzZWFyY2h8OHx8bWVjYW5pY298ZW58MHx8MHx8fDA%3D"
+                  alt="Ruido delantero"
+                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                />
               </div>
               <div className="p-4 bg-white">
                 <p className="font-bold text-primary text-sm">Ruido delantero</p>
@@ -409,10 +420,12 @@ export default function Login() {
 
             {/* Ruido trasero */}
             <div className="rounded-2xl overflow-hidden border border-gray-100 shadow-sm hover:shadow-md transition-all group">
-              <div className="bg-gradient-to-br from-pink-600 to-pink-800 p-6 flex items-center justify-center h-36">
-                <svg className="w-14 h-14 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M17.25 9.75L19.5 12m0 0l2.25 2.25M19.5 12l2.25-2.25M19.5 12l-2.25 2.25m-10.5-6l4.72-4.72a.75.75 0 011.28.531V19.94a.75.75 0 01-1.28.53l-4.72-4.72H4.51c-.88 0-1.704-.507-1.938-1.354A9.01 9.01 0 012.25 12c0-.83.112-1.633.322-2.396C2.806 8.757 3.63 8.25 4.51 8.25H6.75z" />
-                </svg>
+              <div className="h-36 overflow-hidden">
+                <img
+                  src="https://images.unsplash.com/photo-1619642751034-765dfdf7c58e?q=80&w=1074&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D"
+                  alt="Ruido trasero"
+                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                />
               </div>
               <div className="p-4 bg-white">
                 <p className="font-bold text-primary text-sm">Ruido trasero</p>
@@ -422,10 +435,12 @@ export default function Login() {
 
             {/* Suspensión */}
             <div className="rounded-2xl overflow-hidden border border-gray-100 shadow-sm hover:shadow-md transition-all group">
-              <div className="bg-gradient-to-br from-teal-600 to-teal-800 p-6 flex items-center justify-center h-36">
-                <svg className="w-14 h-14 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 18.75a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m3 0h6m-9 0H3.375a1.125 1.125 0 01-1.125-1.125V14.25m17.25 4.5a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m3 0h1.125c.621 0 1.129-.504 1.09-1.124a17.902 17.902 0 00-3.213-9.193 2.056 2.056 0 00-1.58-.86H14.25M16.5 18.75h-2.25m0-11.177v-.958c0-.568-.422-1.048-.987-1.106a48.554 48.554 0 00-10.026 0 1.106 1.106 0 00-.987 1.106v7.635m12-6.677v6.677m0 4.5v-4.5m0 0h-12" />
-                </svg>
+              <div className="h-36 overflow-hidden">
+                <img
+                  src="https://images.unsplash.com/photo-1599474151975-1f978922fa02?q=80&w=1470&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D"
+                  alt="Suspensión"
+                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                />
               </div>
               <div className="p-4 bg-white">
                 <p className="font-bold text-primary text-sm">Suspensión</p>
@@ -435,10 +450,12 @@ export default function Login() {
 
             {/* Más servicios */}
             <div className="rounded-2xl overflow-hidden border border-gray-100 shadow-sm hover:shadow-md transition-all group">
-              <div className="bg-gradient-to-br from-slate-600 to-primary p-6 flex items-center justify-center h-36">
-                <svg className="w-14 h-14 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M11.42 15.17L17.25 21A2.652 2.652 0 0021 17.25l-5.877-5.877M11.42 15.17l2.496-3.03c.317-.384.74-.626 1.208-.766M11.42 15.17l-4.655 5.653a2.548 2.548 0 11-3.586-3.586l6.837-5.63m5.108-.233c.55-.164 1.163-.188 1.743-.14a4.5 4.5 0 004.486-6.336l-3.276 3.277a3.004 3.004 0 01-2.25-2.25l3.276-3.276a4.5 4.5 0 00-6.336 4.486c.091 1.076-.071 2.264-.904 2.95l-.102.085m-1.745 1.437L5.909 7.5H4.5L2.25 3.75l1.5-1.5L7.5 4.5v1.409l4.26 4.26m-1.745 1.437l1.745-1.437m6.615 8.206L15.75 15.75M4.867 19.125h.008v.008h-.008v-.008z" />
-                </svg>
+              <div className="h-36 overflow-hidden">
+                <img
+                  src="https://images.unsplash.com/photo-1637640125496-31852f042a60?q=80&w=687&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D"
+                  alt="Más servicios"
+                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                />
               </div>
               <div className="p-4 bg-white">
                 <p className="font-bold text-primary text-sm">Más servicios</p>
