@@ -1,6 +1,6 @@
 // ── Google Apps Script Web App — cliente fetch v2 ─────────────────────────
 const BASE_URL =
-  'https://script.google.com/macros/s/AKfycbygG5z_OTbdmixKVt2qFVYChGq_qXfmT3FkMVp8O1_isJcIpr2SAMYr7RJD022kH3K6/exec';
+  'https://script.google.com/macros/s/AKfycbzYkVBTdfVImSG4SzYh-Vl2KSfrH45jox5Ha27rrHoDHMhgcqf3ttxzv7jmVXM0659M/exec';
 
 // ── helpers internos ──────────────────────────────────────────────────────
 
@@ -25,15 +25,50 @@ async function post(body) {
   return json.data;
 }
 
+// Comprime una imagen antes de subirla (máx 1024px, calidad 0.75)
+function _comprimirImagen(file, maxPx = 1024, calidad = 0.75) {
+  return new Promise((resolve) => {
+    if (!file.type.startsWith('image/')) { resolve(file); return; }
+    const img    = new Image();
+    const objUrl = URL.createObjectURL(file);
+    img.onload = () => {
+      URL.revokeObjectURL(objUrl);
+      const scale  = Math.min(1, maxPx / Math.max(img.width, img.height));
+      const w      = Math.round(img.width  * scale);
+      const h      = Math.round(img.height * scale);
+      const canvas = document.createElement('canvas');
+      canvas.width  = w;
+      canvas.height = h;
+      canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+      canvas.toBlob(
+        (blob) => resolve(new File([blob], file.name.replace(/\.[^.]+$/, '.jpg'), { type: 'image/jpeg' })),
+        'image/jpeg',
+        calidad,
+      );
+    };
+    img.onerror = () => { URL.revokeObjectURL(objUrl); resolve(file); };
+    img.src = objUrl;
+  });
+}
+
 // Para archivos grandes (fotos): usa POST real con body text/plain (sin preflight CORS)
 async function postArchivo(body) {
-  const res  = await fetch(BASE_URL, {
+  const res = await fetch(BASE_URL, {
     method:   'POST',
     redirect: 'follow',
     body:     JSON.stringify(body),
     // Sin Content-Type explícito → text/plain → no dispara preflight CORS
   });
-  const json = await res.json();
+  // Leer como texto primero para poder diagnosticar respuestas no-JSON
+  const text = await res.text();
+  let json;
+  try {
+    json = JSON.parse(text);
+  } catch {
+    // GAS devolvió HTML u otra respuesta no-JSON
+    const preview = text.replace(/<[^>]+>/g, '').trim().slice(0, 120);
+    throw new Error(`Respuesta inesperada del servidor: ${preview}`);
+  }
   if (!json.ok) throw new Error(json.error || 'Error al subir archivo');
   return json.data;
 }
@@ -123,17 +158,17 @@ export const api = {
   // archivo: File object del input[type=file]
   // Retorna: { url, id, nombre }
   subirFoto: async (archivo) => {
+    const comprimido = await _comprimirImagen(archivo);
     return new Promise((resolve, reject) => {
       const reader = new FileReader();
       reader.onload = async (e) => {
         try {
-          // Quitar el prefijo "data:image/jpeg;base64," y dejar solo el base64
           const base64 = e.target.result.split(',')[1];
           const data = await postArchivo({
             accion: 'subirArchivo',
             base64,
-            nombre: archivo.name || `foto_${Date.now()}.jpg`,
-            tipo:   archivo.type || 'image/jpeg',
+            nombre: comprimido.name || `foto_${Date.now()}.jpg`,
+            tipo:   'image/jpeg',
           });
           resolve(data);
         } catch (err) {
@@ -141,7 +176,7 @@ export const api = {
         }
       };
       reader.onerror = reject;
-      reader.readAsDataURL(archivo);
+      reader.readAsDataURL(comprimido);
     });
   },
 

@@ -657,8 +657,8 @@ function FotoUploader({ fotos = [], onChange }) {
       try {
         const { url } = await api.subirFoto(file);
         onChange(prev => [...prev, { nombre: file.name, url }]);
-      } catch {
-        toast.error(`No se pudo subir ${file.name}`);
+      } catch (err) {
+        toast.error(`No se pudo subir ${file.name}: ${err.message}`);
       } finally {
         setSubiendo(p => { const n = { ...p }; delete n[key]; return n; });
       }
