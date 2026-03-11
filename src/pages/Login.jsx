@@ -154,11 +154,6 @@ function LoginModal({ onClose }) {
                 className="w-full bg-accent hover:bg-red-700 text-white font-semibold py-3 rounded-xl shadow-sm transition-all disabled:opacity-60 disabled:cursor-not-allowed">
                 {loading ? spinnerIcon : 'Ingresar al sistema'}
               </button>
-              <div className="p-3 bg-slate-50 rounded-xl border border-slate-100 text-xs text-slate-400 space-y-0.5">
-                <p className="font-semibold text-slate-500">Demo:</p>
-                <p>Email: <span className="font-mono text-slate-600">admin@drivebot.com</span></p>
-                <p>Contraseña: <span className="font-mono text-slate-600">admin123</span></p>
-              </div>
             </form>
           )}
 
