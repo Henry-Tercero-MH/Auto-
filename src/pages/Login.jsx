@@ -225,7 +225,9 @@ export default function Login() {
     <div className="min-h-screen flex flex-col bg-background">
 
       {/* ── Navbar ── */}
-      <header className="bg-primary shadow-lg sticky top-0 z-40 overflow-hidden">
+      <header className="bg-primary shadow-lg sticky top-0 z-40">
+        {/* Barra superior — overflow-hidden solo aquí para no cortar el dropdown */}
+        <div className="relative overflow-hidden">
         {/* Panel blanco diagonal — solo visible al hacer scroll, máx 40% del ancho */}
         <div
           className="absolute inset-y-0 left-0 bg-white transition-opacity duration-500 pointer-events-none"
@@ -281,6 +283,7 @@ export default function Login() {
             </button>
           </div>
         </div>
+        </div>{/* fin overflow-hidden */}
 
         {/* Menú móvil */}
         {menuOpen && (
