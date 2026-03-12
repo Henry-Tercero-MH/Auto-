@@ -1,353 +1,691 @@
 import { useMemo, useState } from 'react';
 import { useSolicitudes } from '../context/SolicitudesContext';
 import { useCatalogos } from '../context/CatalogosContext';
+import { APP_SCRIPT_URL } from '../services/sheetsApi';
 
-const MESES = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
-
-const Icon = ({ path, className = 'w-5 h-5' }) => (
+const Icon = ({ path, className = 'w-4 h-4' }) => (
   <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.8}>
     <path strokeLinecap="round" strokeLinejoin="round" d={path} />
   </svg>
 );
 
-// ── Barra horizontal con label ────────────────────────────────────────────────
-function BarraH({ label, valor, max, color = 'bg-accent', suffix = '' }) {
-  const pct = max > 0 ? Math.round((valor / max) * 100) : 0;
-  return (
-    <div className="flex items-center gap-3">
-      <span className="text-xs text-slate-500 w-32 truncate flex-shrink-0">{label}</span>
-      <div className="flex-1 bg-gray-100 rounded-full h-2">
-        <div className={`${color} h-2 rounded-full transition-all duration-500`} style={{ width: `${pct}%` }} />
-      </div>
-      <span className="text-xs font-bold text-slate-700 w-8 text-right flex-shrink-0">{valor}{suffix}</span>
-    </div>
-  );
+function exportCsv(filename, headers, rows) {
+  if (!rows.length) return;
+  const escape = (value) => {
+    if (value == null) return '';
+    const str = String(value);
+    if (str.includes('"') || str.includes(',') || str.includes('\n')) {
+      return `"${str.replace(/"/g, '""')}"`;
+    }
+    return str;
+  };
+  const csv = [
+    headers.map((h) => escape(h.label)).join(','),
+    ...rows.map((row) => headers.map((h) => escape(row[h.key])).join(',')),
+  ].join('\n');
+
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = filename;
+  link.click();
+  URL.revokeObjectURL(url);
 }
 
-// ── Gráfica de barras vertical simple (sin librería) ──────────────────────────
-function GraficaBarras({ datos, colorBarra = '#e53935', alto = 120 }) {
-  const max = Math.max(...datos.map((d) => d.valor), 1);
-  return (
-    <div className="flex items-end gap-1 sm:gap-2" style={{ height: alto + 24 }}>
-      {datos.map((d) => {
-        const h = Math.round((d.valor / max) * alto);
-        return (
-          <div key={d.label} className="flex flex-col items-center flex-1 min-w-0">
-            <span className="text-xs font-bold text-slate-600 mb-1">{d.valor || ''}</span>
-            <div
-              className="w-full rounded-t-md transition-all duration-500"
-              style={{ height: h || 2, backgroundColor: d.valor ? colorBarra : '#e5e7eb', minHeight: 2 }}
-              title={`${d.label}: ${d.valor}`}
-            />
-            <span className="text-xs text-slate-400 mt-1 truncate w-full text-center">{d.label}</span>
-          </div>
-        );
-      })}
-    </div>
-  );
-}
+const TABS = [
+  { key: 'ordenes', label: 'Listado de órdenes' },
+  { key: 'finanzas', label: 'Resumen financiero' },
+  { key: 'servicios', label: 'Servicios vendidos' },
+  { key: 'documentos', label: 'Documentos imprimibles' },
+];
 
-// ── Tarjeta KPI ───────────────────────────────────────────────────────────────
-function KpiCard({ label, value, sub, icon, color = 'bg-primary' }) {
-  return (
-    <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-3 sm:p-5 flex items-center gap-3">
-      <div className={`w-9 h-9 sm:w-11 sm:h-11 ${color} rounded-xl flex items-center justify-center shrink-0`}>
-        <Icon path={icon} className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
-      </div>
-      <div className="min-w-0">
-        <p className="text-xl sm:text-2xl font-black text-primary">{value}</p>
-        <p className="text-xs font-semibold text-slate-700 truncate">{label}</p>
-        {sub && <p className="text-xs text-slate-400 hidden sm:block truncate">{sub}</p>}
-      </div>
-    </div>
-  );
-}
-
-// ── Página principal ──────────────────────────────────────────────────────────
 export default function Reportes() {
   const { solicitudes } = useSolicitudes();
-  const { mecanicos, estados } = useCatalogos();
+  const { mecanicos, estados, preciosMap, configNegocio } = useCatalogos();
 
-  const añoActual = new Date().getFullYear();
-  const [añoFiltro, setAñoFiltro] = useState(añoActual);
+  const hoy = new Date().toISOString().slice(0, 10);
+  const inicioMes = `${hoy.slice(0, 7)}-01`;
 
-  // Años disponibles en los datos
-  const añosDisponibles = useMemo(() => {
-    const set = new Set(solicitudes.map((s) => s.fecha?.slice(0, 4)).filter(Boolean));
-    return [...set].sort((a, b) => b - a);
-  }, [solicitudes]);
+  const [tab, setTab] = useState('ordenes');
+  const [desde, setDesde] = useState(inicioMes);
+  const [hasta, setHasta] = useState(hoy);
+  const [estadoFiltro, setEstadoFiltro] = useState('Todos');
+  const [mecanicoFiltro, setMecanicoFiltro] = useState('Todos');
 
-  const solicitudesFiltradas = useMemo(
-    () => solicitudes.filter((s) => s.fecha?.startsWith(String(añoFiltro))),
-    [solicitudes, añoFiltro]
-  );
+  const calcularTotal = (s) => {
+    if (s.precio && Number(s.precio) > 0) return Number(s.precio);
+    return (s.servicio || '')
+      .split(',')
+      .map((n) => n.trim())
+      .filter(Boolean)
+      .reduce((sum, n) => sum + (preciosMap[n] || 0), 0);
+  };
 
-  // ── KPIs globales del año ─────────────────────────────────────────────────
-  const kpis = useMemo(() => {
-    const total       = solicitudesFiltradas.length;
-    const completadas = solicitudesFiltradas.filter((s) => s.estado === 'Completada').length;
-    const enProceso   = solicitudesFiltradas.filter((s) => s.estado === 'En proceso').length;
-    const pendientes  = solicitudesFiltradas.filter((s) => s.estado === 'Pendiente').length;
-    const tasaCompl   = total > 0 ? Math.round((completadas / total) * 100) : 0;
-    const sinAsignar  = solicitudesFiltradas.filter((s) => !s.mecanico).length;
-    return { total, completadas, enProceso, pendientes, tasaCompl, sinAsignar };
-  }, [solicitudesFiltradas]);
-
-  // ── Solicitudes por mes ───────────────────────────────────────────────────
-  const porMes = useMemo(() => {
-    const conteo = Array(12).fill(0);
-    solicitudesFiltradas.forEach((s) => {
-      const mes = parseInt(s.fecha?.slice(5, 7), 10) - 1;
-      if (mes >= 0 && mes < 12) conteo[mes]++;
+  const solicitudesFiltradas = useMemo(() => {
+    return solicitudes.filter((s) => {
+      const f = s.fecha || '';
+      if (desde && f < desde) return false;
+      if (hasta && f > hasta) return false;
+      if (estadoFiltro !== 'Todos' && s.estado !== estadoFiltro) return false;
+      if (mecanicoFiltro !== 'Todos') {
+        if (!s.mecanico || String(s.mecanico.id) !== String(mecanicoFiltro)) return false;
+      }
+      return true;
     });
-    return MESES.map((label, i) => ({ label, valor: conteo[i] }));
-  }, [solicitudesFiltradas]);
+  }, [solicitudes, desde, hasta, estadoFiltro, mecanicoFiltro]);
 
-  // ── Completadas vs Pendientes por mes ────────────────────────────────────
-  const porMesEstado = useMemo(() => {
-    const comp = Array(12).fill(0);
-    const pend = Array(12).fill(0);
+  const resumenFinanciero = useMemo(() => {
+    const porDia = {};
+    let totalFacturado = 0;
+    let totalPorCobrar = 0;
+
     solicitudesFiltradas.forEach((s) => {
-      const mes = parseInt(s.fecha?.slice(5, 7), 10) - 1;
-      if (mes >= 0 && mes < 12) {
-        if (s.estado === 'Completada') comp[mes]++;
-        else pend[mes]++;
+      const fecha = s.fecha || 'Sin fecha';
+      const monto = calcularTotal(s);
+      if (!porDia[fecha]) {
+        porDia[fecha] = { fecha, total: 0, completadas: 0, pendientes: 0, monto: 0 };
+      }
+      const d = porDia[fecha];
+      d.total += 1;
+      d.monto += monto;
+      if (s.estado === 'Completada') {
+        d.completadas += 1;
+        totalFacturado += monto;
+      } else if (s.estado === 'Pendiente' || s.estado === 'En proceso') {
+        d.pendientes += 1;
+        totalPorCobrar += monto;
       }
     });
-    return MESES.map((label, i) => ({ label, completadas: comp[i], pendientes: pend[i] }));
+
+    const filas = Object.values(porDia).sort((a, b) => (a.fecha > b.fecha ? 1 : -1));
+    return { filas, totalFacturado, totalPorCobrar };
   }, [solicitudesFiltradas]);
 
-  // ── Servicios más solicitados ─────────────────────────────────────────────
-  const topServicios = useMemo(() => {
-    const conteo = {};
+  const serviciosVendidos = useMemo(() => {
+    const mapa = {};
     solicitudesFiltradas.forEach((s) => {
-      conteo[s.servicio] = (conteo[s.servicio] || 0) + 1;
+      (s.servicio || '')
+        .split(',')
+        .map((n) => n.trim())
+        .filter(Boolean)
+        .forEach((nombre) => {
+          if (!mapa[nombre]) {
+            mapa[nombre] = { servicio: nombre, cantidad: 0, ingresos: 0 };
+          }
+          mapa[nombre].cantidad += 1;
+          mapa[nombre].ingresos += preciosMap[nombre] || 0;
+        });
     });
-    return Object.entries(conteo)
-      .sort((a, b) => b[1] - a[1])
-      .slice(0, 8)
-      .map(([nombre, count]) => ({ label: nombre, valor: count }));
-  }, [solicitudesFiltradas]);
+    return Object.values(mapa).sort((a, b) => b.cantidad - a.cantidad);
+  }, [solicitudesFiltradas, preciosMap]);
 
-  // ── Productividad por mecánico ────────────────────────────────────────────
-  const prodMecanicos = useMemo(() => {
-    return mecanicos
-      .filter((m) => m.activo)
-      .map((m) => {
-        const asignadas    = solicitudesFiltradas.filter((s) => s.mecanico?.id === m.id);
-        const completadas  = asignadas.filter((s) => s.estado === 'Completada').length;
-        const enProceso    = asignadas.filter((s) => s.estado === 'En proceso').length;
-        const tasa         = asignadas.length > 0 ? Math.round((completadas / asignadas.length) * 100) : 0;
-        return { id: m.id, nombre: m.nombre, especialidad: m.especialidad, total: asignadas.length, completadas, enProceso, tasa };
-      })
-      .sort((a, b) => b.completadas - a.completadas);
-  }, [solicitudesFiltradas, mecanicos]);
+  const [idSeleccionado, setIdSeleccionado] = useState('');
+  const solicitudSeleccionada = useMemo(
+    () => solicitudes.find((s) => String(s.id) === String(idSeleccionado)) || null,
+    [solicitudes, idSeleccionado],
+  );
 
-  const maxComp = prodMecanicos[0]?.completadas || 1;
+  const totalSeleccionada = solicitudSeleccionada ? calcularTotal(solicitudSeleccionada) : 0;
 
-  // ── Estado breakdown ──────────────────────────────────────────────────────
-  const estadoBreakdown = useMemo(() => {
-    return estados.map((e) => ({
-      nombre: e.nombre,
-      count: solicitudesFiltradas.filter((s) => s.estado === e.nombre).length,
-      cls: e.bgClass,
-      dot: e.dotClass,
+  const exportarOrdenes = () => {
+    const headers = [
+      { key: 'id', label: 'ID' },
+      { key: 'fecha', label: 'Fecha' },
+      { key: 'cliente', label: 'Cliente' },
+      { key: 'vehiculo', label: 'Vehículo' },
+      { key: 'placa', label: 'Placa' },
+      { key: 'servicio', label: 'Servicio(s)' },
+      { key: 'mecanico', label: 'Mecánico' },
+      { key: 'estado', label: 'Estado' },
+      { key: 'total', label: 'Total (Q)' },
+    ];
+    const rows = solicitudesFiltradas.map((s) => ({
+      id: s.id,
+      fecha: s.fecha,
+      cliente: s.cliente,
+      vehiculo: s.vehiculo,
+      placa: s.placa,
+      servicio: s.servicio,
+      mecanico: s.mecanico?.name || s.mecanico?.nombre || '',
+      estado: s.estado,
+      total: calcularTotal(s).toFixed(2),
     }));
-  }, [solicitudesFiltradas, estados]);
+    exportCsv('ordenes.csv', headers, rows);
+  };
 
-  // ── Mes pico ──────────────────────────────────────────────────────────────
-  const mesPico = useMemo(() => {
-    const max = Math.max(...porMes.map((m) => m.valor));
-    const idx = porMes.findIndex((m) => m.valor === max);
-    return max > 0 ? `${MESES[idx]} (${max} órdenes)` : '—';
-  }, [porMes]);
+  const exportarFinanzas = () => {
+    const headers = [
+      { key: 'fecha', label: 'Fecha' },
+      { key: 'total', label: '# Órdenes' },
+      { key: 'completadas', label: 'Completadas' },
+      { key: 'pendientes', label: 'Pendientes / En proceso' },
+      { key: 'monto', label: 'Monto total (Q)' },
+    ];
+    const rows = resumenFinanciero.filas.map((f) => ({
+      fecha: f.fecha,
+      total: f.total,
+      completadas: f.completadas,
+      pendientes: f.pendientes,
+      monto: f.monto.toFixed(2),
+    }));
+    exportCsv('finanzas.csv', headers, rows);
+  };
+
+  const exportarServicios = () => {
+    const headers = [
+      { key: 'servicio', label: 'Servicio' },
+      { key: 'cantidad', label: 'Cantidad' },
+      { key: 'ingresos', label: 'Ingresos estimados (Q)' },
+    ];
+    const rows = serviciosVendidos.map((s) => ({
+      servicio: s.servicio,
+      cantidad: s.cantidad,
+      ingresos: s.ingresos.toFixed(2),
+    }));
+    exportCsv('servicios.csv', headers, rows);
+  };
 
   return (
     <div className="space-y-6">
-
-      {/* ── Header ── */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <p className="text-slate-500 text-sm mt-0.5">Análisis de rendimiento del taller</p>
+          <h2 className="text-lg font-semibold text-primary">Centro de reportes e impresión</h2>
+          <p className="text-slate-500 text-sm mt-0.5">
+            Filtra órdenes por rango de fechas y genera listados para Excel o impresión.
+          </p>
         </div>
-        {/* Selector de año */}
-        <div className="flex items-center gap-2">
-          <label className="text-sm text-slate-500">Año:</label>
-          <select
-            value={añoFiltro}
-            onChange={(e) => setAñoFiltro(Number(e.target.value))}
-            className="border border-gray-200 rounded-xl px-3 py-2 text-sm text-slate-700 bg-white focus:outline-none focus:ring-2 focus:ring-accent"
-          >
-            {añosDisponibles.length > 0
-              ? añosDisponibles.map((a) => <option key={a} value={a}>{a}</option>)
-              : <option value={añoActual}>{añoActual}</option>
-            }
-          </select>
-        </div>
+        <button
+          type="button"
+          onClick={() => window.open(APP_SCRIPT_URL, '_blank')}
+          className="inline-flex items-center gap-1.5 px-3 py-2 rounded-md text-xs sm:text-sm font-semibold border border-slate-300 bg-white text-slate-700 hover:bg-slate-50"
+        >
+          <Icon path="M4 4h16v4H4V4zm0 6h10v4H4v-4zm0 6h7v4H4v-4zm12 0h4v4h-4v-4z" />
+          Imprimir libro Excel
+        </button>
       </div>
 
-      {/* ── KPIs ── */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-4">
-        <KpiCard label="Total órdenes"   value={kpis.total}       sub={`año ${añoFiltro}`}        color="bg-primary"    icon="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
-        <KpiCard label="Completadas"     value={kpis.completadas} sub="finalizadas"               color="bg-green-500"  icon="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-        <KpiCard label="En proceso"      value={kpis.enProceso}   sub="actualmente"               color="bg-orange-500" icon="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-        <KpiCard label="Pendientes"      value={kpis.pendientes}  sub="por atender"               color="bg-amber-500"  icon="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-        <KpiCard label="Tasa compl."     value={`${kpis.tasaCompl}%`} sub="órdenes completadas"  color="bg-blue-500"   icon="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
-      </div>
-
-      {/* ── Tarjetas resumen extra ── */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
-        <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-4 sm:p-5">
-          <p className="text-xs text-slate-400 uppercase tracking-wide mb-1">Mes con más actividad</p>
-          <p className="text-base sm:text-lg font-black text-primary">{mesPico}</p>
-        </div>
-        <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-4 sm:p-5">
-          <p className="text-xs text-slate-400 uppercase tracking-wide mb-1">Sin asignar a mecánico</p>
-          <p className="text-base sm:text-lg font-black text-amber-600">{kpis.sinAsignar} <span className="text-sm font-normal text-slate-400">órdenes</span></p>
-        </div>
-        <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-4 sm:p-5">
-          <p className="text-xs text-slate-400 uppercase tracking-wide mb-1">Servicio #1</p>
-          <p className="text-base sm:text-lg font-black text-primary truncate">{topServicios[0]?.label || '—'}</p>
-          {topServicios[0] && <p className="text-xs text-slate-400">{topServicios[0].valor} solicitudes</p>}
-        </div>
-      </div>
-
-      {/* ── Solicitudes por mes (gráfica de barras) ── */}
-      <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-4 sm:p-5">
-        <h3 className="font-semibold text-primary mb-4 sm:mb-5 text-sm uppercase tracking-wide">Órdenes por mes — {añoFiltro}</h3>
-        {kpis.total === 0 ? (
-          <p className="text-slate-400 text-sm text-center py-6">Sin datos para este año</p>
-        ) : (
-          <GraficaBarras datos={porMes} alto={130} colorBarra="#1e3a5f" />
-        )}
-      </div>
-
-      {/* ── Fila: Servicios más solicitados + Estado breakdown ── */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-5">
-
-        {/* Servicios top */}
-        <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-4 sm:p-5">
-          <h3 className="font-semibold text-primary mb-4 sm:mb-5 text-sm uppercase tracking-wide">Servicios más solicitados</h3>
-          {topServicios.length === 0 ? (
-            <p className="text-slate-400 text-sm text-center py-4">Sin datos</p>
-          ) : (
-            <div className="space-y-3">
-              {topServicios.map((s, i) => (
-                <BarraH
-                  key={s.label}
-                  label={s.label}
-                  valor={s.valor}
-                  max={topServicios[0].valor}
-                  color={i === 0 ? 'bg-accent' : i === 1 ? 'bg-orange-400' : 'bg-primary'}
-                />
+      <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-4 sm:p-5 space-y-4">
+        <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
+          <div>
+            <label className="block text-[11px] font-semibold text-slate-500 uppercase tracking-wide mb-1">
+              Desde
+            </label>
+            <input
+              type="date"
+              value={desde}
+              onChange={(e) => setDesde(e.target.value)}
+              className="w-full border border-slate-300 rounded-md px-3 py-2 text-sm text-slate-700 focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none"
+            />
+          </div>
+          <div>
+            <label className="block text-[11px] font-semibold text-slate-500 uppercase tracking-wide mb-1">
+              Hasta
+            </label>
+            <input
+              type="date"
+              value={hasta}
+              onChange={(e) => setHasta(e.target.value)}
+              className="w-full border border-slate-300 rounded-md px-3 py-2 text-sm text-slate-700 focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none"
+            />
+          </div>
+          <div>
+            <label className="block text-[11px] font-semibold text-slate-500 uppercase tracking-wide mb-1">
+              Estado
+            </label>
+            <select
+              value={estadoFiltro}
+              onChange={(e) => setEstadoFiltro(e.target.value)}
+              className="w-full border border-slate-300 rounded-md px-3 py-2 text-sm text-slate-700 bg-white focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none"
+            >
+              <option value="Todos">Todos</option>
+              {estados.map((e) => (
+                <option key={e.id} value={e.nombre}>
+                  {e.nombre}
+                </option>
               ))}
+            </select>
+          </div>
+          <div>
+            <label className="block text-[11px] font-semibold text-slate-500 uppercase tracking-wide mb-1">
+              Mecánico
+            </label>
+            <select
+              value={mecanicoFiltro}
+              onChange={(e) => setMecanicoFiltro(e.target.value)}
+              className="w-full border border-slate-300 rounded-md px-3 py-2 text-sm text-slate-700 bg-white focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none"
+            >
+              <option value="Todos">Todos</option>
+              {mecanicos.map((m) => (
+                <option key={m.id} value={m.id}>
+                  {m.nombre}
+                </option>
+              ))}
+            </select>
+          </div>
+        </div>
+
+        <p className="text-xs text-slate-400">
+          {solicitudesFiltradas.length} de {solicitudes.length} órdenes dentro del rango seleccionado.
+        </p>
+      </div>
+
+      <div className="border-b border-slate-200">
+        <nav className="flex gap-1 -mb-px overflow-x-auto">
+          {TABS.map((t) => (
+            <button
+              key={t.key}
+              onClick={() => setTab(t.key)}
+              className={`px-3 sm:px-4 py-2.5 text-xs sm:text-sm font-semibold border-b-2 whitespace-nowrap flex items-center gap-2 ${
+                tab === t.key
+                  ? 'border-primary text-primary'
+                  : 'border-transparent text-slate-400 hover:text-slate-700 hover:border-slate-300'
+              }`}
+            >
+              {t.label}
+            </button>
+          ))}
+        </nav>
+      </div>
+
+      {tab === 'ordenes' && (
+        <div className="space-y-4">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <h3 className="text-sm font-semibold text-primary">Listado detallado de órdenes</h3>
+            <div className="flex flex-wrap gap-2">
+              <button
+                type="button"
+                onClick={exportarOrdenes}
+                disabled={solicitudesFiltradas.length === 0}
+                className={`inline-flex items-center gap-1.5 px-3 py-2 rounded-md text-xs font-semibold border transition ${
+                  solicitudesFiltradas.length === 0
+                    ? 'border-slate-200 text-slate-300 cursor-not-allowed'
+                    : 'border-slate-300 text-slate-700 hover:bg-slate-50'
+                }`}
+              >
+                <Icon path="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-8 0V5a2 2 0 012-2h4a2 2 0 012 2v2M9 12h6m-6 4h3" />
+                Exportar a Excel
+              </button>
+              <button
+                type="button"
+                onClick={() => window.print()}
+                className="inline-flex items-center gap-1.5 px-3 py-2 rounded-md text-xs font-semibold bg-primary text-white hover:bg-primary/90"
+              >
+                <Icon path="M6 9V4a2 2 0 012-2h8a2 2 0 012 2v5m-2 4h2a2 2 0 002-2v-1a2 2 0 00-2-2H4a2 2 0 00-2 2v1a2 2 0 002 2h2m0 0v3a2 2 0 002 2h8a2 2 0 002-2v-3m-12 0h12" />
+                Imprimir listado
+              </button>
             </div>
-          )}
+          </div>
+
+          <div className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-x-auto">
+            {solicitudesFiltradas.length === 0 ? (
+              <p className="text-slate-400 text-sm text-center py-10">No hay órdenes en el rango seleccionado.</p>
+            ) : (
+              <table className="w-full text-sm min-w-[700px]">
+                <thead>
+                  <tr className="bg-slate-50 text-slate-500 text-xs uppercase tracking-wider">
+                    <th className="text-left px-3 sm:px-4 py-3">ID</th>
+                    <th className="text-left px-3 sm:px-4 py-3">Fecha</th>
+                    <th className="text-left px-3 sm:px-4 py-3">Cliente</th>
+                    <th className="text-left px-3 sm:px-4 py-3">Vehículo</th>
+                    <th className="text-left px-3 sm:px-4 py-3">Servicio(s)</th>
+                    <th className="text-left px-3 sm:px-4 py-3">Mecánico</th>
+                    <th className="text-left px-3 sm:px-4 py-3">Estado</th>
+                    <th className="text-right px-3 sm:px-4 py-3">Total (Q)</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-100">
+                  {solicitudesFiltradas.map((s) => (
+                    <tr key={s.id} className="hover:bg-slate-50">
+                      <td className="px-3 sm:px-4 py-2 text-xs font-mono text-slate-500">#{s.id}</td>
+                      <td className="px-3 sm:px-4 py-2 text-xs text-slate-600">{s.fecha}</td>
+                      <td className="px-3 sm:px-4 py-2 text-xs text-slate-800">{s.cliente}</td>
+                      <td className="px-3 sm:px-4 py-2 text-xs text-slate-600">{s.vehiculo}</td>
+                      <td className="px-3 sm:px-4 py-2 text-xs text-slate-600">{s.servicio}</td>
+                      <td className="px-3 sm:px-4 py-2 text-xs text-slate-600">
+                        {s.mecanico?.name || s.mecanico?.nombre || '—'}
+                      </td>
+                      <td className="px-3 sm:px-4 py-2 text-xs text-slate-700">{s.estado}</td>
+                      <td className="px-3 sm:px-4 py-2 text-xs text-right font-semibold text-slate-800">
+                        {calcularTotal(s).toFixed(2)}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
+          </div>
         </div>
+      )}
 
-        {/* Breakdown por estado */}
-        <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-4 sm:p-5">
-          <h3 className="font-semibold text-primary mb-4 sm:mb-5 text-sm uppercase tracking-wide">Distribución por estado</h3>
-          {kpis.total === 0 ? (
-            <p className="text-slate-400 text-sm text-center py-4">Sin datos</p>
-          ) : (
-            <div className="space-y-4">
-              {estadoBreakdown.map((e) => (
-                <div key={e.nombre}>
-                  <div className="flex items-center justify-between mb-1.5">
-                    <div className="flex items-center gap-2">
-                      <span className={`w-2.5 h-2.5 rounded-full flex-shrink-0 ${e.dot}`} />
-                      <span className="text-sm text-slate-700">{e.nombre}</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${e.cls}`}>{e.count}</span>
-                      <span className="text-xs text-slate-400">
-                        {kpis.total > 0 ? Math.round((e.count / kpis.total) * 100) : 0}%
-                      </span>
-                    </div>
-                  </div>
-                  <div className="w-full bg-gray-100 rounded-full h-2">
-                    <div
-                      className="h-2 rounded-full transition-all duration-500"
-                      style={{
-                        width: kpis.total > 0 ? `${Math.round((e.count / kpis.total) * 100)}%` : '0%',
-                        backgroundColor: estados.find((s) => s.nombre === e.nombre)?.color || '#94a3b8',
-                      }}
-                    />
-                  </div>
-                </div>
-              ))}
+      {tab === 'finanzas' && (
+        <div className="space-y-4">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <h3 className="text-sm font-semibold text-primary">Resumen financiero por día</h3>
+            <div className="flex flex-wrap gap-2">
+              <button
+                type="button"
+                onClick={exportarFinanzas}
+                disabled={resumenFinanciero.filas.length === 0}
+                className={`inline-flex items-center gap-1.5 px-3 py-2 rounded-md text-xs font-semibold border transition ${
+                  resumenFinanciero.filas.length === 0
+                    ? 'border-slate-200 text-slate-300 cursor-not-allowed'
+                    : 'border-slate-300 text-slate-700 hover:bg-slate-50'
+                }`}
+              >
+                <Icon path="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-8 0V5a2 2 0 012-2h4a2 2 0 012 2v2M9 12h6m-6 4h3" />
+                Exportar a Excel
+              </button>
+              <button
+                type="button"
+                onClick={() => window.print()}
+                className="inline-flex items-center gap-1.5 px-3 py-2 rounded-md text-xs font-semibold bg-primary text-white hover:bg-primary/90"
+              >
+                <Icon path="M6 9V4a2 2 0 012-2h8a2 2 0 012 2v5m-2 4h2a2 2 0 002-2v-1a2 2 0 00-2-2H4a2 2 0 00-2 2v1a2 2 0 002 2h2m0 0v3a2 2 0 002 2h8a2 2 0 002-2v-3m-12 0h12" />
+                Imprimir resumen
+              </button>
+            </div>
+          </div>
 
-              {/* Dona visual simple */}
-              <div className="mt-4 pt-4 border-t border-gray-100 flex items-center justify-center gap-4 flex-wrap">
-                {estadoBreakdown.map((e) => (
-                  <div key={e.nombre} className="flex items-center gap-1.5 text-xs text-slate-500">
-                    <span className={`w-2 h-2 rounded-full ${e.dot}`} />
-                    {e.nombre}: {kpis.total > 0 ? Math.round((e.count / kpis.total) * 100) : 0}%
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-4">
+              <p className="text-[11px] text-slate-400 uppercase tracking-wide mb-1">Total facturado</p>
+              <p className="text-lg font-black text-primary">
+                Q {resumenFinanciero.totalFacturado.toLocaleString('es-GT', { minimumFractionDigits: 2 })}
+              </p>
+            </div>
+            <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-4">
+              <p className="text-[11px] text-slate-400 uppercase tracking-wide mb-1">Por cobrar</p>
+              <p className="text-lg font-black text-amber-600">
+                Q {resumenFinanciero.totalPorCobrar.toLocaleString('es-GT', { minimumFractionDigits: 2 })}
+              </p>
+            </div>
+            <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-4">
+              <p className="text-[11px] text-slate-400 uppercase tracking-wide mb-1">Órdenes en rango</p>
+              <p className="text-lg font-black text-slate-800">{solicitudesFiltradas.length}</p>
+            </div>
+          </div>
+
+          <div className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-x-auto">
+            {resumenFinanciero.filas.length === 0 ? (
+              <p className="text-slate-400 text-sm text-center py-10">No hay datos financieros en el rango seleccionado.</p>
+            ) : (
+              <table className="w-full text-sm min-w-[600px]">
+                <thead>
+                  <tr className="bg-slate-50 text-slate-500 text-xs uppercase tracking-wider">
+                    <th className="text-left px-3 sm:px-4 py-3">Fecha</th>
+                    <th className="text-center px-3 sm:px-4 py-3">Órdenes</th>
+                    <th className="text-center px-3 sm:px-4 py-3">Completadas</th>
+                    <th className="text-center px-3 sm:px-4 py-3">Pendientes / En proceso</th>
+                    <th className="text-right px-3 sm:px-4 py-3">Monto total (Q)</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-100">
+                  {resumenFinanciero.filas.map((f) => (
+                    <tr key={f.fecha} className="hover:bg-slate-50">
+                      <td className="px-3 sm:px-4 py-2 text-xs text-slate-700">{f.fecha}</td>
+                      <td className="px-3 sm:px-4 py-2 text-xs text-center text-slate-700 font-semibold">{f.total}</td>
+                      <td className="px-3 sm:px-4 py-2 text-xs text-center text-green-600 font-semibold">{f.completadas}</td>
+                      <td className="px-3 sm:px-4 py-2 text-xs text-center text-amber-600 font-semibold">{f.pendientes}</td>
+                      <td className="px-3 sm:px-4 py-2 text-xs text-right text-slate-800 font-semibold">
+                        {f.monto.toFixed(2)}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
+          </div>
+        </div>
+      )}
+
+      {tab === 'servicios' && (
+        <div className="space-y-4">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <h3 className="text-sm font-semibold text-primary">Servicios vendidos en el rango</h3>
+            <div className="flex flex-wrap gap-2">
+              <button
+                type="button"
+                onClick={exportarServicios}
+                disabled={serviciosVendidos.length === 0}
+                className={`inline-flex items-center gap-1.5 px-3 py-2 rounded-md text-xs font-semibold border transition ${
+                  serviciosVendidos.length === 0
+                    ? 'border-slate-200 text-slate-300 cursor-not-allowed'
+                    : 'border-slate-300 text-slate-700 hover:bg-slate-50'
+                }`}
+              >
+                <Icon path="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-8 0V5a2 2 0 012-2h4a2 2 0 012 2v2M9 12h6m-6 4h3" />
+                Exportar a Excel
+              </button>
+            </div>
+          </div>
+
+          <div className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-x-auto">
+            {serviciosVendidos.length === 0 ? (
+              <p className="text-slate-400 text-sm text-center py-10">No hay servicios registrados en el rango seleccionado.</p>
+            ) : (
+              <table className="w-full text-sm min-w-[500px]">
+                <thead>
+                  <tr className="bg-slate-50 text-slate-500 text-xs uppercase tracking-wider">
+                    <th className="text-left px-3 sm:px-4 py-3">Servicio</th>
+                    <th className="text-center px-3 sm:px-4 py-3">Cantidad</th>
+                    <th className="text-right px-3 sm:px-4 py-3">Ingresos estimados (Q)</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-100">
+                  {serviciosVendidos.map((s) => (
+                    <tr key={s.servicio} className="hover:bg-slate-50">
+                      <td className="px-3 sm:px-4 py-2 text-xs text-slate-800">{s.servicio}</td>
+                      <td className="px-3 sm:px-4 py-2 text-xs text-center text-slate-700 font-semibold">
+                        {s.cantidad}
+                      </td>
+                      <td className="px-3 sm:px-4 py-2 text-xs text-right text-slate-800 font-semibold">
+                        {s.ingresos.toFixed(2)}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
+          </div>
+        </div>
+      )}
+
+      {tab === 'documentos' && (
+        <div className="space-y-5">
+          <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-4 sm:p-5 space-y-4">
+            <h3 className="text-sm font-semibold text-primary">Impresión de recibo / orden de trabajo</h3>
+
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <div className="sm:col-span-1">
+                <label className="block text-[11px] font-semibold text-slate-500 uppercase tracking-wide mb-1">
+                  Seleccionar orden
+                </label>
+                <select
+                  value={idSeleccionado}
+                  onChange={(e) => setIdSeleccionado(e.target.value)}
+                  className="w-full border border-slate-300 rounded-md px-3 py-2 text-sm text-slate-700 bg-white focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none"
+                >
+                  <option value="">Buscar por ID…</option>
+                  {solicitudes
+                    .slice()
+                    .sort((a, b) => (b.id > a.id ? 1 : -1))
+                    .map((s) => (
+                      <option key={s.id} value={s.id}>
+                        #{s.id} · {s.cliente} · {s.vehiculo}
+                      </option>
+                    ))}
+                </select>
+              </div>
+
+              <div className="sm:col-span-2">
+                {solicitudSeleccionada ? (
+                  <div id="print-recibo" className="border border-slate-200 rounded-lg p-4 bg-white">
+                    <style>{`
+                      @media print {
+                        @page { size: 80mm auto; margin: 5mm; }
+                        body * { visibility: hidden !important; }
+                        #print-recibo, #print-recibo * { visibility: visible !important; }
+                        #print-recibo {
+                          position: fixed; inset: 0;
+                          max-width: 80mm; margin: 0 auto;
+                          font-family: 'Courier New', monospace;
+                          font-size: 10px; color: #000;
+                        }
+                      }
+                    `}</style>
+                    <div className="text-center mb-2">
+                      <p className="font-bold text-xs uppercase">
+                        {configNegocio?.nombre || 'Nombre del negocio'}
+                      </p>
+                      {configNegocio?.slogan && (
+                        <p className="text-[10px] text-slate-500">{configNegocio.slogan}</p>
+                      )}
+                      {configNegocio?.direccion && (
+                        <p className="text-[9px] text-slate-400">{configNegocio.direccion}</p>
+                      )}
+                      {(configNegocio?.telefono || configNegocio?.nit) && (
+                        <p className="text-[9px] text-slate-400">
+                          {configNegocio.telefono && `Tel: ${configNegocio.telefono}`}{' '}
+                          {configNegocio.nit && `· NIT: ${configNegocio.nit}`}
+                        </p>
+                      )}
+                    </div>
+
+                    <div className="border-t border-b border-dashed border-slate-400 py-1 my-1">
+                      <p className="text-center text-[11px] font-bold tracking-wide">
+                        RECIBO / FACTURA #{solicitudSeleccionada.id}
+                      </p>
+                      <p className="text-[10px] text-slate-600 flex justify-between">
+                        <span>Fecha:</span>
+                        <span>{solicitudSeleccionada.fecha}</span>
+                      </p>
+                    </div>
+
+                    <div className="mt-1 space-y-1 text-[10px]">
+                      <p className="flex justify-between">
+                        <span className="text-slate-500">Cliente:</span>
+                        <span className="font-semibold text-slate-800 ml-2">
+                          {solicitudSeleccionada.cliente}
+                        </span>
+                      </p>
+                      <p className="flex justify-between">
+                        <span className="text-slate-500">Vehículo:</span>
+                        <span className="font-semibold text-slate-800 ml-2">
+                          {solicitudSeleccionada.vehiculo}
+                        </span>
+                      </p>
+                      <p className="flex justify-between">
+                        <span className="text-slate-500">Placa:</span>
+                        <span className="font-semibold text-slate-800 ml-2">
+                          {solicitudSeleccionada.placa}
+                        </span>
+                      </p>
+                    </div>
+
+                    <div className="mt-3 border-t border-b border-slate-300 py-1">
+                      <p className="text-[10px] font-semibold text-slate-600 mb-1">
+                        Detalle de servicios
+                      </p>
+                      <table className="w-full text-[10px]">
+                        <tbody>
+                          {(solicitudSeleccionada.servicio || '')
+                            .split(',')
+                            .map((n) => n.trim())
+                            .filter(Boolean)
+                            .map((nombre) => (
+                              <tr key={nombre}>
+                                <td className="pr-1 text-slate-700">{nombre}</td>
+                                <td className="text-right font-semibold text-slate-800">
+                                  {preciosMap[nombre]
+                                    ? `Q ${preciosMap[nombre].toFixed(2)}`
+                                    : ''}
+                                </td>
+                              </tr>
+                            ))}
+                          <tr>
+                            <td className="pt-1 border-t border-dashed border-slate-400 font-bold text-slate-700">
+                              TOTAL
+                            </td>
+                            <td className="pt-1 border-t border-dashed border-slate-400 text-right font-black text-slate-900">
+                              Q {totalSeleccionada.toFixed(2)}
+                            </td>
+                          </tr>
+                        </tbody>
+                      </table>
+                    </div>
+
+                    <div className="mt-3 text-[9px] text-slate-600 min-h-[24px]">
+                      {solicitudSeleccionada.notas && (
+                        <>
+                          <p className="font-semibold uppercase">Observaciones:</p>
+                          <p>{solicitudSeleccionada.notas}</p>
+                        </>
+                      )}
+                    </div>
+
+                    <div className="mt-4 flex justify-between text-[9px] text-slate-600">
+                      <div className="flex-1 mr-4">
+                        <div className="border-t border-slate-400 mt-6 pt-1 text-center">
+                          Firma del cliente
+                        </div>
+                      </div>
+                      <div className="flex-1">
+                        <div className="border-t border-slate-400 mt-6 pt-1 text-center">
+                          Autorizado por
+                        </div>
+                      </div>
+                    </div>
                   </div>
-                ))}
+                ) : (
+                  <p className="text-xs text-slate-400 mt-2">
+                    Selecciona una orden para preparar el documento de impresión.
+                  </p>
+                )}
               </div>
             </div>
-          )}
-        </div>
-      </div>
 
-      {/* ── Productividad por mecánico ── */}
-      <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-4 sm:p-5">
-        <h3 className="font-semibold text-primary mb-4 sm:mb-5 text-sm uppercase tracking-wide">Productividad por mecánico — {añoFiltro}</h3>
-        {prodMecanicos.length === 0 ? (
-          <p className="text-slate-400 text-sm text-center py-4">Sin mecánicos registrados</p>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm min-w-[400px]">
-              <thead>
-                <tr className="bg-slate-50 text-slate-500 text-xs uppercase tracking-wider">
-                  <th className="text-left px-3 sm:px-4 py-3">Mecánico</th>
-                  <th className="text-left px-3 sm:px-4 py-3 hidden sm:table-cell">Especialidad</th>
-                  <th className="text-center px-3 sm:px-4 py-3">Total</th>
-                  <th className="text-center px-3 sm:px-4 py-3">Comp.</th>
-                  <th className="text-center px-3 sm:px-4 py-3 hidden sm:table-cell">En proc.</th>
-                  <th className="text-left px-3 sm:px-4 py-3">Tasa</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-100">
-                {prodMecanicos.map((m, i) => (
-                  <tr key={m.id} className="hover:bg-slate-50 transition-colors">
-                    <td className="px-3 sm:px-4 py-3">
-                      <div className="flex items-center gap-2">
-                        {i === 0 && m.completadas > 0 && (
-                          <span className="text-amber-400 text-sm">🏆</span>
-                        )}
-                        <span className="font-semibold text-slate-800 text-xs sm:text-sm">{m.nombre}</span>
-                      </div>
-                    </td>
-                    <td className="px-3 sm:px-4 py-3 text-slate-500 text-xs hidden sm:table-cell">{m.especialidad}</td>
-                    <td className="px-3 sm:px-4 py-3 text-center font-bold text-slate-700 text-xs sm:text-sm">{m.total}</td>
-                    <td className="px-3 sm:px-4 py-3 text-center">
-                      <span className="font-bold text-green-600 text-xs sm:text-sm">{m.completadas}</span>
-                    </td>
-                    <td className="px-3 sm:px-4 py-3 text-center hidden sm:table-cell">
-                      <span className="font-bold text-orange-500 text-xs sm:text-sm">{m.enProceso}</span>
-                    </td>
-                    <td className="px-3 sm:px-4 py-3 min-w-[80px] sm:min-w-[100px]">
-                      <div className="flex items-center gap-2">
-                        <div className="flex-1 bg-gray-100 rounded-full h-1.5">
-                          <div
-                            className="bg-green-500 h-1.5 rounded-full transition-all duration-500"
-                            style={{ width: `${m.tasa}%` }}
-                          />
-                        </div>
-                        <span className="text-xs font-bold text-slate-600 w-7 sm:w-8">{m.tasa}%</span>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+            <div className="flex flex-wrap gap-2 justify-end">
+              <button
+                type="button"
+                disabled={!solicitudSeleccionada}
+                onClick={() => {
+                  if (!solicitudSeleccionada) return;
+                  const prev = document.title;
+                  document.title = `Recibo-${solicitudSeleccionada.id}`;
+                  window.print();
+                  document.title = prev;
+                }}
+                className={`inline-flex items-center gap-1.5 px-3 py-2 rounded-md text-xs font-semibold border transition ${
+                  !solicitudSeleccionada
+                    ? 'border-slate-200 text-slate-300 cursor-not-allowed'
+                    : 'border-slate-300 text-slate-700 hover:bg-slate-50'
+                }`}
+              >
+                <Icon path="M6 9V4a2 2 0 012-2h8a2 2 0 012 2v5m-2 4h2a2 2 0 002-2v-1a2 2 0 00-2-2H4a2 2 0 00-2 2v1a2 2 0 002 2h2m0 0v3a2 2 0 002 2h8a2 2 0 002-2v-3m-12 0h12" />
+                Imprimir recibo
+              </button>
+              <button
+                type="button"
+                disabled={!solicitudSeleccionada}
+                onClick={() => {
+                  if (!solicitudSeleccionada) return;
+                  const prev = document.title;
+                  document.title = `Orden-${solicitudSeleccionada.id}`;
+                  window.print();
+                  document.title = prev;
+                }}
+                className={`inline-flex items-center gap-1.5 px-3 py-2 rounded-md text-xs font-semibold bg-primary text-white ${
+                  !solicitudSeleccionada ? 'opacity-50 cursor-not-allowed' : 'hover:bg-primary/90'
+                }`}
+              >
+                <Icon path="M9 12h6m-9 4h6M9 8h3m-1-6H7a2 2 0 00-2 2v16a2 2 0 002 2h10a2 2 0 002-2V8.828a2 2 0 00-.586-1.414l-4.828-4.828A2 2 0 0012.172 2H11z" />
+                Imprimir orden de trabajo
+              </button>
+            </div>
           </div>
-        )}
-      </div>
-
+        </div>
+      )}
     </div>
   );
 }

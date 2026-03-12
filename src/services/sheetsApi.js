@@ -2,6 +2,9 @@
 const BASE_URL =
   'https://script.google.com/macros/s/AKfycbzYkVBTdfVImSG4SzYh-Vl2KSfrH45jox5Ha27rrHoDHMhgcqf3ttxzv7jmVXM0659M/exec';
 
+// URL pública del Web App (se exporta para abrir/imprimir el libro completo desde el frontend)
+export const APP_SCRIPT_URL = BASE_URL;
+
 // ── helpers internos ──────────────────────────────────────────────────────
 
 async function get(recurso, id = null) {

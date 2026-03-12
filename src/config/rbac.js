@@ -15,7 +15,7 @@ const FEATURES = {
   '/servicios':       { enabled: true,  label: 'Servicios' },
   '/seguimiento':     { enabled: true,  label: 'Seguimiento' },
   '/catalogos':       { enabled:false, label: 'Catálogos' },
-  '/reportes':        { enabled: false, label: 'Reportes' },
+  '/reportes':        { enabled: true, label: 'Reportes' },
   'notificaciones':   { enabled: false,  label: 'Notificaciones' },
   'fotos':            { enabled: false,  label: 'Fotos de solicitud' },
 };
