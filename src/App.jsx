@@ -13,6 +13,8 @@ import Seguimiento from './pages/Seguimiento';
 import Scaner from './pages/Scaner';
 import Catalogos from './pages/Catalogos';
 import Reportes from './pages/Reportes';
+import NotFound from './pages/NotFound';
+import Offline from './pages/Offline';
 import { CatalogosProvider } from './context/CatalogosContext';
 import FeatureGuard from './components/FeatureGuard';
 
@@ -50,7 +52,8 @@ function AppRoutes() {
         <Route path="/reportes" element={<FeatureGuard path="/reportes"><Reportes /></FeatureGuard>} />
         <Route path="/seguimiento" element={<FeatureGuard path="/seguimiento"><Seguimiento /></FeatureGuard>} />
       </Route>
-      <Route path="*" element={<Navigate to="/" replace />} />
+      <Route path="/offline" element={<FeatureGuard path="/offline"><Offline /></FeatureGuard>} />
+      <Route path="*" element={<NotFound />} />
     </Routes>
   );
 }
