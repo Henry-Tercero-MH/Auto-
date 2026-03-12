@@ -148,7 +148,7 @@ export default function Solicitudes() {
         !q ||
         (s.cliente || '').toLowerCase().includes(q) ||
         (s.vehiculo || '').toLowerCase().includes(q) ||
-        (s.placa || '').toLowerCase().includes(q) ||
+        String(s.placa || '').toLowerCase().includes(q) ||
         (s.servicio || '').toLowerCase().includes(q) ||
         (s.id || '').includes(q);
       return matchFiltro && matchBusqueda;
