@@ -41,6 +41,11 @@ export function getFeatureLabel(path) {
   return FEATURES[path]?.label ?? path;
 }
 
+/** Devuelve la descripción de un módulo bloqueado */
+export function getFeatureDescription(path) {
+  return FEATURES[path]?.description ?? '';
+}
+
 /** Devuelve el mapa completo (útil para un panel de admin futuro) */
 export function getAllFeatures() {
   return { ...FEATURES };

@@ -375,44 +375,42 @@ export default function Solicitudes() {
                             </div>
                           )}
 
-                          <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
-                            {/* Info */}
-                            <div className="sm:col-span-2 grid grid-cols-1 xs:grid-cols-2 gap-3 sm:gap-4 text-sm">
-                              <div>
-                                <p className="text-xs text-slate-400 uppercase tracking-wide mb-1">Cliente</p>
-                                <p className="font-semibold text-slate-800">{s.cliente}</p>
-                                <p className="text-slate-500">{s.tel}</p>
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
+                        {/* Info */}
+                        <div className="sm:col-span-2 grid grid-cols-1 xs:grid-cols-2 gap-3 sm:gap-4 text-sm">
+                          <div>
+                            <p className="text-xs text-slate-400 uppercase tracking-wide mb-1">Cliente</p>
+                            <p className="font-semibold text-slate-800">{s.cliente}</p>
+                            <p className="text-slate-500">{s.tel}</p>
+                          </div>
+                          <div>
+                            <p className="text-xs text-slate-400 uppercase tracking-wide mb-1">Vehículo</p>
+                            <p className="font-semibold text-slate-800">{s.vehiculo}</p>
+                            <p className="text-slate-500">Placa: {s.placa}</p>
+                          </div>
+                          <div>
+                            <p className="text-xs text-slate-400 uppercase tracking-wide mb-1">Servicio</p>
+                            <p className="font-semibold text-slate-800">{s.servicio}</p>
+                          </div>
+                          <div>
+                            <p className="text-xs text-slate-400 uppercase tracking-wide mb-1">Fecha ingreso</p>
+                            <p className="font-semibold text-slate-800">{s.fecha}</p>
+                          </div>
+                          {/* Mecánico asignado */}
+                          <div className="col-span-2">
+                            <p className="text-xs text-slate-400 uppercase tracking-wide mb-1">Mecánico asignado</p>
+                            {s.mecanico ? (
+                              <div className="flex items-center gap-2">
+                                <div className="w-6 h-6 rounded-full bg-primary flex items-center justify-center text-white text-xs font-bold flex-shrink-0">
+                                  {(s.mecanico?.name ?? s.mecanico?.nombre ?? '?').charAt(0)}
+                                </div>
+                                <p className="font-semibold text-slate-800">{s.mecanico?.name ?? s.mecanico?.nombre ?? 'Sin nombre'}</p>
                               </div>
-                              <div>
-                                <p className="text-xs text-slate-400 uppercase tracking-wide mb-1">Vehículo</p>
-                                <p className="font-semibold text-slate-800">{s.vehiculo}</p>
-                                <p className="text-slate-500">Placa: {s.placa}</p>
-                              </div>
-                              <div>
-                                <p className="text-xs text-slate-400 uppercase tracking-wide mb-1">Servicio</p>
-                                <p className="font-semibold text-slate-800">{s.servicio}</p>
-                              </div>
-                              <div>
-                                <p className="text-xs text-slate-400 uppercase tracking-wide mb-1">Fecha ingreso</p>
-                                <p className="font-semibold text-slate-800">{s.fecha}</p>
-                              </div>
-                              {/* Mecánico asignado */}
-                              <div className="col-span-2">
-                                <p className="text-xs text-slate-400 uppercase tracking-wide mb-1">Mecánico asignado</p>
-                                {s.mecanico ? (
-                                  <div className="flex items-center gap-2">
-                                    <div className="w-6 h-6 rounded-full bg-primary flex items-center justify-center text-white text-xs font-bold flex-shrink-0">
-                                      {(s.mecanico?.name ?? s.mecanico?.nombre ?? '?').charAt(0)}
-                                    </div>
-                                    <p className="font-semibold text-slate-800">
-                                      {s.mecanico?.name ?? s.mecanico?.nombre ?? 'Sin nombre'}
-                                    </p>
-                                  </div>
-                                ) : (
-                                  <p className="text-amber-600 font-medium text-sm">Sin asignar</p>
-                                )}
-                              </div>
-                            </div>
+                            ) : (
+                              <p className="text-amber-600 font-medium text-sm">Sin asignar</p>
+                            )}
+                          </div>
+                        </div>
 
                             {/* Cambiar estado — mecánico solo puede si la solicitud es suya */}
                             {(esAdmin || esMiaSolicitud) && (
