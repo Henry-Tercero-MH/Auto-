@@ -17,7 +17,7 @@ const FEATURES = {
   '/catalogos':       { enabled:false, label: 'Catálogos' },
   '/reportes':        { enabled: true, label: 'Reportes' },
   'notificaciones':   { enabled: false,  label: 'Notificaciones' },
-  'fotos':            { enabled: false,  label: 'Fotos de solicitud' },
+  'fotos':            { enabled: true,  label: 'Fotos de solicitud' },
 };
 
 // ── Datos de contacto del desarrollador (se muestran en el modal) ──────────
