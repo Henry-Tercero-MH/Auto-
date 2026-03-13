@@ -34,10 +34,10 @@ function exportCsv(filename, headers, rows) {
 }
 
 const TABS = [
-  { key: 'ordenes', label: 'Listado de órdenes' },
-  { key: 'finanzas', label: 'Resumen financiero' },
-  { key: 'servicios', label: 'Servicios vendidos' },
-  { key: 'documentos', label: 'Documentos imprimibles' },
+  { key: 'ordenes',    label: 'Listado de órdenes',     short: 'Órdenes'    },
+  { key: 'finanzas',   label: 'Resumen financiero',      short: 'Finanzas'   },
+  { key: 'servicios',  label: 'Servicios vendidos',      short: 'Servicios'  },
+  { key: 'documentos', label: 'Documentos imprimibles',  short: 'Documentos' },
 ];
 
 export default function Reportes() {
@@ -282,7 +282,8 @@ export default function Reportes() {
                   : 'border-transparent text-slate-400 hover:text-slate-700 hover:border-slate-300'
               }`}
             >
-              {t.label}
+              <span className="sm:hidden">{t.short}</span>
+              <span className="hidden sm:inline">{t.label}</span>
             </button>
           ))}
         </nav>
@@ -317,38 +318,56 @@ export default function Reportes() {
             </div>
           </div>
 
-          <div className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-x-auto">
+          {/* Tarjetas móvil */}
+          <div className="sm:hidden space-y-2">
+            {solicitudesFiltradas.length === 0 ? (
+              <p className="text-slate-400 text-sm text-center py-10">No hay órdenes en el rango seleccionado.</p>
+            ) : solicitudesFiltradas.map((s) => (
+              <div key={s.id} className="bg-white rounded-xl border border-gray-100 shadow-sm p-3 space-y-1.5">
+                <div className="flex items-center justify-between">
+                  <span className="font-mono text-[11px] text-slate-400">#{s.id}</span>
+                  <span className="text-[11px] text-slate-400">{s.fecha}</span>
+                </div>
+                <p className="font-semibold text-sm text-slate-800 uppercase">{s.cliente}</p>
+                <p className="text-xs text-slate-500 uppercase">{s.vehiculo}</p>
+                <p className="text-xs text-slate-500 line-clamp-2">{s.servicio}</p>
+                <div className="flex items-center justify-between pt-1 border-t border-slate-100">
+                  <span className="text-xs text-slate-500">{s.estado}</span>
+                  <span className="text-sm font-bold text-slate-800">Q {calcularTotal(s).toFixed(2)}</span>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Tabla desktop */}
+          <div className="hidden sm:block bg-white rounded-xl border border-gray-100 shadow-sm overflow-x-auto">
             {solicitudesFiltradas.length === 0 ? (
               <p className="text-slate-400 text-sm text-center py-10">No hay órdenes en el rango seleccionado.</p>
             ) : (
               <table className="w-full text-sm min-w-[700px]">
                 <thead>
                   <tr className="bg-slate-50 text-slate-500 text-xs uppercase tracking-wider">
-                    <th className="text-left px-3 sm:px-4 py-3">ID</th>
-                    <th className="text-left px-3 sm:px-4 py-3">Fecha</th>
-                    <th className="text-left px-3 sm:px-4 py-3">Cliente</th>
-                    <th className="text-left px-3 sm:px-4 py-3">Vehículo</th>
-                    <th className="text-left px-3 sm:px-4 py-3">Servicio(s)</th>
-                    <th className="text-left px-3 sm:px-4 py-3">Mecánico</th>
-                    <th className="text-left px-3 sm:px-4 py-3">Estado</th>
-                    <th className="text-right px-3 sm:px-4 py-3">Total (Q)</th>
+                    <th className="text-left px-4 py-3">ID</th>
+                    <th className="text-left px-4 py-3">Fecha</th>
+                    <th className="text-left px-4 py-3">Cliente</th>
+                    <th className="text-left px-4 py-3">Vehículo</th>
+                    <th className="text-left px-4 py-3">Servicio(s)</th>
+                    <th className="text-left px-4 py-3">Mecánico</th>
+                    <th className="text-left px-4 py-3">Estado</th>
+                    <th className="text-right px-4 py-3">Total (Q)</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-100">
                   {solicitudesFiltradas.map((s) => (
                     <tr key={s.id} className="hover:bg-slate-50">
-                      <td className="px-3 sm:px-4 py-2 text-xs font-mono text-slate-500">#{s.id}</td>
-                      <td className="px-3 sm:px-4 py-2 text-xs text-slate-600">{s.fecha}</td>
-                      <td className="px-3 sm:px-4 py-2 text-xs text-slate-800 uppercase">{s.cliente}</td>
-                      <td className="px-3 sm:px-4 py-2 text-xs text-slate-600 uppercase">{s.vehiculo}</td>
-                      <td className="px-3 sm:px-4 py-2 text-xs text-slate-600">{s.servicio}</td>
-                      <td className="px-3 sm:px-4 py-2 text-xs text-slate-600">
-                        {s.mecanico?.name || s.mecanico?.nombre || '—'}
-                      </td>
-                      <td className="px-3 sm:px-4 py-2 text-xs text-slate-700">{s.estado}</td>
-                      <td className="px-3 sm:px-4 py-2 text-xs text-right font-semibold text-slate-800">
-                        {calcularTotal(s).toFixed(2)}
-                      </td>
+                      <td className="px-4 py-2 text-xs font-mono text-slate-500">#{s.id}</td>
+                      <td className="px-4 py-2 text-xs text-slate-600">{s.fecha}</td>
+                      <td className="px-4 py-2 text-xs text-slate-800 uppercase">{s.cliente}</td>
+                      <td className="px-4 py-2 text-xs text-slate-600 uppercase">{s.vehiculo}</td>
+                      <td className="px-4 py-2 text-xs text-slate-600">{s.servicio}</td>
+                      <td className="px-4 py-2 text-xs text-slate-600">{s.mecanico?.name || s.mecanico?.nombre || '—'}</td>
+                      <td className="px-4 py-2 text-xs text-slate-700">{s.estado}</td>
+                      <td className="px-4 py-2 text-xs text-right font-semibold text-slate-800">{calcularTotal(s).toFixed(2)}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -406,30 +425,48 @@ export default function Reportes() {
             </div>
           </div>
 
-          <div className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-x-auto">
+          {/* Tarjetas móvil */}
+          <div className="sm:hidden space-y-2">
+            {resumenFinanciero.filas.length === 0 ? (
+              <p className="text-slate-400 text-sm text-center py-10">No hay datos financieros en el rango seleccionado.</p>
+            ) : resumenFinanciero.filas.map((f) => (
+              <div key={f.fecha} className="bg-white rounded-xl border border-gray-100 shadow-sm p-3">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-xs font-semibold text-slate-700">{f.fecha}</span>
+                  <span className="text-sm font-bold text-slate-800">Q {f.monto.toFixed(2)}</span>
+                </div>
+                <div className="flex gap-4 text-xs">
+                  <span className="text-slate-500">Órdenes: <strong className="text-slate-700">{f.total}</strong></span>
+                  <span className="text-green-600">✓ {f.completadas}</span>
+                  <span className="text-amber-600">⏳ {f.pendientes}</span>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Tabla desktop */}
+          <div className="hidden sm:block bg-white rounded-xl border border-gray-100 shadow-sm overflow-x-auto">
             {resumenFinanciero.filas.length === 0 ? (
               <p className="text-slate-400 text-sm text-center py-10">No hay datos financieros en el rango seleccionado.</p>
             ) : (
               <table className="w-full text-sm min-w-[600px]">
                 <thead>
                   <tr className="bg-slate-50 text-slate-500 text-xs uppercase tracking-wider">
-                    <th className="text-left px-3 sm:px-4 py-3">Fecha</th>
-                    <th className="text-center px-3 sm:px-4 py-3">Órdenes</th>
-                    <th className="text-center px-3 sm:px-4 py-3">Completadas</th>
-                    <th className="text-center px-3 sm:px-4 py-3">Pendientes / En proceso</th>
-                    <th className="text-right px-3 sm:px-4 py-3">Monto total (Q)</th>
+                    <th className="text-left px-4 py-3">Fecha</th>
+                    <th className="text-center px-4 py-3">Órdenes</th>
+                    <th className="text-center px-4 py-3">Completadas</th>
+                    <th className="text-center px-4 py-3">Pendientes / En proceso</th>
+                    <th className="text-right px-4 py-3">Monto total (Q)</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-100">
                   {resumenFinanciero.filas.map((f) => (
                     <tr key={f.fecha} className="hover:bg-slate-50">
-                      <td className="px-3 sm:px-4 py-2 text-xs text-slate-700">{f.fecha}</td>
-                      <td className="px-3 sm:px-4 py-2 text-xs text-center text-slate-700 font-semibold">{f.total}</td>
-                      <td className="px-3 sm:px-4 py-2 text-xs text-center text-green-600 font-semibold">{f.completadas}</td>
-                      <td className="px-3 sm:px-4 py-2 text-xs text-center text-amber-600 font-semibold">{f.pendientes}</td>
-                      <td className="px-3 sm:px-4 py-2 text-xs text-right text-slate-800 font-semibold">
-                        {f.monto.toFixed(2)}
-                      </td>
+                      <td className="px-4 py-2 text-xs text-slate-700">{f.fecha}</td>
+                      <td className="px-4 py-2 text-xs text-center text-slate-700 font-semibold">{f.total}</td>
+                      <td className="px-4 py-2 text-xs text-center text-green-600 font-semibold">{f.completadas}</td>
+                      <td className="px-4 py-2 text-xs text-center text-amber-600 font-semibold">{f.pendientes}</td>
+                      <td className="px-4 py-2 text-xs text-right text-slate-800 font-semibold">{f.monto.toFixed(2)}</td>
                     </tr>
                   ))}
                 </tbody>
