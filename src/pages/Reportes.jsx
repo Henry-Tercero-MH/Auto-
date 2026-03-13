@@ -175,12 +175,12 @@ export default function Reportes() {
           <div className="min-w-0">
             <label className="block text-[11px] font-semibold text-slate-500 uppercase tracking-wide mb-1">Desde</label>
             <input type="date" value={desde} onChange={(e) => setDesde(e.target.value)}
-              className="w-full min-w-0 block border border-slate-300 rounded-md px-3 py-2 text-sm text-slate-700 focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none" />
+              className="w-full min-w-0 block border border-slate-300 rounded-md px-3 py-2 text-sm text-slate-700 focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none appearance-none box-border" />
           </div>
           <div className="min-w-0">
             <label className="block text-[11px] font-semibold text-slate-500 uppercase tracking-wide mb-1">Hasta</label>
             <input type="date" value={hasta} onChange={(e) => setHasta(e.target.value)}
-              className="w-full min-w-0 block border border-slate-300 rounded-md px-3 py-2 text-sm text-slate-700 focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none" />
+              className="w-full min-w-0 block border border-slate-300 rounded-md px-3 py-2 text-sm text-slate-700 focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none appearance-none box-border" />
           </div>
         </div>
         {/* Selects — 2 columnas en móvil */}
