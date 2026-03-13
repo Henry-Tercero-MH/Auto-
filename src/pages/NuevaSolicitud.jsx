@@ -969,22 +969,13 @@ export default function NuevaSolicitud() {
         e.anio = 'Año no válido';
       }
       if (!form.modelo) e.modelo = 'Modelo requerido';
-      if (!form.placa.trim()) {
-        e.placa = 'Placa requerida';
-      } else {
-        // Normalizar: quitar guiones, espacios y pasar a mayúsculas
+      if (form.placa.trim()) {
         const placaNorm = form.placa.trim().replace(/[\s-]/g, '').toUpperCase();
-        // Formatos válidos Guatemala:
-        //   Estándar civil:   3 letras + 3 dígitos  → ABC123
-        //   Con año:         3 letras + 4 dígitos   → ABC1234
-        //   Moto / especial: 1–2 letras + 3–6 díg  → P123456, M1234
         if (!/^[A-Z]{1,3}\d{3,6}$/.test(placaNorm)) {
           e.placa = 'Placa no válida — ej: ABC123 o ABC-1234';
         }
       }
-      if (!form.kilometraje) {
-        e.kilometraje = 'Kilometraje requerido';
-      } else if (isNaN(form.kilometraje) || +form.kilometraje < 0) {
+      if (form.kilometraje && (isNaN(form.kilometraje) || +form.kilometraje < 0)) {
         e.kilometraje = 'Kilometraje no válido';
       }
     }
@@ -1344,7 +1335,7 @@ export default function NuevaSolicitud() {
                   );
                 })()}
                 <div>
-                  <label htmlFor="placa" className="block text-sm font-medium text-slate-700 mb-1">Placa</label>
+                  <label htmlFor="placa" className="block text-sm font-medium text-slate-700 mb-1">Placa <span className="text-slate-400 font-normal">(opcional)</span></label>
                   <input
                     id="placa" name="placa" type="text"
                     value={form.placa}
@@ -1359,7 +1350,7 @@ export default function NuevaSolicitud() {
                   {errores.placa && <p className="mt-1 text-xs text-red-500">{errores.placa}</p>}
                 </div>
                 <div>
-                  <label htmlFor="kilometraje" className="block text-sm font-medium text-slate-700 mb-1">Kilometraje</label>
+                  <label htmlFor="kilometraje" className="block text-sm font-medium text-slate-700 mb-1">Kilometraje <span className="text-slate-400 font-normal">(opcional)</span></label>
                   <input id="kilometraje" name="kilometraje" type="number" min="0" value={form.kilometraje} onChange={handleChange} placeholder="45000" className={inputCls(errores.kilometraje)} />
                   {errores.kilometraje && <p className="mt-1 text-xs text-red-500">{errores.kilometraje}</p>}
                 </div>
