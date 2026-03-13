@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import { useSolicitudes } from '../context/SolicitudesContext';
 import { useCatalogos } from '../context/CatalogosContext';
+import { usePagos } from '../context/PagosContext';
 import { APP_SCRIPT_URL } from '../services/sheetsApi';
 
 const Icon = ({ path, className = 'w-4 h-4' }) => (
@@ -40,7 +41,8 @@ const TABS = [
 
 export default function Reportes() {
   const { solicitudes } = useSolicitudes();
-  const { mecanicos, estados, preciosMap, configNegocio } = useCatalogos();
+  const { mecanicos, estados, configNegocio } = useCatalogos();
+  const { pagos } = usePagos();
 
   const hoy = new Date().toISOString().slice(0, 10);
   const inicioMes = `${hoy.slice(0, 7)}-01`;
@@ -51,14 +53,14 @@ export default function Reportes() {
   const [estadoFiltro, setEstadoFiltro]   = useState('Todos');
   const [mecanicoFiltro, setMecanicoFiltro] = useState('Todos');
 
-  const calcularTotal = (s) => {
-    if (s.precio && Number(s.precio) > 0) return Number(s.precio);
-    return (s.servicio || '')
-      .split(',')
-      .map((n) => n.trim())
-      .filter(Boolean)
-      .reduce((sum, n) => sum + (preciosMap[n] || 0), 0);
-  };
+  // Mapa solicitud_id → monto real del pago
+  const pagosMap = useMemo(() => {
+    const m = {};
+    pagos.forEach((p) => { m[p.solicitud_id] = Number(p.monto) || 0; });
+    return m;
+  }, [pagos]);
+
+  const calcularTotal = (s) => pagosMap[s.id] ?? 0;
 
   const solicitudesFiltradas = useMemo(() => {
     return solicitudes.filter((s) => {
@@ -77,14 +79,16 @@ export default function Reportes() {
   const serviciosVendidos = useMemo(() => {
     const mapa = {};
     solicitudesFiltradas.forEach((s) => {
-      (s.servicio || '').split(',').map((n) => n.trim()).filter(Boolean).forEach((nombre) => {
+      const nombres = (s.servicio || '').split(',').map((n) => n.trim()).filter(Boolean);
+      const montoPorServicio = nombres.length > 0 ? (pagosMap[s.id] || 0) / nombres.length : 0;
+      nombres.forEach((nombre) => {
         if (!mapa[nombre]) mapa[nombre] = { servicio: nombre, cantidad: 0, ingresos: 0 };
         mapa[nombre].cantidad += 1;
-        mapa[nombre].ingresos += preciosMap[nombre] || 0;
+        mapa[nombre].ingresos += montoPorServicio;
       });
     });
     return Object.values(mapa).sort((a, b) => b.cantidad - a.cantidad);
-  }, [solicitudesFiltradas, preciosMap]);
+  }, [solicitudesFiltradas, pagosMap]);
 
   const [idSeleccionado, setIdSeleccionado] = useState('');
   const solicitudSeleccionada = useMemo(
@@ -445,16 +449,18 @@ export default function Reportes() {
                     <p className="text-[10px] font-semibold text-slate-600 mb-1 uppercase">Detalle de servicios</p>
                     <table className="w-full text-[10px]">
                       <tbody>
-                        {(solicitudSeleccionada.servicio || '')
-                          .split(',').map((n) => n.trim()).filter(Boolean)
-                          .map((nombre) => (
+                        {(() => {
+                          const nombres = (solicitudSeleccionada.servicio || '').split(',').map((n) => n.trim()).filter(Boolean);
+                          const porServicio = nombres.length > 0 ? totalSeleccionada / nombres.length : 0;
+                          return nombres.map((nombre) => (
                             <tr key={nombre}>
                               <td className="pr-1 text-slate-700 uppercase">{nombre}</td>
                               <td className="text-right font-semibold text-slate-800">
-                                {preciosMap[nombre] ? `Q ${preciosMap[nombre].toFixed(2)}` : ''}
+                                {porServicio > 0 ? `Q ${porServicio.toFixed(2)}` : ''}
                               </td>
                             </tr>
-                          ))}
+                          ));
+                        })()}
                         <tr>
                           <td className="pt-1.5 border-t border-dashed border-slate-400 font-bold text-slate-700 uppercase">Total</td>
                           <td className="pt-1.5 border-t border-dashed border-slate-400 text-right font-black text-slate-900">
