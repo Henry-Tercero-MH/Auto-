@@ -34,7 +34,6 @@ function exportCsv(filename, headers, rows) {
 
 const TABS = [
   { key: 'ordenes',    label: 'Listado de órdenes',    short: 'Órdenes'    },
-  { key: 'finanzas',   label: 'Resumen financiero',     short: 'Finanzas'   },
   { key: 'servicios',  label: 'Servicios vendidos',     short: 'Servicios'  },
   { key: 'documentos', label: 'Documentos imprimibles', short: 'Documentos' },
 ];
@@ -74,23 +73,6 @@ export default function Reportes() {
     });
   }, [solicitudes, desde, hasta, estadoFiltro, mecanicoFiltro]);
 
-  const resumenFinanciero = useMemo(() => {
-    const porDia = {};
-    let totalFacturado = 0;
-    let totalPorCobrar = 0;
-    solicitudesFiltradas.forEach((s) => {
-      const fecha = s.fecha || 'Sin fecha';
-      const monto = calcularTotal(s);
-      if (!porDia[fecha]) porDia[fecha] = { fecha, total: 0, completadas: 0, pendientes: 0, monto: 0 };
-      const d = porDia[fecha];
-      d.total += 1;
-      d.monto += monto;
-      if (s.estado === 'Completada') { d.completadas += 1; totalFacturado += monto; }
-      else if (s.estado === 'Pendiente' || s.estado === 'En proceso') { d.pendientes += 1; totalPorCobrar += monto; }
-    });
-    const filas = Object.values(porDia).sort((a, b) => (a.fecha > b.fecha ? 1 : -1));
-    return { filas, totalFacturado, totalPorCobrar };
-  }, [solicitudesFiltradas]);
 
   const serviciosVendidos = useMemo(() => {
     const mapa = {};
@@ -124,14 +106,6 @@ export default function Reportes() {
     })));
   };
 
-  const exportarFinanzas = () => {
-    exportCsv('finanzas.csv',
-      [{ key: 'fecha', label: 'Fecha' }, { key: 'total', label: '# Órdenes' },
-       { key: 'completadas', label: 'Completadas' }, { key: 'pendientes', label: 'Pendientes / En proceso' },
-       { key: 'monto', label: 'Monto total (Q)' }],
-      resumenFinanciero.filas.map((f) => ({ ...f, monto: f.monto.toFixed(2) })),
-    );
-  };
 
   const exportarServicios = () => {
     exportCsv('servicios.csv',
@@ -295,100 +269,6 @@ export default function Reportes() {
                         <td className="px-4 py-2 text-xs text-slate-600">{s.mecanico?.name || s.mecanico?.nombre || '—'}</td>
                         <td className="px-4 py-2 text-xs text-slate-700">{s.estado}</td>
                         <td className="px-4 py-2 text-xs text-right font-semibold text-slate-800">{calcularTotal(s).toFixed(2)}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </>
-          )}
-        </div>
-      )}
-
-      {/* ══════════════════════════════════════════
-          TAB: FINANZAS
-      ══════════════════════════════════════════ */}
-      {tab === 'finanzas' && (
-        <div className="space-y-3">
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <h3 className="text-sm font-semibold text-primary">Resumen financiero por día</h3>
-            <div className="flex gap-2">
-              <button type="button" onClick={exportarFinanzas} disabled={!resumenFinanciero.filas.length}
-                className={resumenFinanciero.filas.length ? btnSecundario : `${btnSecundario} opacity-40 cursor-not-allowed`}>
-                <Icon path="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-8 0V5a2 2 0 012-2h4a2 2 0 012 2v2M9 12h6m-6 4h3" />
-                <span className="hidden sm:inline">Exportar a Excel</span>
-                <span className="sm:hidden">Excel</span>
-              </button>
-              <button type="button" onClick={() => window.print()} className={btnPrimario}>
-                <Icon path="M6 9V4a2 2 0 012-2h8a2 2 0 012 2v5m-2 4h2a2 2 0 002-2v-1a2 2 0 00-2-2H4a2 2 0 00-2 2v1a2 2 0 002 2h2m0 0v3a2 2 0 002 2h8a2 2 0 002-2v-3m-12 0h12" />
-                <span className="hidden sm:inline">Imprimir resumen</span>
-                <span className="sm:hidden">Imprimir</span>
-              </button>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-3 gap-2 sm:gap-3">
-            <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-3 sm:p-4">
-              <p className="text-[10px] sm:text-[11px] text-slate-400 uppercase tracking-wide mb-1">Facturado</p>
-              <p className="text-base sm:text-lg font-black text-primary">
-                Q {resumenFinanciero.totalFacturado.toLocaleString('es-GT', { minimumFractionDigits: 2 })}
-              </p>
-            </div>
-            <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-3 sm:p-4">
-              <p className="text-[10px] sm:text-[11px] text-slate-400 uppercase tracking-wide mb-1">Por cobrar</p>
-              <p className="text-base sm:text-lg font-black text-amber-600">
-                Q {resumenFinanciero.totalPorCobrar.toLocaleString('es-GT', { minimumFractionDigits: 2 })}
-              </p>
-            </div>
-            <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-3 sm:p-4">
-              <p className="text-[10px] sm:text-[11px] text-slate-400 uppercase tracking-wide mb-1">Órdenes</p>
-              <p className="text-base sm:text-lg font-black text-slate-800">{solicitudesFiltradas.length}</p>
-            </div>
-          </div>
-
-          {resumenFinanciero.filas.length === 0 ? (
-            <p className="text-slate-400 text-sm text-center py-10 bg-white rounded-xl border border-gray-100">
-              No hay datos financieros en el rango seleccionado.
-            </p>
-          ) : (
-            <>
-              {/* Tarjetas móvil */}
-              <div className="sm:hidden space-y-2">
-                {resumenFinanciero.filas.map((f) => (
-                  <div key={f.fecha} className="bg-white rounded-xl border border-gray-100 shadow-sm p-3">
-                    <div className="flex items-center justify-between mb-1.5">
-                      <span className="text-xs font-semibold text-slate-700">{f.fecha}</span>
-                      <span className="text-sm font-bold text-primary">Q {f.monto.toFixed(2)}</span>
-                    </div>
-                    <div className="flex gap-3 text-xs">
-                      <span className="text-slate-500">Órdenes: <strong className="text-slate-700">{f.total}</strong></span>
-                      <span className="text-green-600 font-semibold">✓ {f.completadas}</span>
-                      <span className="text-amber-600 font-semibold">⏳ {f.pendientes}</span>
-                    </div>
-                  </div>
-                ))}
-              </div>
-
-              {/* Tabla desktop */}
-              <div className="hidden sm:block bg-white rounded-xl border border-gray-100 shadow-sm overflow-x-auto">
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr className="bg-slate-50 text-slate-500 text-xs uppercase tracking-wider">
-                      <th className="text-left px-4 py-3">Fecha</th>
-                      <th className="text-center px-4 py-3">Órdenes</th>
-                      <th className="text-center px-4 py-3">Completadas</th>
-                      <th className="text-center px-4 py-3">Pendientes / En proceso</th>
-                      <th className="text-right px-4 py-3">Monto total (Q)</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-gray-100">
-                    {resumenFinanciero.filas.map((f) => (
-                      <tr key={f.fecha} className="hover:bg-slate-50">
-                        <td className="px-4 py-2 text-xs text-slate-700">{f.fecha}</td>
-                        <td className="px-4 py-2 text-xs text-center text-slate-700 font-semibold">{f.total}</td>
-                        <td className="px-4 py-2 text-xs text-center text-green-600 font-semibold">{f.completadas}</td>
-                        <td className="px-4 py-2 text-xs text-center text-amber-600 font-semibold">{f.pendientes}</td>
-                        <td className="px-4 py-2 text-xs text-right text-slate-800 font-semibold">{f.monto.toFixed(2)}</td>
                       </tr>
                     ))}
                   </tbody>
