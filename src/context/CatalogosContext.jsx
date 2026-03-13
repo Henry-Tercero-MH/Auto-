@@ -22,7 +22,7 @@ const TIPOS_DANO_INICIAL = [
 // ── Config negocio defaults ────────────────────────────────────────────────
 const CONFIG_NEGOCIO_INICIAL = {
   nombre:    'AUTO+',
-  direccion: 'Ciudad de Guatemala, Guatemala',
+  direccion: 'Ciudad de Retalhuleu, Retalhuleu',
   telefono:  '555-0000',
   moneda:    'Q',
   nit:       '',
@@ -392,7 +392,10 @@ export function CatalogosProvider({ children }) {
   // ─────────────────────────────────────────────────────────────────────
   const preciosMap = {};
   servicios.forEach((cat) => {
-    cat.servicios?.forEach((s) => { preciosMap[s.nombre] = s.precio; });
+    cat.servicios?.forEach((s) => {
+      preciosMap[s.nombre] = s.precio;
+      preciosMap[s.nombre.toLowerCase()] = s.precio;
+    });
   });
 
   return (
