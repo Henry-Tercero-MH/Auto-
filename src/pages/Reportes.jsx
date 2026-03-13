@@ -339,8 +339,8 @@ export default function Reportes() {
                     <tr key={s.id} className="hover:bg-slate-50">
                       <td className="px-3 sm:px-4 py-2 text-xs font-mono text-slate-500">#{s.id}</td>
                       <td className="px-3 sm:px-4 py-2 text-xs text-slate-600">{s.fecha}</td>
-                      <td className="px-3 sm:px-4 py-2 text-xs text-slate-800">{s.cliente}</td>
-                      <td className="px-3 sm:px-4 py-2 text-xs text-slate-600">{s.vehiculo}</td>
+                      <td className="px-3 sm:px-4 py-2 text-xs text-slate-800 uppercase">{s.cliente}</td>
+                      <td className="px-3 sm:px-4 py-2 text-xs text-slate-600 uppercase">{s.vehiculo}</td>
                       <td className="px-3 sm:px-4 py-2 text-xs text-slate-600">{s.servicio}</td>
                       <td className="px-3 sm:px-4 py-2 text-xs text-slate-600">
                         {s.mecanico?.name || s.mecanico?.nombre || '—'}

@@ -306,12 +306,12 @@ export default function Solicitudes() {
                           <div className={`w-2.5 h-2.5 rounded-full flex-shrink-0 ${cfg.dot}`} />
                           <div className="flex-1 min-w-0 grid grid-cols-1 sm:grid-cols-4 gap-1 sm:gap-4">
                             <div>
-                              <p className="font-semibold text-slate-800 text-sm truncate">{s.cliente}</p>
+                              <p className="font-semibold text-slate-800 text-sm truncate uppercase">{s.cliente}</p>
                               <p className="text-xs text-slate-400 font-mono">#{s.id}</p>
                             </div>
                             <div className="hidden sm:block">
-                              <p className="text-sm text-slate-600 truncate">{s.vehiculo}</p>
-                              <p className="text-xs text-slate-400">{s.placa}</p>
+                              <p className="text-sm text-slate-600 truncate uppercase">{s.vehiculo}</p>
+                              <p className="text-xs text-slate-400 uppercase">{s.placa}</p>
                             </div>
                             <div className="hidden sm:block">
                               <p className="text-sm text-slate-600 truncate">{s.servicio}</p>
@@ -380,13 +380,13 @@ export default function Solicitudes() {
                         <div className="sm:col-span-2 grid grid-cols-1 xs:grid-cols-2 gap-3 sm:gap-4 text-sm">
                           <div>
                             <p className="text-xs text-slate-400 uppercase tracking-wide mb-1">Cliente</p>
-                            <p className="font-semibold text-slate-800">{s.cliente}</p>
+                            <p className="font-semibold text-slate-800 uppercase">{s.cliente}</p>
                             <p className="text-slate-500">{s.tel}</p>
                           </div>
                           <div>
                             <p className="text-xs text-slate-400 uppercase tracking-wide mb-1">Vehículo</p>
-                            <p className="font-semibold text-slate-800">{s.vehiculo}</p>
-                            <p className="text-slate-500">Placa: {s.placa}</p>
+                            <p className="font-semibold text-slate-800 uppercase">{s.vehiculo}</p>
+                            <p className="text-slate-500 uppercase">Placa: {s.placa}</p>
                           </div>
                           <div>
                             <p className="text-xs text-slate-400 uppercase tracking-wide mb-1">Servicio</p>

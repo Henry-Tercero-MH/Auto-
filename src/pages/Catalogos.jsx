@@ -150,7 +150,7 @@ function TabClientes() {
               <tr key={c.id} className="hover:bg-slate-50/70 transition-colors">
                 <td className="px-4 py-2.5 font-mono text-[11px] text-slate-400 hidden sm:table-cell">{c.id}</td>
                 <td className="px-4 py-2.5 font-medium text-slate-800">
-                  <span>{c.nombre}</span>
+                  <span className="uppercase">{c.nombre}</span>
                   <span className="sm:hidden block text-[11px] text-slate-400">{c.telefono || ''}</span>
                 </td>
                 <td className="px-4 py-2.5 text-slate-600 hidden sm:table-cell">{c.telefono || '—'}</td>

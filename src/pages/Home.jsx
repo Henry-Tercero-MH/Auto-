@@ -243,8 +243,8 @@ export default function Home() {
               ) : recientes.map((s) => (
                 <tr key={s.id} className="hover:bg-slate-50 transition-colors">
                   <td className="px-3 sm:px-6 py-3 font-mono text-slate-500 text-xs">#{s.id}</td>
-                  <td className="px-3 sm:px-6 py-3 font-medium text-slate-800 text-xs sm:text-sm">{s.cliente}</td>
-                  <td className="px-3 sm:px-6 py-3 text-slate-500 hidden md:table-cell text-xs">{s.vehiculo}</td>
+                  <td className="px-3 sm:px-6 py-3 font-medium text-slate-800 text-xs sm:text-sm uppercase">{s.cliente}</td>
+                  <td className="px-3 sm:px-6 py-3 text-slate-500 hidden md:table-cell text-xs uppercase">{s.vehiculo}</td>
                   <td className="px-3 sm:px-6 py-3 text-slate-500 hidden sm:table-cell text-xs">{s.servicio}</td>
                   <td className="px-3 sm:px-6 py-3 hidden lg:table-cell">
                     {s.mecanico
