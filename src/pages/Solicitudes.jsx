@@ -4,6 +4,7 @@ import toast from 'react-hot-toast';
 import { useSolicitudes } from '../context/SolicitudesContext';
 import { useCatalogos } from '../context/CatalogosContext';
 import { useAuth } from '../context/AuthContext';
+import { usePagos } from '../context/PagosContext';
 import { isFeatureEnabled } from '../config/rbac';
 
 // Extrae el FILE_ID de una URL de Google Drive y devuelve URL de thumbnail
@@ -116,6 +117,7 @@ function CarruselModal({ urls, inicial = 0, onClose }) {
 
 export default function Solicitudes() {
   const { solicitudes, cambiarEstado, tomarSolicitud } = useSolicitudes();
+  const { sincronizarEstado } = usePagos();
   const { estados } = useCatalogos();
   const { user, esAdmin, esMecanico } = useAuth();
   const [carrusel, setCarrusel] = useState(null); // { urls, idx }
@@ -187,6 +189,7 @@ export default function Solicitudes() {
 
   const handleCambiarEstado = (id, nuevoEstado) => {
     cambiarEstado(id, nuevoEstado);
+    sincronizarEstado(id, nuevoEstado);
     toast.success(`Estado actualizado a "${nuevoEstado}"`);
   };
 

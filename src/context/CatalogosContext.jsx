@@ -393,8 +393,9 @@ export function CatalogosProvider({ children }) {
   const preciosMap = {};
   servicios.forEach((cat) => {
     cat.servicios?.forEach((s) => {
-      preciosMap[s.nombre] = s.precio;
-      preciosMap[s.nombre.toLowerCase()] = s.precio;
+      const p = Number(s.precio) || 0;
+      preciosMap[s.nombre] = p;
+      preciosMap[s.nombre.toLowerCase()] = p;
     });
   });
 

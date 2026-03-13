@@ -5,6 +5,7 @@ import logo from '../imagenes/logoMecanica.png';
 import { formatQ, CategoryIcon } from '../data/servicios';
 import { useCatalogos } from '../context/CatalogosContext';
 import { useSolicitudes } from '../context/SolicitudesContext';
+import { usePagos } from '../context/PagosContext';
 import { isFeatureEnabled } from '../config/rbac';
 import { useLockedModal } from '../hooks/useLockedModal';
 import imgSuperior from '../imagenes/vista superior.png';
@@ -912,6 +913,7 @@ function ClienteCombobox({ clientes, onSelect, onCrear }) {
 export default function NuevaSolicitud() {
   const { marcas: MARCAS, servicios: CATEGORIAS_SERVICIOS, preciosMap: PRECIOS, tiposDano, mecanicos, clientes, agregarCliente, vehiculosPorCliente, agregarVehiculo } = useCatalogos();
   const { agregarSolicitud } = useSolicitudes();
+  const { agregarPago } = usePagos();
   const draft = loadDraft();
   const [step, setStep] = useState(() => draft?.step ?? 1);
   const [form, setForm] = useState(() => draft?.form ?? initialState);
@@ -1075,7 +1077,16 @@ export default function NuevaSolicitud() {
         mecanico:    null,
         fotos:       form.fotos.map(f => f.url).join(','),
       };
-      await agregarSolicitud(datos);
+      const solicitudId = await agregarSolicitud(datos);
+      // Registrar pago vinculado a la solicitud
+      await agregarPago({
+        solicitud_id: solicitudId,
+        cliente:      lc(form.nombre),
+        monto:        totalOrden,
+        metodo:       '',
+        fecha:        ahora.toISOString().slice(0, 10),
+        estado:       'Pendiente',
+      });
       localStorage.removeItem(DRAFT_KEY);
       setForm(initialState);
       setOrdenNum(genOrden());

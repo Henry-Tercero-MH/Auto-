@@ -16,6 +16,7 @@ import Reportes from './pages/Reportes';
 import NotFound from './pages/NotFound';
 import Offline from './pages/Offline';
 import { CatalogosProvider } from './context/CatalogosContext';
+import { PagosProvider } from './context/PagosContext';
 import FeatureGuard from './components/FeatureGuard';
 
 function ProtectedLayout() {
@@ -63,12 +64,14 @@ export default function App() {
     <AuthProvider>
       <SolicitudesProvider>
         <CatalogosProvider>
-          <NotificacionesProvider>
-            <Router>
-              <AppRoutes />
-            </Router>
-            <Toaster position="top-right" richColors closeButton theme="light" toastOptions={{ className: 'text-sm' }} />
-          </NotificacionesProvider>
+          <PagosProvider>
+            <NotificacionesProvider>
+              <Router>
+                <AppRoutes />
+              </Router>
+              <Toaster position="top-right" richColors closeButton theme="light" toastOptions={{ className: 'text-sm' }} />
+            </NotificacionesProvider>
+          </PagosProvider>
         </CatalogosProvider>
       </SolicitudesProvider>
     </AuthProvider>
