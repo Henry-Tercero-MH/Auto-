@@ -14,7 +14,9 @@ export function PagosProvider({ children }) {
   const [pagos, setPagos] = useState([]);
 
   useEffect(() => {
-    api.getPagos().then(setPagos).catch(() => {});
+    api.getPagos()
+      .then((data) => setPagos(Array.isArray(data) ? data : []))
+      .catch(() => {});
   }, []);
 
   // Crear pago al registrar una nueva solicitud

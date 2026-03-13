@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import { useSolicitudes } from '../context/SolicitudesContext';
 import { useCatalogos } from '../context/CatalogosContext';
 import { usePagos } from '../context/PagosContext';
+import logo from '../imagenes/logoMecanica.png';
 import { APP_SCRIPT_URL } from '../services/sheetsApi';
 
 const Icon = ({ path, className = 'w-4 h-4' }) => (
@@ -41,7 +42,7 @@ const TABS = [
 
 export default function Reportes() {
   const { solicitudes } = useSolicitudes();
-  const { mecanicos, estados, configNegocio } = useCatalogos();
+  const { mecanicos, estados, configNegocio, clientes } = useCatalogos();
   const { pagos } = usePagos();
 
   const hoy = new Date().toISOString().slice(0, 10);
@@ -96,6 +97,44 @@ export default function Reportes() {
     [solicitudes, idSeleccionado],
   );
   const totalSeleccionada = solicitudSeleccionada ? calcularTotal(solicitudSeleccionada) : 0;
+
+  // Teléfono del cliente (busca en catálogo por cliente_id o nombre)
+  const telefonoCliente = useMemo(() => {
+    if (!solicitudSeleccionada) return '';
+    const c = clientes.find(
+      (cl) => cl.id === solicitudSeleccionada.cliente_id ||
+              (cl.nombre || '').toLowerCase() === (solicitudSeleccionada.cliente || '').toLowerCase()
+    );
+    return String(c?.telefono ?? '').replace(/\D/g, '');
+  }, [solicitudSeleccionada, clientes]);
+
+  // Mensaje WhatsApp con resumen del comprobante
+  const mensajeWhatsApp = useMemo(() => {
+    if (!solicitudSeleccionada) return '';
+    const s = solicitudSeleccionada;
+    const numF = `F-${String(s.id).replace(/\D/g, '').padStart(4, '0')}`;
+    const nombres = (s.servicio || '').split(',').map((n) => n.trim()).filter(Boolean);
+    const porServicio = nombres.length > 0 ? totalSeleccionada / nombres.length : 0;
+    const lineas = nombres.map((n) =>
+      `• ${n.toUpperCase()}${porServicio > 0 ? `: Q ${porServicio.toFixed(2)}` : ''}`
+    ).join('\n');
+    return [
+      `🔧 *${configNegocio?.nombre || 'AUTO+'}*`,
+      `📋 Comprobante *${numF}*`,
+      `📅 Fecha: ${s.fecha}`,
+      ``,
+      `👤 *${(s.cliente || '').toUpperCase()}*`,
+      `🚗 ${(s.vehiculo || '').toUpperCase()}${s.placa ? ` · ${s.placa}` : ''}`,
+      ``,
+      `*Servicios:*`,
+      lineas,
+      ``,
+      `💰 *TOTAL: Q ${totalSeleccionada.toFixed(2)}*`,
+      s.notas ? `📝 ${s.notas}` : null,
+      ``,
+      `_Gracias por preferirnos — ${configNegocio?.direccion || ''}_`,
+    ].filter(Boolean).join('\n');
+  }, [solicitudSeleccionada, totalSeleccionada, configNegocio]);
 
   const exportarOrdenes = () => {
     const headers = [
@@ -370,135 +409,178 @@ export default function Reportes() {
             {/* Vista previa del documento */}
             {solicitudSeleccionada ? (
               <>
-                <div id="print-recibo" className="border border-slate-200 rounded-lg p-4 bg-white max-w-sm mx-auto">
+                {/* ── Factura profesional ── */}
+                <div id="print-recibo" className="bg-white rounded-2xl shadow-lg border border-slate-200 max-w-lg mx-auto overflow-hidden">
                   <style>{`
                     @media print {
                       @page { size: 80mm auto; margin: 4mm; }
-                      body > * { display: none !important; }
-                      #print-recibo { display: block !important; position: static !important;
-                        width: 100%; max-width: 80mm; margin: 0 auto;
-                        font-family: 'Courier New', monospace; font-size: 10px; color: #000; }
-                      #print-recibo * { visibility: visible !important; }
+                      body * { visibility: hidden; }
+                      #print-recibo { visibility: visible; position: absolute; left: 0; top: 0; width: 100%; box-shadow: none !important; border-radius: 0 !important; border: none !important; font-family: 'Courier New', monospace !important; }
+                      #print-recibo * { visibility: visible; }
+                      #print-recibo .print-header { border-top: 3px solid #000 !important; }
+                      #print-recibo .print-band { background: #f1f5f9 !important; border-top: 1px solid #e2e8f0 !important; border-bottom: 1px solid #e2e8f0 !important; }
+                      #print-recibo .print-band * { color: #000 !important; }
+                      #print-recibo .print-th { background: #1e293b !important; }
+                      #print-recibo .print-th * { color: #fff !important; }
+                      #print-recibo .print-total { background: #1e293b !important; }
+                      #print-recibo .print-total * { color: #fff !important; }
+                      #print-recibo img { filter: grayscale(100%) !important; }
+                      .no-print { display: none !important; }
                     }
                   `}</style>
 
-                  {/* Cabecera negocio */}
-                  <div className="text-center mb-2">
-                    <p className="font-bold text-xs uppercase tracking-wide">
-                      {configNegocio?.nombre || 'AUTO+'}
-                    </p>
-                    {configNegocio?.slogan && (
-                      <p className="text-[10px] text-slate-500">{configNegocio.slogan}</p>
+                  {/* Header limpio */}
+                  <div className="print-header border-t-4 border-primary px-5 py-4 flex items-center justify-between gap-4 bg-white border-b border-slate-100">
+                    <img src={logo} alt="logo" className="h-11 object-contain" />
+                    <div className="text-right">
+                      <p className="text-primary font-black text-base tracking-wide">
+                        {configNegocio?.nombre || 'AUTO+'}
+                      </p>
+                      {configNegocio?.slogan && (
+                        <p className="text-slate-400 text-[10px]">{configNegocio.slogan}</p>
+                      )}
+                      {configNegocio?.direccion && (
+                        <p className="text-slate-400 text-[10px]">{configNegocio.direccion}</p>
+                      )}
+                      {configNegocio?.telefono && (
+                        <p className="text-slate-400 text-[10px]">Tel: {configNegocio.telefono}</p>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Banda de número de comprobante */}
+                  <div className="print-band bg-slate-50 border-b border-slate-100 px-5 py-2 flex items-center justify-between">
+                    <span className="text-slate-500 text-xs font-semibold uppercase tracking-widest">Comprobante</span>
+                    <span className="text-primary font-black text-base tracking-wide">
+                      F-{String(solicitudSeleccionada.id).replace(/\D/g, '').padStart(4, '0')}
+                    </span>
+                  </div>
+
+                  <div className="px-5 py-4 space-y-4">
+
+                    {/* Fecha y estado */}
+                    <div className="flex justify-between items-center text-xs text-slate-500">
+                      <span>Fecha: <strong className="text-slate-700">{solicitudSeleccionada.fecha}</strong></span>
+                      <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase ${solicitudSeleccionada.estado === 'Completada' ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'}`}>
+                        {solicitudSeleccionada.estado}
+                      </span>
+                    </div>
+
+                    {/* Datos cliente / vehículo */}
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="border border-slate-100 rounded-xl p-3">
+                        <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mb-1">Cliente</p>
+                        <p className="font-bold text-slate-800 text-sm uppercase leading-tight">
+                          {solicitudSeleccionada.cliente}
+                        </p>
+                        {solicitudSeleccionada.telefono && (
+                          <p className="text-[10px] text-slate-500 mt-0.5">{solicitudSeleccionada.telefono}</p>
+                        )}
+                      </div>
+                      <div className="border border-slate-100 rounded-xl p-3">
+                        <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mb-1">Vehículo</p>
+                        <p className="font-bold text-slate-800 text-sm uppercase leading-tight">
+                          {solicitudSeleccionada.vehiculo}
+                        </p>
+                        {solicitudSeleccionada.placa && (
+                          <p className="text-[10px] text-slate-500 mt-0.5">Placa: {solicitudSeleccionada.placa}</p>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Tabla de servicios */}
+                    <div className="rounded-xl overflow-hidden border border-slate-100">
+                      <table className="w-full text-sm">
+                        <thead>
+                          <tr className="print-th bg-slate-700 text-white text-xs">
+                            <th className="text-left px-3 py-2 font-semibold">Servicio</th>
+                            <th className="text-right px-3 py-2 font-semibold">Precio</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {(() => {
+                            const nombres = (solicitudSeleccionada.servicio || '').split(',').map((n) => n.trim()).filter(Boolean);
+                            const porServicio = nombres.length > 0 ? totalSeleccionada / nombres.length : 0;
+                            return nombres.map((nombre, i) => (
+                              <tr key={nombre} className={i % 2 === 0 ? 'bg-white' : 'bg-slate-50'}>
+                                <td className="px-3 py-2 text-slate-700 uppercase text-xs">{nombre}</td>
+                                <td className="px-3 py-2 text-right font-semibold text-slate-800 text-xs">
+                                  {porServicio > 0 ? `Q ${porServicio.toFixed(2)}` : '—'}
+                                </td>
+                              </tr>
+                            ));
+                          })()}
+                        </tbody>
+                      </table>
+
+                      {/* Total */}
+                      <div className="print-total bg-slate-700 px-3 py-2.5 flex justify-between items-center">
+                        <span className="text-white font-bold text-sm uppercase tracking-wide">Total</span>
+                        <span className="text-white font-black text-lg">Q {totalSeleccionada.toFixed(2)}</span>
+                      </div>
+                    </div>
+
+                    {/* Observaciones */}
+                    {solicitudSeleccionada.notas && (
+                      <div className="border border-slate-200 rounded-lg px-3 py-2 text-xs text-slate-600">
+                        <span className="font-bold uppercase text-slate-500">Observaciones: </span>
+                        <span className="uppercase">{solicitudSeleccionada.notas}</span>
+                      </div>
                     )}
-                    {configNegocio?.direccion && (
-                      <p className="text-[9px] text-slate-400">{configNegocio.direccion}</p>
-                    )}
-                    {(configNegocio?.telefono || configNegocio?.nit) && (
-                      <p className="text-[9px] text-slate-400">
-                        {configNegocio.telefono && `Tel: ${configNegocio.telefono}`}
-                        {configNegocio.nit && ` · NIT: ${configNegocio.nit}`}
+
+                    {/* Mecánico */}
+                    {solicitudSeleccionada.mecanico && (
+                      <p className="text-[10px] text-slate-400 text-center">
+                        Atendido por: <strong className="text-slate-600">{solicitudSeleccionada.mecanico?.name || solicitudSeleccionada.mecanico?.nombre}</strong>
                       </p>
                     )}
-                  </div>
 
-                  {/* Número y fecha */}
-                  <div className="border-t border-b border-dashed border-slate-400 py-1 my-1">
-                    <p className="text-center text-[11px] font-bold tracking-wide uppercase">
-                      Orden de Trabajo #{solicitudSeleccionada.id}
+                    {/* Firmas */}
+                    <div className="flex justify-between gap-8 pt-2 pb-1">
+                      <div className="flex-1 text-center">
+                        <div className="border-t-2 border-slate-200 mt-8 pt-1 text-[10px] text-slate-400 uppercase tracking-wide">Firma del cliente</div>
+                      </div>
+                      <div className="flex-1 text-center">
+                        <div className="border-t-2 border-slate-200 mt-8 pt-1 text-[10px] text-slate-400 uppercase tracking-wide">Autorizado por</div>
+                      </div>
+                    </div>
+
+                    {/* Footer */}
+                    <p className="text-center text-[9px] text-slate-300 uppercase tracking-widest">
+                      {configNegocio?.nombre || 'AUTO+'} · {configNegocio?.nit ? `NIT: ${configNegocio.nit}` : 'Gracias por su preferencia'}
                     </p>
-                    <div className="flex justify-between text-[10px] text-slate-600 mt-0.5">
-                      <span>Fecha:</span>
-                      <span>{solicitudSeleccionada.fecha}</span>
-                    </div>
-                  </div>
-
-                  {/* Datos cliente/vehículo */}
-                  <div className="mt-1.5 space-y-0.5 text-[10px]">
-                    <div className="flex justify-between gap-2">
-                      <span className="text-slate-500 flex-shrink-0">Cliente:</span>
-                      <span className="font-semibold text-slate-800 uppercase text-right">
-                        {solicitudSeleccionada.cliente}
-                      </span>
-                    </div>
-                    <div className="flex justify-between gap-2">
-                      <span className="text-slate-500 flex-shrink-0">Vehículo:</span>
-                      <span className="font-semibold text-slate-800 uppercase text-right">
-                        {solicitudSeleccionada.vehiculo}
-                      </span>
-                    </div>
-                    {solicitudSeleccionada.placa && (
-                      <div className="flex justify-between gap-2">
-                        <span className="text-slate-500 flex-shrink-0">Placa:</span>
-                        <span className="font-semibold text-slate-800 uppercase text-right">
-                          {solicitudSeleccionada.placa}
-                        </span>
-                      </div>
-                    )}
-                    {solicitudSeleccionada.mecanico && (
-                      <div className="flex justify-between gap-2">
-                        <span className="text-slate-500 flex-shrink-0">Mecánico:</span>
-                        <span className="font-semibold text-slate-800 uppercase text-right">
-                          {solicitudSeleccionada.mecanico?.name || solicitudSeleccionada.mecanico?.nombre || '—'}
-                        </span>
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Servicios */}
-                  <div className="mt-2 border-t border-b border-slate-300 py-1.5">
-                    <p className="text-[10px] font-semibold text-slate-600 mb-1 uppercase">Detalle de servicios</p>
-                    <table className="w-full text-[10px]">
-                      <tbody>
-                        {(() => {
-                          const nombres = (solicitudSeleccionada.servicio || '').split(',').map((n) => n.trim()).filter(Boolean);
-                          const porServicio = nombres.length > 0 ? totalSeleccionada / nombres.length : 0;
-                          return nombres.map((nombre) => (
-                            <tr key={nombre}>
-                              <td className="pr-1 text-slate-700 uppercase">{nombre}</td>
-                              <td className="text-right font-semibold text-slate-800">
-                                {porServicio > 0 ? `Q ${porServicio.toFixed(2)}` : ''}
-                              </td>
-                            </tr>
-                          ));
-                        })()}
-                        <tr>
-                          <td className="pt-1.5 border-t border-dashed border-slate-400 font-bold text-slate-700 uppercase">Total</td>
-                          <td className="pt-1.5 border-t border-dashed border-slate-400 text-right font-black text-slate-900">
-                            Q {totalSeleccionada.toFixed(2)}
-                          </td>
-                        </tr>
-                      </tbody>
-                    </table>
-                  </div>
-
-                  {/* Observaciones */}
-                  {solicitudSeleccionada.notas && (
-                    <div className="mt-2 text-[9px] text-slate-600">
-                      <p className="font-semibold uppercase">Observaciones:</p>
-                      <p className="uppercase">{solicitudSeleccionada.notas}</p>
-                    </div>
-                  )}
-
-                  {/* Firmas */}
-                  <div className="mt-4 flex justify-between gap-4 text-[9px] text-slate-600">
-                    <div className="flex-1 text-center">
-                      <div className="border-t border-slate-400 mt-6 pt-1">Firma del cliente</div>
-                    </div>
-                    <div className="flex-1 text-center">
-                      <div className="border-t border-slate-400 mt-6 pt-1">Autorizado por</div>
-                    </div>
                   </div>
                 </div>
 
-                {/* Botones de impresión */}
-                <div className="flex flex-col sm:flex-row gap-2 sm:justify-end">
-                  <button type="button" onClick={() => imprimirDoc('Recibo')} className={`w-full sm:w-auto ${btnSecundario}`}>
-                    <Icon path="M6 9V4a2 2 0 012-2h8a2 2 0 012 2v5m-2 4h2a2 2 0 002-2v-1a2 2 0 00-2-2H4a2 2 0 00-2 2v1a2 2 0 002 2h2m0 0v3a2 2 0 002 2h8a2 2 0 002-2v-3m-12 0h12" />
-                    Imprimir recibo
-                  </button>
+                {/* Botones */}
+                <div className="flex flex-col sm:flex-row gap-2 sm:justify-end no-print">
+                  {/* WhatsApp */}
+                  {telefonoCliente ? (
+                    <a
+                      href={`https://wa.me/502${telefonoCliente}?text=${encodeURIComponent(mensajeWhatsApp)}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="w-full sm:w-auto inline-flex items-center justify-center gap-2 bg-[#25D366] hover:bg-[#1ebe5d] text-white font-semibold px-4 py-2 rounded-xl text-sm transition-colors"
+                    >
+                      <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                        <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/>
+                        <path d="M12 0C5.373 0 0 5.373 0 12c0 2.127.558 4.126 1.534 5.858L.057 23.5l5.797-1.516A11.94 11.94 0 0012 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 21.894a9.877 9.877 0 01-5.031-1.378l-.361-.214-3.741.979 1.001-3.648-.235-.374A9.865 9.865 0 012.106 12C2.106 6.58 6.58 2.106 12 2.106S21.894 6.58 21.894 12 17.42 21.894 12 21.894z"/>
+                      </svg>
+                      Enviar por WhatsApp
+                    </a>
+                  ) : (
+                    <span className="w-full sm:w-auto inline-flex items-center justify-center gap-2 bg-slate-100 text-slate-400 font-semibold px-4 py-2 rounded-xl text-sm cursor-not-allowed" title="Sin número de teléfono registrado">
+                      <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                        <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/>
+                        <path d="M12 0C5.373 0 0 5.373 0 12c0 2.127.558 4.126 1.534 5.858L.057 23.5l5.797-1.516A11.94 11.94 0 0012 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 21.894a9.877 9.877 0 01-5.031-1.378l-.361-.214-3.741.979 1.001-3.648-.235-.374A9.865 9.865 0 012.106 12C2.106 6.58 6.58 2.106 12 2.106S21.894 6.58 21.894 12 17.42 21.894 12 21.894z"/>
+                      </svg>
+                      Sin teléfono
+                    </span>
+                  )}
+                  {/* Imprimir (térmica B&W) */}
                   <button type="button" onClick={() => imprimirDoc('Orden')} className={`w-full sm:w-auto ${btnPrimario}`}>
-                    <Icon path="M9 12h6m-9 4h6M9 8h3m-1-6H7a2 2 0 00-2 2v16a2 2 0 002 2h10a2 2 0 002-2V8.828a2 2 0 00-.586-1.414l-4.828-4.828A2 2 0 0012.172 2H11z" />
-                    Imprimir orden de trabajo
+                    <Icon path="M6 9V4a2 2 0 012-2h8a2 2 0 012 2v5m-2 4h2a2 2 0 002-2v-1a2 2 0 00-2-2H4a2 2 0 00-2 2v1a2 2 0 002 2h2m0 0v3a2 2 0 002 2h8a2 2 0 002-2v-3m-12 0h12" />
+                    Imprimir comprobante
                   </button>
                 </div>
               </>
