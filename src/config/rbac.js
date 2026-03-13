@@ -14,7 +14,7 @@ const FEATURES = {
   '/nueva-solicitud': { enabled: true,  label: 'Nueva Solicitud' },
   '/servicios':       { enabled: true,  label: 'Servicios' },
   '/seguimiento':     { enabled: true,  label: 'Seguimiento' },
-  '/catalogos':       { enabled:false, label: 'Catálogos' },
+  '/catalogos':       { enabled:true, label: 'Catálogos' },
   '/reportes':        { enabled: true, label: 'Reportes' },
   'notificaciones':   { enabled: false,  label: 'Notificaciones' },
   'fotos':            { enabled: true,  label: 'Fotos de solicitud' },
