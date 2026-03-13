@@ -169,18 +169,18 @@ export default function Reportes() {
       </div>
 
       {/* ── Filtros ── */}
-      <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-4 space-y-3">
+      <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-4 space-y-3 overflow-hidden">
         {/* Fechas — fila propia, full width en móvil */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          <div>
+          <div className="min-w-0">
             <label className="block text-[11px] font-semibold text-slate-500 uppercase tracking-wide mb-1">Desde</label>
             <input type="date" value={desde} onChange={(e) => setDesde(e.target.value)}
-              className="w-full border border-slate-300 rounded-md px-3 py-2 text-sm text-slate-700 focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none" />
+              className="w-full min-w-0 block border border-slate-300 rounded-md px-3 py-2 text-sm text-slate-700 focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none" />
           </div>
-          <div>
+          <div className="min-w-0">
             <label className="block text-[11px] font-semibold text-slate-500 uppercase tracking-wide mb-1">Hasta</label>
             <input type="date" value={hasta} onChange={(e) => setHasta(e.target.value)}
-              className="w-full border border-slate-300 rounded-md px-3 py-2 text-sm text-slate-700 focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none" />
+              className="w-full min-w-0 block border border-slate-300 rounded-md px-3 py-2 text-sm text-slate-700 focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none" />
           </div>
         </div>
         {/* Selects — 2 columnas en móvil */}
