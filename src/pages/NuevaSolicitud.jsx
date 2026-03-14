@@ -149,7 +149,7 @@ const STEPS = [
 ];
 
 // ── Combobox ─────────────────────────────────────────────────────────────────
-function Combobox({ id, value, onChange, options, placeholder, error, disabled }) {
+function Combobox({ id, value, onChange, options, placeholder, error, disabled, allowFreeText }) {
   const [query, setQuery] = useState('');
   const [open, setOpen] = useState(false);
   const ref = useRef(null);
@@ -159,10 +159,19 @@ function Combobox({ id, value, onChange, options, placeholder, error, disabled }
     : options;
 
   useEffect(() => {
-    const handler = (e) => { if (ref.current && !ref.current.contains(e.target)) setOpen(false); };
+    const handler = (e) => {
+      if (ref.current && !ref.current.contains(e.target)) {
+        // Al perder foco: si allowFreeText y hay texto escrito, confirmar como valor
+        if (allowFreeText && query.trim()) {
+          onChange(query.trim());
+          setQuery('');
+        }
+        setOpen(false);
+      }
+    };
     document.addEventListener('mousedown', handler);
     return () => document.removeEventListener('mousedown', handler);
-  }, []);
+  }, [allowFreeText, query, onChange]);
 
   const select = (opt) => { onChange(opt); setQuery(''); setOpen(false); };
 
@@ -181,6 +190,11 @@ function Combobox({ id, value, onChange, options, placeholder, error, disabled }
         value={open ? query : value}
         onFocus={() => { if (!disabled) { setQuery(''); setOpen(true); } }}
         onChange={e => { setQuery(e.target.value); setOpen(true); }}
+        onKeyDown={e => {
+          if (e.key === 'Enter' && allowFreeText && query.trim()) {
+            onChange(query.trim()); setQuery(''); setOpen(false); e.preventDefault();
+          }
+        }}
         className={inputCls2}
       />
       {/* chevron */}
@@ -189,7 +203,7 @@ function Combobox({ id, value, onChange, options, placeholder, error, disabled }
           <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
         </svg>
       </span>
-      {open && filtered.length > 0 && (
+      {open && (filtered.length > 0 || (allowFreeText && query.trim())) && (
         <ul className="absolute z-50 mt-1 w-full bg-white border border-gray-200 rounded-lg shadow-lg max-h-52 overflow-y-auto">
           {filtered.map(opt => (
             <li
@@ -200,9 +214,20 @@ function Combobox({ id, value, onChange, options, placeholder, error, disabled }
               {opt}
             </li>
           ))}
+          {allowFreeText && query.trim() && !filtered.some(o => o.toLowerCase() === query.trim().toLowerCase()) && (
+            <li
+              onMouseDown={() => select(query.trim())}
+              className="flex items-center gap-2 px-3 py-2.5 text-sm cursor-pointer border-t border-gray-100 text-accent hover:bg-red-50 font-medium"
+            >
+              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2.5}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+              </svg>
+              Usar "{query.trim()}"
+            </li>
+          )}
         </ul>
       )}
-      {open && filtered.length === 0 && (
+      {open && filtered.length === 0 && !allowFreeText && (
         <div className="absolute z-50 mt-1 w-full bg-white border border-gray-200 rounded-lg shadow-lg px-3 py-2 text-sm text-gray-400 italic">
           Sin resultados
         </div>
@@ -490,84 +515,81 @@ function OrdenTrabajo({ form, ordenNum, tiposDano, onPrecioChange }) {
   if (Object.keys(EC).length === 0) Object.assign(EC, ESTADO_CONFIG_DEFAULT);
 
   return (
-    <div className="bg-white border-2 border-gray-300 rounded-none font-mono text-xs sm:text-sm select-none" style={{ fontFamily: "'Courier New', monospace" }}>
+    <div className="bg-white border border-gray-300 rounded-none select-none text-sm w-full" style={{ fontFamily: "'Courier New', monospace", maxWidth: '480px' }}>
 
       {/* ── Encabezado ── */}
-      <div className="thermal-header border-b-2 border-gray-300 px-4 py-2.5 flex items-center justify-between gap-4">
-        <img src={logo} alt="AUTO+" className="thermal-logo h-12 object-contain" />
-        <div className="text-right">
-          <p className="thermal-label text-[10px] text-gray-500 uppercase tracking-wider">Orden de Trabajo</p>
-          <p className="thermal-orden-num text-accent font-black text-2xl tracking-wide leading-tight">No. {ordenNum}</p>
-          <p className="thermal-label text-gray-500 text-[10px]">Fecha: {fecha}</p>
-          <p className="thermal-label text-gray-500 text-[10px]">Hora entrada: {horaEntrada}</p>
+      <div className="thermal-header border-b border-gray-400 px-2 py-1.5 flex items-center justify-between gap-2">
+        <img src={logo} alt="AUTO+" className="thermal-logo h-8 object-contain" />
+        <div className="text-right leading-tight">
+          <p className="thermal-label text-xs print:text-[8px] text-gray-500 uppercase tracking-wider">Orden de Trabajo</p>
+          <p className="thermal-orden-num text-accent font-black text-2xl print:text-lg tracking-wide">No. {ordenNum}</p>
+          <p className="thermal-label text-gray-500 text-xs print:text-[8px]">{fecha} · {horaEntrada}</p>
         </div>
       </div>
 
-      {/* ── Cliente + Vehículo en una sola sección compacta ── */}
-      <div className="thermal-section border-b border-dashed border-gray-300 px-4 py-2">
-        <p className="thermal-section-title text-primary font-bold uppercase tracking-widest text-[10px] mb-1.5">Cliente</p>
-        {/* Nombre | Tel en una fila */}
-        <div className="grid grid-cols-3 gap-x-4 gap-y-1">
-          <div className="col-span-2">
-            <span className="thermal-label text-gray-400 uppercase text-[9px]">Nombre:</span>
-            <p className="thermal-value font-semibold text-gray-800 border-b border-dotted border-gray-300 leading-tight">{form.nombre}</p>
+      {/* ── Cliente ── */}
+      <div className="thermal-section border-b border-dashed border-gray-300 px-2 py-1">
+        <p className="thermal-section-title text-primary font-bold uppercase tracking-widest text-xs print:text-[8px] mb-1">Cliente</p>
+        <div className="space-y-1">
+          <div>
+            <span className="thermal-label text-gray-400 uppercase text-[11px] print:text-[7px]">Nombre: </span>
+            <span className="thermal-value font-semibold text-gray-800 text-sm print:text-[10px]">{form.nombre}</span>
           </div>
           <div>
-            <span className="thermal-label text-gray-400 uppercase text-[9px]">Tel:</span>
-            <p className="thermal-value font-semibold text-gray-800 border-b border-dotted border-gray-300 leading-tight">{form.telefono}</p>
+            <span className="thermal-label text-gray-400 uppercase text-[11px] print:text-[7px]">Tel: </span>
+            <span className="thermal-value font-semibold text-gray-800 text-sm print:text-[10px]">{form.telefono}</span>
           </div>
           {form.mecanico && (
-            <div className="col-span-3 mt-0.5">
-              <span className="thermal-label text-gray-400 uppercase text-[9px]">Técnico asignado:</span>
-              <p className="thermal-value font-semibold text-gray-800 border-b border-dotted border-gray-300 leading-tight">{form.mecanico}</p>
+            <div>
+              <span className="thermal-label text-gray-400 uppercase text-[11px] print:text-[7px]">Técnico: </span>
+              <span className="thermal-value font-semibold text-gray-800 text-sm print:text-[10px]">{form.mecanico}</span>
             </div>
           )}
         </div>
       </div>
 
       {/* ── Vehículo ── */}
-      <div className="thermal-section border-b border-dashed border-gray-300 px-4 py-2">
-        <p className="thermal-section-title text-primary font-bold uppercase tracking-widest text-[10px] mb-1.5">Vehículo</p>
-        <div className="thermal-grid-3 grid grid-cols-5 gap-x-3 gap-y-1">
+      <div className="thermal-section border-b border-dashed border-gray-300 px-2 py-1">
+        <p className="thermal-section-title text-primary font-bold uppercase tracking-widest text-xs print:text-[8px] mb-1">Vehículo</p>
+        <div className="thermal-grid-3 grid grid-cols-2 gap-x-3 gap-y-1">
           <div>
-            <span className="thermal-label text-gray-400 uppercase text-[9px]">Marca:</span>
-            <p className="thermal-value font-semibold text-gray-800 border-b border-dotted border-gray-300 leading-tight">{form.marca}</p>
+            <span className="thermal-label text-gray-400 uppercase text-[11px] print:text-[7px]">Marca: </span>
+            <span className="thermal-value font-semibold text-gray-800 text-sm print:text-[10px]">{form.marca}</span>
           </div>
           <div>
-            <span className="thermal-label text-gray-400 uppercase text-[9px]">Modelo:</span>
-            <p className="thermal-value font-semibold text-gray-800 border-b border-dotted border-gray-300 leading-tight">{form.modelo}</p>
+            <span className="thermal-label text-gray-400 uppercase text-[11px] print:text-[7px]">Modelo: </span>
+            <span className="thermal-value font-semibold text-gray-800 text-sm print:text-[10px]">{form.modelo}</span>
           </div>
           <div>
-            <span className="thermal-label text-gray-400 uppercase text-[9px]">Año:</span>
-            <p className="thermal-value font-semibold text-gray-800 border-b border-dotted border-gray-300 leading-tight">{form.anio}</p>
+            <span className="thermal-label text-gray-400 uppercase text-[11px] print:text-[7px]">Año: </span>
+            <span className="thermal-value font-semibold text-gray-800 text-sm print:text-[10px]">{form.anio}</span>
           </div>
           <div>
-            <span className="thermal-label text-gray-400 uppercase text-[9px]">Placas:</span>
-            <p className="thermal-value font-semibold text-gray-800 border-b border-dotted border-gray-300 leading-tight">{form.placa}</p>
+            <span className="thermal-label text-gray-400 uppercase text-[11px] print:text-[7px]">Placa: </span>
+            <span className="thermal-value font-semibold text-gray-800 text-sm print:text-[10px]">{form.placa || '—'}</span>
           </div>
-          <div>
-            <span className="thermal-label text-gray-400 uppercase text-[9px]">Km:</span>
-            <p className="thermal-value font-semibold text-gray-800 border-b border-dotted border-gray-300 leading-tight">
-              {Number(form.kilometraje).toLocaleString()}
-            </p>
-          </div>
+          {form.kilometraje && (
+            <div className="col-span-2">
+              <span className="thermal-label text-gray-400 uppercase text-[11px] print:text-[7px]">Km: </span>
+              <span className="thermal-value font-semibold text-gray-800 text-sm print:text-[10px]">{Number(form.kilometraje).toLocaleString()}</span>
+            </div>
+          )}
         </div>
       </div>
 
       {/* ── Condición al ingreso (solo si hay daños) ── */}
       {danos.length > 0 && (
-        <div className="thermal-section border-b border-dashed border-gray-300 px-4 py-2">
-          <p className="thermal-section-title text-primary font-bold uppercase tracking-widest text-[10px] mb-1.5">Condición al ingreso</p>
-          <div className="thermal-grid grid grid-cols-2 gap-x-4 gap-y-0.5">
+        <div className="thermal-section border-b border-dashed border-gray-300 px-2 py-1">
+          <p className="thermal-section-title text-primary font-bold uppercase tracking-widest text-xs print:text-[8px] mb-1">Condición al ingreso</p>
+          <div className="thermal-grid space-y-1">
             {danos.map(([k, v]) => {
               const [vid, ...zParts] = k.split('::');
               const zid = zParts.join('::');
               const vistaLabel = VISTAS.find(vv => vv.id === vid)?.label || vid;
               return (
-                <div key={k} className="flex items-center gap-1.5 text-[10px]">
+                <div key={k} className="flex items-center gap-1.5 text-xs print:text-[8px]">
                   <span className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ backgroundColor: EC[v]?.dot || '#999' }} />
-                  <span className="text-gray-500">{vistaLabel} —</span>
-                  <span className="text-gray-700">{ZONA_LABELS[zid] || zid}</span>
+                  <span className="text-gray-500">{vistaLabel} — {ZONA_LABELS[zid] || zid}</span>
                   <span className="font-bold ml-auto" style={{ color: EC[v]?.dot || '#999' }}>{EC[v]?.label || v}</span>
                 </div>
               );
@@ -576,22 +598,17 @@ function OrdenTrabajo({ form, ordenNum, tiposDano, onPrecioChange }) {
         </div>
       )}
 
-      {/* ── Trabajos a ordenar ── */}
+      {/* ── Trabajos ── */}
       <div className="thermal-section border-b border-dashed border-gray-300">
-        <div className="thermal-table-head grid grid-cols-12 bg-primary text-white text-[10px] uppercase tracking-widest font-bold px-4 py-1.5">
-          <div className="col-span-1 text-center">Cant.</div>
-          <div className="col-span-8 pl-2">Descripción del trabajo</div>
-          <div className="col-span-3 text-right pr-1">Precio</div>
+        <div className="thermal-table-head flex justify-between bg-primary text-white text-xs print:text-[7px] uppercase font-bold px-2 py-1.5 print:py-1">
+          <span>Descripción</span>
+          <span>Precio</span>
         </div>
         {serviciosConPrecio.map((s, i) => (
-          <div
-            key={i}
-            className={`grid grid-cols-12 px-4 py-1.5 border-b border-dotted border-gray-200 items-center ${i % 2 === 0 ? 'bg-white' : 'bg-gray-50'}`}
-          >
-            <div className="col-span-1 text-center font-bold text-gray-700">1</div>
-            <div className="col-span-7 pl-2 text-gray-800 font-medium">{s.nombre}</div>
-            <div className="col-span-4 flex items-center justify-end pr-1 gap-0.5">
-              <span className="text-gray-400 text-[10px]">Q</span>
+          <div key={i} className="thermal-serv-row flex items-center justify-between px-2 py-1.5 print:py-1 border-b border-dotted border-gray-200">
+            <span className="text-gray-800 font-medium text-sm print:text-[9px] flex-1 pr-1">{s.nombre}</span>
+            <div className="flex items-center gap-0.5 flex-shrink-0">
+              <span className="text-gray-400 text-xs print:text-[8px]">Q</span>
               <input
                 type="number"
                 min="0"
@@ -599,49 +616,41 @@ function OrdenTrabajo({ form, ordenNum, tiposDano, onPrecioChange }) {
                 value={s.precio || ''}
                 onChange={(e) => onPrecioChange(s.nombre, parseFloat(e.target.value) || 0)}
                 placeholder="0.00"
-                className="w-20 text-right font-bold text-gray-700 bg-transparent border-b border-dashed border-gray-400 focus:border-accent focus:outline-none py-0.5 text-xs print:border-none"
+                className="w-20 print:w-16 text-right font-bold text-gray-700 bg-transparent border-b border-dashed border-gray-400 focus:border-accent focus:outline-none py-0 text-sm print:text-[9px] print:border-none"
               />
             </div>
           </div>
         ))}
-        {Array.from({ length: Math.max(0, 3 - serviciosConPrecio.length) }).map((_, i) => (
-          <div key={`empty-${i}`} className="grid grid-cols-12 px-4 py-1.5 border-b border-dotted border-gray-200">
-            <div className="col-span-1 text-center text-gray-200">—</div>
-            <div className="col-span-8" />
-            <div className="col-span-3" />
-          </div>
-        ))}
-        {/* ── Subtotal / Total ── */}
-        <div className="px-4 py-1.5 border-t border-gray-300">
-          <div className="flex justify-between text-[11px] text-gray-600">
-            <span className="font-semibold uppercase tracking-wider">Subtotal:</span>
+        {/* Total */}
+        <div className="px-2 py-1.5 print:py-1 border-t border-gray-400">
+          <div className="flex justify-between text-sm print:text-[9px] text-gray-600 mb-0.5">
+            <span className="font-semibold uppercase">Subtotal:</span>
             <span className="font-bold">{formatQ(subtotal)}</span>
           </div>
-          <div className="flex justify-between text-sm text-primary mt-1 pt-1 border-t border-dashed border-gray-300">
-            <span className="font-black uppercase tracking-widest">TOTAL:</span>
-            <span className="font-black text-accent text-base">{formatQ(total)}</span>
+          <div className="flex justify-between text-base print:text-[11px] font-black text-primary border-t border-dashed border-gray-300 pt-0.5">
+            <span className="uppercase">TOTAL:</span>
+            <span className="text-accent">{formatQ(total)}</span>
           </div>
         </div>
       </div>
 
-      {/* ── Observaciones + Firma en una fila ── */}
-      <div className="px-4 py-2 grid grid-cols-2 gap-x-6">
-        <div>
-          <span className="thermal-label text-gray-400 uppercase text-[9px]">Observaciones:</span>
-          <p className="thermal-value text-gray-800 border-b border-dotted border-gray-300 leading-tight min-h-[14px] mt-0.5">
-            {form.observaciones || ''}
-          </p>
-          <div className="border-b border-dotted border-gray-200 mt-1 min-h-[14px]" />
+      {/* ── Observaciones ── */}
+      {form.observaciones && (
+        <div className="px-2 py-1 border-b border-dashed border-gray-300">
+          <span className="thermal-label text-gray-400 uppercase text-[11px] print:text-[7px]">Obs.: </span>
+          <span className="text-gray-800 text-xs print:text-[8px]">{form.observaciones}</span>
         </div>
-        <div className="thermal-firma flex flex-col justify-end gap-2">
-          <div>
-            <span className="thermal-label text-gray-400 uppercase text-[9px]">Aceptación cliente (F):</span>
-            <div className="thermal-firma-line border-b border-gray-400 mt-2" />
-          </div>
-          <div>
-            <span className="thermal-label text-gray-400 uppercase text-[9px]">Nombre:</span>
-            <div className="thermal-firma-line border-b border-gray-400 mt-2" />
-          </div>
+      )}
+
+      {/* ── Firma ── */}
+      <div className="thermal-firma px-2 py-2 space-y-3">
+        <div>
+          <span className="thermal-label text-gray-400 uppercase text-[11px] print:text-[7px]">Firma / Aceptación:</span>
+          <div className="thermal-firma-line border-b border-gray-400 mt-6 print:mt-4 w-full" />
+        </div>
+        <div>
+          <span className="thermal-label text-gray-400 uppercase text-[11px] print:text-[7px]">Nombre:</span>
+          <div className="thermal-firma-line border-b border-gray-400 mt-4 w-full" />
         </div>
       </div>
     </div>
@@ -913,7 +922,7 @@ function ClienteCombobox({ clientes, onSelect, onCrear }) {
 }
 
 export default function NuevaSolicitud() {
-  const { marcas: MARCAS, servicios: CATEGORIAS_SERVICIOS, preciosMap: PRECIOS, tiposDano, mecanicos, clientes, agregarCliente, vehiculosPorCliente, agregarVehiculo } = useCatalogos();
+  const { marcas: MARCAS, servicios: CATEGORIAS_SERVICIOS, preciosMap: PRECIOS, tiposDano, mecanicos, clientes, agregarCliente, vehiculosPorCliente, agregarVehiculo, agregarServicio, agregarCategoria } = useCatalogos();
   const { agregarSolicitud } = useSolicitudes();
   const { agregarPago } = usePagos();
   const draft = loadDraft();
@@ -994,6 +1003,51 @@ export default function NuevaSolicitud() {
     if (Object.keys(e).length > 0) { setErrores(e); return; }
     setErrores({});
 
+    // Paso 3 → 4: guardar vehículo nuevo vinculado al cliente (con confirmación)
+    if (step === 3 && form.cliente_id && !form.vehiculo_id) {
+      const placaNorm = form.placa.trim().replace(/[\s-]/g, '').toUpperCase();
+      toast((t) => (
+        <div className="flex flex-col gap-3" style={{ minWidth: 240 }}>
+          <div>
+            <p className="font-bold text-slate-800 text-sm">¿Guardar vehículo en el catálogo?</p>
+            <p className="text-xs text-slate-500 mt-0.5">
+              {form.marca} {form.modelo} {form.anio}{placaNorm ? ` · ${placaNorm}` : ''}
+            </p>
+          </div>
+          <div className="flex gap-2">
+            <button
+              onMouseDown={async () => {
+                toast.dismiss(t.id);
+                try {
+                  const vid = await agregarVehiculo({
+                    cliente_id: form.cliente_id,
+                    marca:      form.marca,
+                    modelo:     form.modelo,
+                    anio:       form.anio,
+                    placa:      placaNorm,
+                    km:         form.kilometraje || 0,
+                  });
+                  setForm(p => ({ ...p, vehiculo_id: vid, placa: placaNorm }));
+                  toast.success('Vehículo guardado en el catálogo');
+                } catch { toast.error('No se pudo guardar el vehículo'); }
+                setStep(s => s + 1);
+              }}
+              className="flex-1 bg-primary text-white text-xs font-semibold py-1.5 px-3 rounded-lg hover:bg-[#162048] transition"
+            >
+              Sí, guardar
+            </button>
+            <button
+              onMouseDown={() => { toast.dismiss(t.id); setStep(s => s + 1); }}
+              className="flex-1 border border-gray-200 text-slate-600 text-xs font-semibold py-1.5 px-3 rounded-lg hover:bg-slate-50 transition"
+            >
+              Solo esta vez
+            </button>
+          </div>
+        </div>
+      ), { duration: Infinity });
+      return;
+    }
+
     if (step === 2 && !clienteSeleccionado) {
       const existe = clientes.some(
         c => c.nombre.trim().toLowerCase() === form.nombre.trim().toLowerCase()
@@ -1008,7 +1062,7 @@ export default function NuevaSolicitud() {
             <div className="flex gap-2">
               <button
                 onMouseDown={() => {
-                  agregarCliente({ nombre: form.nombre.trim(), telefono: form.telefono.trim() });
+                  agregarCliente({ nombre: form.nombre.trim(), telefono: form.telefono.trim(), activo: true });
                   toast.dismiss(t.id);
                   toast.success('Cliente guardado en el catálogo');
                   setClienteSeleccionado(true);
@@ -1037,6 +1091,7 @@ export default function NuevaSolicitud() {
   const handleBack = () => { setErrores({}); setStep((s) => s - 1); };
 
   const [guardando, setGuardando] = useState(false);
+  const [nuevoServForm, setNuevoServForm] = useState({ open: false, nombre: '', categoria: '', precio: '' });
 
   const handleWhatsApp = async () => {
     const el = document.getElementById('print-area');
@@ -1341,15 +1396,16 @@ export default function NuevaSolicitud() {
               )}
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                {/* 1. Marca */}
+                {/* 1. Marca — combobox + escritura libre */}
                 <div>
                   <label htmlFor="marca" className="block text-sm font-medium text-slate-700 mb-1">Marca</label>
                   <Combobox
                     id="marca"
                     value={form.marca}
                     options={Object.keys(MARCAS)}
-                    placeholder="Buscar marca…"
+                    placeholder="Buscar o escribir marca…"
                     error={errores.marca}
+                    allowFreeText
                     onChange={v => {
                       setForm(p => ({ ...p, marca: v, modelo: '' }));
                       if (errores.marca) setErrores(p => ({ ...p, marca: '' }));
@@ -1374,23 +1430,15 @@ export default function NuevaSolicitud() {
                   />
                   {errores.anio && <p className="mt-1 text-xs text-red-500">{errores.anio}</p>}
                 </div>
-                {/* 3. Modelo — filtrado por marca + año */}
+                {/* 3. Modelo — combobox con opciones filtradas o escritura libre */}
                 {(() => {
                   const anioNum = +form.anio;
                   const anioValido = form.anio && /^\d{4}$/.test(form.anio) && anioNum >= 1900 && anioNum <= new Date().getFullYear() + 1;
-                  const modelosDisponibles = form.marca && anioValido
+                  const modelosDisponibles = form.marca && anioValido && MARCAS[form.marca]
                     ? Object.entries(MARCAS[form.marca] || {})
                         .filter(([, { desde, hasta }]) => anioNum >= desde && anioNum <= (hasta ?? new Date().getFullYear() + 1))
                         .map(([nombre]) => nombre)
                     : [];
-                  const disabledModelo = !form.marca || !anioValido;
-                  const hintModelo = !form.marca
-                    ? 'Selecciona una marca primero'
-                    : !anioValido
-                      ? 'Ingresa el año primero'
-                      : modelosDisponibles.length === 0
-                        ? 'Sin modelos para ese año'
-                        : null;
                   return (
                     <div>
                       <label htmlFor="modelo" className="block text-sm font-medium text-slate-700 mb-1">Modelo</label>
@@ -1398,9 +1446,9 @@ export default function NuevaSolicitud() {
                         id="modelo"
                         value={form.modelo}
                         options={modelosDisponibles}
-                        placeholder="Buscar modelo…"
+                        placeholder="Buscar o escribir modelo…"
                         error={errores.modelo}
-                        disabled={disabledModelo || modelosDisponibles.length === 0}
+                        allowFreeText
                         onChange={v => {
                           setForm(p => ({ ...p, modelo: v }));
                           if (errores.modelo) setErrores(p => ({ ...p, modelo: '' }));
@@ -1408,7 +1456,9 @@ export default function NuevaSolicitud() {
                       />
                       {errores.modelo
                         ? <p className="mt-1 text-xs text-red-500">{errores.modelo}</p>
-                        : hintModelo && <p className="mt-1 text-xs text-slate-400 italic">{hintModelo}</p>
+                        : modelosDisponibles.length === 0 && form.marca && anioValido
+                          ? <p className="mt-1 text-xs text-slate-400 italic">No hay modelos en catálogo — escríbelo manualmente</p>
+                          : null
                       }
                     </div>
                   );
@@ -1491,6 +1541,102 @@ export default function NuevaSolicitud() {
                     );
                   })}
                 </div>
+
+                {/* Mini-form: agregar servicio nuevo al catálogo */}
+                {nuevoServForm.open ? (
+                  <div className="mt-3 rounded-xl border border-accent/30 bg-red-50 p-4 space-y-3">
+                    <p className="text-xs font-semibold text-accent uppercase tracking-wide">Agregar nuevo servicio al catálogo</p>
+                    <input
+                      autoFocus
+                      type="text"
+                      placeholder="Nombre del servicio *"
+                      value={nuevoServForm.nombre}
+                      onChange={e => setNuevoServForm(p => ({ ...p, nombre: e.target.value }))}
+                      className="w-full rounded-lg px-3 py-2 text-sm border border-gray-200 bg-white focus:outline-none focus:ring-2 focus:ring-accent"
+                    />
+                    <div className="grid grid-cols-2 gap-2">
+                      <div>
+                        <select
+                          value={nuevoServForm.categoria}
+                          onChange={e => setNuevoServForm(p => ({ ...p, categoria: e.target.value }))}
+                          className="w-full rounded-lg px-3 py-2 text-sm border border-gray-200 bg-white focus:outline-none focus:ring-2 focus:ring-accent"
+                        >
+                          <option value="">Categoría…</option>
+                          {CATEGORIAS_SERVICIOS.map(c => (
+                            <option key={c.categoria} value={c.categoria}>{c.categoria}</option>
+                          ))}
+                          <option value="__nueva__">+ Nueva categoría</option>
+                        </select>
+                        {nuevoServForm.categoria === '__nueva__' && (
+                          <input
+                            autoFocus
+                            type="text"
+                            placeholder="Nombre de categoría *"
+                            value={nuevoServForm.categoriaCustom || ''}
+                            onChange={e => setNuevoServForm(p => ({ ...p, categoriaCustom: e.target.value }))}
+                            className="mt-2 w-full rounded-lg px-3 py-2 text-sm border border-gray-200 bg-white focus:outline-none focus:ring-2 focus:ring-accent"
+                          />
+                        )}
+                      </div>
+                      <input
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        placeholder="Precio (Q)"
+                        value={nuevoServForm.precio}
+                        onChange={e => setNuevoServForm(p => ({ ...p, precio: e.target.value }))}
+                        className="w-full rounded-lg px-3 py-2 text-sm border border-gray-200 bg-white focus:outline-none focus:ring-2 focus:ring-accent"
+                      />
+                    </div>
+                    <div className="flex gap-2">
+                      <button
+                        type="button"
+                        disabled={!nuevoServForm.nombre.trim() || (!nuevoServForm.categoria || (nuevoServForm.categoria === '__nueva__' && !nuevoServForm.categoriaCustom?.trim()))}
+                        onMouseDown={async () => {
+                          const nombre = nuevoServForm.nombre.trim();
+                          const precio = parseFloat(nuevoServForm.precio) || 0;
+                          const catFinal = nuevoServForm.categoria === '__nueva__'
+                            ? nuevoServForm.categoriaCustom?.trim()
+                            : nuevoServForm.categoria;
+                          // Crear categoría nueva si no existe
+                          const catExiste = CATEGORIAS_SERVICIOS.some(c => c.categoria === catFinal);
+                          if (!catExiste) agregarCategoria({ nombre: catFinal });
+                          await agregarServicio(catFinal, { nombre, precio });
+                          // Seleccionarlo como servicio principal si no hay uno aún
+                          setForm(p => ({
+                            ...p,
+                            tipoServicio: p.tipoServicio || nombre,
+                            preciosManuales: { ...p.preciosManuales, [nombre]: precio },
+                          }));
+                          setNuevoServForm({ open: false, nombre: '', categoria: '', precio: '' });
+                          toast.success(`Servicio "${nombre}" agregado al catálogo`);
+                          if (errores.tipoServicio) setErrores(p => ({ ...p, tipoServicio: '' }));
+                        }}
+                        className="flex-1 rounded-lg bg-accent py-2 text-sm font-semibold text-white hover:bg-red-700 disabled:opacity-50 transition"
+                      >
+                        Guardar y usar
+                      </button>
+                      <button
+                        type="button"
+                        onMouseDown={() => setNuevoServForm({ open: false, nombre: '', categoria: '', precio: '' })}
+                        className="px-3 rounded-lg border border-gray-200 bg-white text-sm text-gray-500 hover:bg-slate-100 transition"
+                      >
+                        Cancelar
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => setNuevoServForm(p => ({ ...p, open: true }))}
+                    className="mt-3 flex items-center gap-1.5 text-xs text-accent font-semibold hover:underline"
+                  >
+                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2.5}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+                    </svg>
+                    El servicio no está en la lista, agregarlo al catálogo
+                  </button>
+                )}
               </div>
               <div>
                 <label htmlFor="mecanico" className="block text-sm font-medium text-slate-700 mb-1">Mecánico asignado <span className="text-gray-400 font-normal">(opcional)</span></label>
@@ -1514,78 +1660,87 @@ export default function NuevaSolicitud() {
 
           {/* ── PASO 5: Resumen ── */}
           {step === 5 && (
-            <div id="print-area" className="mx-4 sm:mx-8 my-4">
+            <div id="print-area" className="flex justify-center my-4 px-4 sm:px-8">
               <style>{`
                 @media print {
-                  @page { size: 150mm auto; margin: 8mm 10mm; }
+                  @page { size: 80mm auto; margin: 3mm 4mm; }
 
                   body * { visibility: hidden !important; }
                   #print-area, #print-area * { visibility: visible !important; }
 
                   #print-area {
                     position: fixed; inset: 0;
-                    width: 138mm; background: white;
+                    width: 72mm; background: white;
                     font-family: 'Courier New', monospace;
-                    font-size: 9.5pt; color: #000;
+                    font-size: 7.5pt; color: #000;
                   }
 
                   /* Encabezado */
                   #print-area .thermal-header {
                     display: flex; justify-content: space-between;
-                    align-items: flex-start; border-bottom: 1.5px solid #000;
-                    padding-bottom: 5px; margin-bottom: 5px;
+                    align-items: flex-start; border-bottom: 1px solid #000;
+                    padding-bottom: 3px; margin-bottom: 3px;
                   }
-                  #print-area .thermal-logo { height: 38px !important; }
+                  #print-area .thermal-logo { height: 26px !important; }
 
-                  /* Eliminar fondos de color — tabla de servicios */
+                  /* Tabla de servicios */
                   #print-area .thermal-table-head {
                     background: white !important; color: black !important;
-                    border-top: 1.5px solid #000; border-bottom: 1.5px solid #000;
-                    font-weight: bold; font-size: 8pt;
+                    border-top: 1px solid #000; border-bottom: 1px solid #000;
+                    font-weight: bold; font-size: 6.5pt;
                   }
 
                   /* Secciones */
                   #print-area .thermal-section {
                     border-bottom: 1px dashed #666;
-                    padding: 4px 0; margin-bottom: 3px;
+                    padding: 2px 0; margin-bottom: 2px;
                   }
                   #print-area .thermal-section-title {
-                    font-size: 8pt; font-weight: bold;
-                    text-transform: uppercase; letter-spacing: 0.5px;
-                    margin-bottom: 3px; color: #000;
+                    font-size: 6.5pt; font-weight: bold;
+                    text-transform: uppercase; letter-spacing: 0.3px;
+                    margin-bottom: 2px; color: #000;
                   }
 
-                  /* Grids de datos */
+                  /* Grids de datos — en rollo de 80mm todo en 1 columna */
                   #print-area .thermal-grid {
-                    display: grid; grid-template-columns: 1fr 1fr; gap: 2px 10px;
+                    display: block;
                   }
                   #print-area .thermal-grid-3 {
-                    display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 2px 8px;
+                    display: grid; grid-template-columns: 1fr 1fr; gap: 1px 4px;
                   }
                   #print-area .thermal-label {
-                    font-size: 7.5pt; text-transform: uppercase; color: #444;
+                    font-size: 6pt; text-transform: uppercase; color: #444;
                   }
                   #print-area .thermal-value {
-                    font-size: 9.5pt; font-weight: bold;
-                    border-bottom: 1px dotted #999; min-height: 13px;
+                    font-size: 7.5pt; font-weight: bold;
+                    border-bottom: 1px dotted #999; min-height: 10px;
+                    word-break: break-word;
                   }
 
-                  /* Filas de servicios sin color */
-                  #print-area .thermal-row-even { background: white !important; }
-                  #print-area .thermal-row-odd  { background: white !important; }
+                  /* Filas de servicios */
+                  #print-area .thermal-row-even,
+                  #print-area .thermal-row-odd { background: white !important; }
 
                   /* Número de orden */
                   #print-area .thermal-orden-num {
-                    font-size: 14pt; font-weight: 900;
+                    font-size: 11pt; font-weight: 900;
                   }
 
-                  /* Firma */
+                  /* Firma — apilada en rollo angosto */
                   #print-area .thermal-firma {
-                    display: flex; justify-content: space-between;
-                    padding-top: 6px; font-size: 8pt;
+                    display: block;
+                    padding-top: 4px; font-size: 6.5pt;
                   }
                   #print-area .thermal-firma-line {
-                    border-bottom: 1px solid #000; width: 50mm; margin-top: 10px;
+                    border-bottom: 1px solid #000;
+                    width: 100%; margin-top: 8px;
+                  }
+
+                  /* Fila de servicio compacta */
+                  #print-area .thermal-serv-row {
+                    display: flex; justify-content: space-between;
+                    font-size: 7pt; border-bottom: 1px dotted #ccc;
+                    padding: 1px 0;
                   }
                 }
               `}</style>

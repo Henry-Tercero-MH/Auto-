@@ -395,147 +395,139 @@ export default function Reportes() {
             {/* Vista previa del documento */}
             {solicitudSeleccionada ? (
               <>
-                {/* ── Factura profesional ── */}
-                <div id="print-recibo" className="bg-white rounded-2xl shadow-lg border border-slate-200 max-w-lg mx-auto overflow-hidden">
+                {/* ── Ticket térmico 80mm ── */}
+                <div className="flex justify-center px-4 sm:px-8">
+                <div id="print-recibo" className="bg-white border border-gray-300 rounded-none select-none text-sm w-full" style={{ fontFamily: "'Courier New', monospace", maxWidth: '480px' }}>
                   <style>{`
                     @media print {
-                      @page { size: 80mm auto; margin: 4mm; }
-                      body * { visibility: hidden; }
-                      #print-recibo { visibility: visible; position: absolute; left: 0; top: 0; width: 100%; box-shadow: none !important; border-radius: 0 !important; border: none !important; font-family: 'Courier New', monospace !important; }
-                      #print-recibo * { visibility: visible; }
-                      #print-recibo .print-header { border-top: 3px solid #000 !important; }
-                      #print-recibo .print-band { background: #f1f5f9 !important; border-top: 1px solid #e2e8f0 !important; border-bottom: 1px solid #e2e8f0 !important; }
-                      #print-recibo .print-band * { color: #000 !important; }
-                      #print-recibo .print-th { background: #1e293b !important; }
-                      #print-recibo .print-th * { color: #fff !important; }
-                      #print-recibo .print-total { background: #1e293b !important; }
-                      #print-recibo .print-total * { color: #fff !important; }
-                      #print-recibo img { filter: grayscale(100%) !important; }
+                      @page { size: 80mm auto; margin: 3mm 4mm; }
+                      body * { visibility: hidden !important; }
+                      #print-recibo, #print-recibo * { visibility: visible !important; }
+                      #print-recibo {
+                        position: fixed; inset: 0;
+                        width: 72mm; background: white;
+                        font-family: 'Courier New', monospace;
+                        font-size: 7.5pt; color: #000;
+                      }
+                      #print-recibo .r-header { display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 1px solid #000; padding-bottom: 3px; margin-bottom: 3px; }
+                      #print-recibo .r-logo { height: 26px !important; }
+                      #print-recibo .r-section { border-bottom: 1px dashed #666; padding: 2px 0; margin-bottom: 2px; }
+                      #print-recibo .r-section-title { font-size: 6.5pt; font-weight: bold; text-transform: uppercase; letter-spacing: 0.3px; margin-bottom: 2px; color: #000; }
+                      #print-recibo .r-label { font-size: 6pt; text-transform: uppercase; color: #444; }
+                      #print-recibo .r-value { font-size: 7.5pt; font-weight: bold; word-break: break-word; }
+                      #print-recibo .r-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1px 4px; }
+                      #print-recibo .r-table-head { background: white !important; color: black !important; border-top: 1px solid #000; border-bottom: 1px solid #000; font-weight: bold; font-size: 6.5pt; }
+                      #print-recibo .r-serv-row { display: flex; justify-content: space-between; font-size: 7pt; border-bottom: 1px dotted #ccc; padding: 1px 0; }
+                      #print-recibo .r-orden-num { font-size: 11pt; font-weight: 900; }
+                      #print-recibo .r-firma { display: block; padding-top: 4px; font-size: 6.5pt; }
+                      #print-recibo .r-firma-line { border-bottom: 1px solid #000; width: 100%; margin-top: 8px; }
                       .no-print { display: none !important; }
                     }
                   `}</style>
 
-                  {/* Header limpio */}
-                  <div className="print-header border-t-4 border-primary px-5 py-4 flex items-center justify-between gap-4 bg-white border-b border-slate-100">
-                    <img src={logo} alt="logo" className="h-11 object-contain" />
-                    <div className="text-right">
-                      <p className="text-primary font-black text-base tracking-wide">
-                        {configNegocio?.nombre || 'AUTO+'}
+                  {/* Encabezado */}
+                  <div className="r-header border-b border-gray-400 px-2 py-1.5 flex items-center justify-between gap-2">
+                    <img src={logo} alt="AUTO+" className="r-logo h-8 object-contain" />
+                    <div className="text-right leading-tight">
+                      <p className="r-label text-xs print:text-[8px] text-gray-500 uppercase tracking-wider">Orden de Trabajo</p>
+                      <p className="r-orden-num text-accent font-black text-2xl print:text-lg tracking-wide">
+                        No. {String(solicitudSeleccionada.id).replace(/\D/g, '').padStart(5, '0')}
                       </p>
-                      {configNegocio?.slogan && (
-                        <p className="text-slate-400 text-[10px]">{configNegocio.slogan}</p>
+                      <p className="r-label text-gray-500 text-xs print:text-[8px]">{solicitudSeleccionada.fecha}</p>
+                    </div>
+                  </div>
+
+                  {/* Cliente */}
+                  <div className="r-section border-b border-dashed border-gray-300 px-2 py-1">
+                    <p className="r-section-title text-primary font-bold uppercase tracking-widest text-xs print:text-[8px] mb-1">Cliente</p>
+                    <div className="space-y-1">
+                      <div>
+                        <span className="r-label text-gray-400 uppercase text-[11px] print:text-[7px]">Nombre: </span>
+                        <span className="r-value font-semibold text-gray-800 text-sm print:text-[10px] uppercase">{solicitudSeleccionada.cliente}</span>
+                      </div>
+                      {solicitudSeleccionada.telefono && (
+                        <div>
+                          <span className="r-label text-gray-400 uppercase text-[11px] print:text-[7px]">Tel: </span>
+                          <span className="r-value font-semibold text-gray-800 text-sm print:text-[10px]">{solicitudSeleccionada.telefono}</span>
+                        </div>
                       )}
-                      {configNegocio?.direccion && (
-                        <p className="text-slate-400 text-[10px]">{configNegocio.direccion}</p>
-                      )}
-                      {configNegocio?.telefono && (
-                        <p className="text-slate-400 text-[10px]">Tel: {configNegocio.telefono}</p>
+                      {solicitudSeleccionada.mecanico && (
+                        <div>
+                          <span className="r-label text-gray-400 uppercase text-[11px] print:text-[7px]">Técnico: </span>
+                          <span className="r-value font-semibold text-gray-800 text-sm print:text-[10px]">{solicitudSeleccionada.mecanico?.name || solicitudSeleccionada.mecanico?.nombre || solicitudSeleccionada.mecanico}</span>
+                        </div>
                       )}
                     </div>
                   </div>
 
-                  {/* Banda de número de comprobante */}
-                  <div className="print-band bg-slate-50 border-b border-slate-100 px-5 py-2 flex items-center justify-between">
-                    <span className="text-slate-500 text-xs font-semibold uppercase tracking-widest">Comprobante</span>
-                    <span className="text-primary font-black text-base tracking-wide">
-                      F-{String(solicitudSeleccionada.id).replace(/\D/g, '').padStart(4, '0')}
-                    </span>
+                  {/* Vehículo */}
+                  <div className="r-section border-b border-dashed border-gray-300 px-2 py-1">
+                    <p className="r-section-title text-primary font-bold uppercase tracking-widest text-xs print:text-[8px] mb-1">Vehículo</p>
+                    <div className="r-grid grid grid-cols-2 gap-x-3 gap-y-1">
+                      <div className="col-span-2">
+                        <span className="r-label text-gray-400 uppercase text-[11px] print:text-[7px]">Vehículo: </span>
+                        <span className="r-value font-semibold text-gray-800 text-sm print:text-[10px] uppercase">{solicitudSeleccionada.vehiculo}</span>
+                      </div>
+                      {solicitudSeleccionada.placa && (
+                        <div>
+                          <span className="r-label text-gray-400 uppercase text-[11px] print:text-[7px]">Placa: </span>
+                          <span className="r-value font-semibold text-gray-800 text-sm print:text-[10px]">{solicitudSeleccionada.placa}</span>
+                        </div>
+                      )}
+                      <div>
+                        <span className="r-label text-gray-400 uppercase text-[11px] print:text-[7px]">Estado: </span>
+                        <span className="r-value font-semibold text-gray-800 text-sm print:text-[10px]">{solicitudSeleccionada.estado}</span>
+                      </div>
+                    </div>
                   </div>
 
-                  <div className="px-5 py-4 space-y-4">
-
-                    {/* Fecha y estado */}
-                    <div className="flex justify-between items-center text-xs text-slate-500">
-                      <span>Fecha: <strong className="text-slate-700">{solicitudSeleccionada.fecha}</strong></span>
-                      <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase ${solicitudSeleccionada.estado === 'Completada' ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'}`}>
-                        {solicitudSeleccionada.estado}
-                      </span>
+                  {/* Trabajos */}
+                  <div className="r-section border-b border-dashed border-gray-300">
+                    <div className="r-table-head flex justify-between bg-primary text-white text-xs print:text-[7px] uppercase font-bold px-2 py-1.5 print:py-1">
+                      <span>Descripción</span>
+                      <span>Precio</span>
                     </div>
-
-                    {/* Datos cliente / vehículo */}
-                    <div className="grid grid-cols-2 gap-3">
-                      <div className="border border-slate-100 rounded-xl p-3">
-                        <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mb-1">Cliente</p>
-                        <p className="font-bold text-slate-800 text-sm uppercase leading-tight">
-                          {solicitudSeleccionada.cliente}
-                        </p>
-                        {solicitudSeleccionada.telefono && (
-                          <p className="text-[10px] text-slate-500 mt-0.5">{solicitudSeleccionada.telefono}</p>
-                        )}
-                      </div>
-                      <div className="border border-slate-100 rounded-xl p-3">
-                        <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mb-1">Vehículo</p>
-                        <p className="font-bold text-slate-800 text-sm uppercase leading-tight">
-                          {solicitudSeleccionada.vehiculo}
-                        </p>
-                        {solicitudSeleccionada.placa && (
-                          <p className="text-[10px] text-slate-500 mt-0.5">Placa: {solicitudSeleccionada.placa}</p>
-                        )}
+                    {(() => {
+                      const nombres = (solicitudSeleccionada.servicio || '').split(',').map(n => n.trim()).filter(Boolean);
+                      const porServicio = nombres.length > 0 ? totalSeleccionada / nombres.length : 0;
+                      return nombres.map((nombre) => (
+                        <div key={nombre} className="r-serv-row flex items-center justify-between px-2 py-1.5 print:py-1 border-b border-dotted border-gray-200">
+                          <span className="text-gray-800 font-medium text-sm print:text-[9px] flex-1 pr-1 uppercase">{nombre}</span>
+                          <span className="font-bold text-gray-700 text-sm print:text-[9px]">
+                            {porServicio > 0 ? `Q ${porServicio.toFixed(2)}` : '—'}
+                          </span>
+                        </div>
+                      ));
+                    })()}
+                    {/* Total */}
+                    <div className="px-2 py-1.5 print:py-1 border-t border-gray-400">
+                      <div className="flex justify-between text-base print:text-[11px] font-black text-primary">
+                        <span className="uppercase">TOTAL:</span>
+                        <span className="text-accent">Q {totalSeleccionada.toFixed(2)}</span>
                       </div>
                     </div>
-
-                    {/* Tabla de servicios */}
-                    <div className="rounded-xl overflow-hidden border border-slate-100">
-                      <table className="w-full text-sm">
-                        <thead>
-                          <tr className="print-th bg-slate-700 text-white text-xs">
-                            <th className="text-left px-3 py-2 font-semibold">Servicio</th>
-                            <th className="text-right px-3 py-2 font-semibold">Precio</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {(() => {
-                            const nombres = (solicitudSeleccionada.servicio || '').split(',').map((n) => n.trim()).filter(Boolean);
-                            const porServicio = nombres.length > 0 ? totalSeleccionada / nombres.length : 0;
-                            return nombres.map((nombre, i) => (
-                              <tr key={nombre} className={i % 2 === 0 ? 'bg-white' : 'bg-slate-50'}>
-                                <td className="px-3 py-2 text-slate-700 uppercase text-xs">{nombre}</td>
-                                <td className="px-3 py-2 text-right font-semibold text-slate-800 text-xs">
-                                  {porServicio > 0 ? `Q ${porServicio.toFixed(2)}` : '—'}
-                                </td>
-                              </tr>
-                            ));
-                          })()}
-                        </tbody>
-                      </table>
-
-                      {/* Total */}
-                      <div className="print-total bg-slate-700 px-3 py-2.5 flex justify-between items-center">
-                        <span className="text-white font-bold text-sm uppercase tracking-wide">Total</span>
-                        <span className="text-white font-black text-lg">Q {totalSeleccionada.toFixed(2)}</span>
-                      </div>
-                    </div>
-
-                    {/* Observaciones */}
-                    {solicitudSeleccionada.notas && (
-                      <div className="border border-slate-200 rounded-lg px-3 py-2 text-xs text-slate-600">
-                        <span className="font-bold uppercase text-slate-500">Observaciones: </span>
-                        <span className="uppercase">{solicitudSeleccionada.notas}</span>
-                      </div>
-                    )}
-
-                    {/* Mecánico */}
-                    {solicitudSeleccionada.mecanico && (
-                      <p className="text-[10px] text-slate-400 text-center">
-                        Atendido por: <strong className="text-slate-600">{solicitudSeleccionada.mecanico?.name || solicitudSeleccionada.mecanico?.nombre}</strong>
-                      </p>
-                    )}
-
-                    {/* Firmas */}
-                    <div className="flex justify-between gap-8 pt-2 pb-1">
-                      <div className="flex-1 text-center">
-                        <div className="border-t-2 border-slate-200 mt-8 pt-1 text-[10px] text-slate-400 uppercase tracking-wide">Firma del cliente</div>
-                      </div>
-                      <div className="flex-1 text-center">
-                        <div className="border-t-2 border-slate-200 mt-8 pt-1 text-[10px] text-slate-400 uppercase tracking-wide">Autorizado por</div>
-                      </div>
-                    </div>
-
-                    {/* Footer */}
-                    <p className="text-center text-[9px] text-slate-300 uppercase tracking-widest">
-                      {configNegocio?.nombre || 'AUTO+'} · {configNegocio?.nit ? `NIT: ${configNegocio.nit}` : 'Gracias por su preferencia'}
-                    </p>
                   </div>
+
+                  {/* Observaciones */}
+                  {solicitudSeleccionada.notas && (
+                    <div className="px-2 py-1 border-b border-dashed border-gray-300">
+                      <span className="r-label text-gray-400 uppercase text-[11px] print:text-[7px]">Obs.: </span>
+                      <span className="text-gray-800 text-xs print:text-[8px] uppercase">{solicitudSeleccionada.notas}</span>
+                    </div>
+                  )}
+
+                  {/* Firmas */}
+                  <div className="r-firma px-2 py-2 space-y-3">
+                    <div>
+                      <span className="r-label text-gray-400 uppercase text-[11px] print:text-[7px]">Firma / Aceptación:</span>
+                      <div className="r-firma-line border-b border-gray-400 mt-6 print:mt-4 w-full" />
+                    </div>
+                    <div>
+                      <span className="r-label text-gray-400 uppercase text-[11px] print:text-[7px]">Nombre:</span>
+                      <div className="r-firma-line border-b border-gray-400 mt-6 print:mt-4 w-full" />
+                    </div>
+                  </div>
+                </div>
                 </div>
 
                 {/* Botones */}

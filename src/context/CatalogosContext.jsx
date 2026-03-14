@@ -156,13 +156,12 @@ export function CatalogosProvider({ children }) {
   const agregarCliente = useCallback(async (cliente) => {
     try {
       const { id } = await api.crearCliente(cliente);
-      setClientes((prev) => [...prev, { ...cliente, id }]);
+      setClientes((prev) => [...prev, { ...cliente, id, activo: true }]);
+      return id;
     } catch {
-      // fallback local
-      setClientes((prev) => [
-        ...prev,
-        { ...cliente, id: `C${String(prev.length + 1).padStart(3, '0')}` },
-      ]);
+      const id = `C${String(Date.now()).slice(-6)}`;
+      setClientes((prev) => [...prev, { ...cliente, id, activo: true }]);
+      return id;
     }
   }, []);
 
