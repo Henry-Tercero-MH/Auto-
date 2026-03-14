@@ -110,25 +110,31 @@ function TabClientes() {
   const { clientes, agregarCliente, editarCliente, eliminarCliente } = useCatalogos();
   const [busqueda, setBusqueda] = useState('');
   const [modal, setModal] = useState(null);
-  const [form, setForm] = useState({ nombre: '', telefono: '' });
+  const [form, setForm] = useState({ nombre: '', telefono: '', email: '', direccion: '' });
   const [confirm, setConfirm] = useState(null);
 
   const filtrados = useMemo(
     () => clientes.filter((c) =>
-      c.nombre.toLowerCase().includes(busqueda.toLowerCase()) || c.telefono.includes(busqueda)
+      String(c.nombre ?? '').toLowerCase().includes(busqueda.toLowerCase()) ||
+      String(c.telefono ?? '').includes(busqueda)
     ),
     [clientes, busqueda]
   );
 
-  const openNew = () => { setForm({ nombre: '', telefono: '' }); setModal('nuevo'); };
-  const openEdit = (c) => { setForm({ nombre: c.nombre, telefono: c.telefono }); setModal(c); };
+  const openNew  = () => { setForm({ nombre: '', telefono: '', email: '', direccion: '' }); setModal('nuevo'); };
+  const openEdit = (c) => { setForm({ nombre: c.nombre || '', telefono: c.telefono || '', email: c.email || '', direccion: c.direccion || '' }); setModal(c); };
   const closeModal = () => setModal(null);
 
   const handleSave = () => {
     if (!form.nombre.trim()) return toast.error('El nombre es obligatorio');
-    if (modal === 'nuevo') { agregarCliente(form); toast.success('Cliente registrado'); }
+    if (modal === 'nuevo') { agregarCliente({ ...form, activo: true }); toast.success('Cliente registrado'); }
     else { editarCliente(modal.id, form); toast.success('Cliente actualizado'); }
     closeModal();
+  };
+
+  const toggleActivo = (c) => {
+    editarCliente(c.id, { activo: !c.activo });
+    toast.success(c.activo ? 'Cliente desactivado' : 'Cliente activado');
   };
 
   return (
@@ -142,18 +148,25 @@ function TabClientes() {
               <th className="text-left px-4 py-2.5 font-semibold text-slate-500 uppercase text-[11px] tracking-wider hidden sm:table-cell">Código</th>
               <th className="text-left px-4 py-2.5 font-semibold text-slate-500 uppercase text-[11px] tracking-wider">Nombre</th>
               <th className="text-left px-4 py-2.5 font-semibold text-slate-500 uppercase text-[11px] tracking-wider hidden sm:table-cell">Teléfono</th>
-              <th className="px-4 py-2.5 w-24"></th>
+              <th className="text-left px-4 py-2.5 font-semibold text-slate-500 uppercase text-[11px] tracking-wider w-24">Estado</th>
+              <th className="px-4 py-2.5 w-20"></th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100">
             {filtrados.map((c) => (
-              <tr key={c.id} className="hover:bg-slate-50/70 transition-colors">
+              <tr key={c.id} className={`hover:bg-slate-50/70 transition-colors ${!c.activo ? 'opacity-50' : ''}`}>
                 <td className="px-4 py-2.5 font-mono text-[11px] text-slate-400 hidden sm:table-cell">{c.id}</td>
                 <td className="px-4 py-2.5 font-medium text-slate-800">
                   <span className="uppercase">{c.nombre}</span>
                   <span className="sm:hidden block text-[11px] text-slate-400">{c.telefono || ''}</span>
                 </td>
                 <td className="px-4 py-2.5 text-slate-600 hidden sm:table-cell">{c.telefono || '—'}</td>
+                <td className="px-4 py-2.5">
+                  <button onClick={() => toggleActivo(c)} title={c.activo ? 'Desactivar' : 'Activar'}
+                    className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ${c.activo ? 'bg-green-500' : 'bg-slate-300'}`}>
+                    <span className={`inline-block h-4 w-4 rounded-full bg-white shadow transform transition-transform duration-200 ${c.activo ? 'translate-x-4' : 'translate-x-0'}`} />
+                  </button>
+                </td>
                 <td className="px-4 py-2.5">
                   <div className="flex justify-end gap-1">
                     <button onClick={() => openEdit(c)} title="Editar" className="p-1.5 rounded hover:bg-blue-50 text-slate-400 hover:text-blue-600 transition"><I d={icons.edit} className="w-4 h-4" /></button>
@@ -163,7 +176,7 @@ function TabClientes() {
               </tr>
             ))}
             {filtrados.length === 0 && (
-              <tr><td colSpan={4} className="text-center py-10 text-slate-400 text-sm">Sin resultados</td></tr>
+              <tr><td colSpan={5} className="text-center py-10 text-slate-400 text-sm">Sin resultados</td></tr>
             )}
           </tbody>
         </table>
@@ -175,9 +188,19 @@ function TabClientes() {
             <label className={labelCls}>Nombre completo *</label>
             <input className={inputCls} placeholder="Ej: Juan Pérez" value={form.nombre} onChange={(e) => setForm({ ...form, nombre: e.target.value })} autoFocus />
           </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className={labelCls}>Teléfono</label>
+              <input className={inputCls} placeholder="Ej: 5555-1234" value={form.telefono} onChange={(e) => setForm({ ...form, telefono: e.target.value })} />
+            </div>
+            <div>
+              <label className={labelCls}>Email</label>
+              <input type="email" className={inputCls} placeholder="Ej: correo@mail.com" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} />
+            </div>
+          </div>
           <div>
-            <label className={labelCls}>Teléfono</label>
-            <input className={inputCls} placeholder="Ej: 5555-1234" value={form.telefono} onChange={(e) => setForm({ ...form, telefono: e.target.value })} />
+            <label className={labelCls}>Dirección</label>
+            <input className={inputCls} placeholder="Ej: Zona 1, Ciudad" value={form.direccion} onChange={(e) => setForm({ ...form, direccion: e.target.value })} />
           </div>
           <div className="flex justify-end gap-2 pt-2 border-t border-slate-100">
             <button onClick={closeModal} className={btnSecondary}>Cancelar</button>
@@ -197,125 +220,165 @@ function TabClientes() {
 /* ═══════════════════════════════════════════════════════════════════════════════
    TAB: VEHÍCULOS (MARCAS / MODELOS)
    ═══════════════════════════════════════════════════════════════════════════════ */
+const FORM_VEH_INIT = { cliente_id: '', marca: '', modelo: '', anio: '', placa: '', km: '' };
+
 function TabVehiculos() {
-  const { marcas, agregarMarca, eliminarMarca, agregarModelo, eliminarModelo } = useCatalogos();
+  const { vehiculos, clientes, agregarVehiculo, editarVehiculoCat, eliminarVehiculoCat } = useCatalogos();
   const [busqueda, setBusqueda] = useState('');
-  const [marcaAbierta, setMarcaAbierta] = useState(null);
-  const [modal, setModal] = useState(null);
-  const [formMarca, setFormMarca] = useState('');
-  const [formModelo, setFormModelo] = useState({ marca: '', modelo: '', desde: 2020, hasta: '' });
-  const [confirm, setConfirm] = useState(null);
+  const [modal, setModal]       = useState(null); // null | 'nuevo' | vehiculo-obj
+  const [form, setForm]         = useState(FORM_VEH_INIT);
+  const [confirm, setConfirm]   = useState(null);
+  const [guardando, setGuardando] = useState(false);
 
-  const marcasList = useMemo(
-    () => Object.keys(marcas).filter((m) => m.toLowerCase().includes(busqueda.toLowerCase())).sort(),
-    [marcas, busqueda]
-  );
-  const totalModelos = useMemo(() => Object.values(marcas).reduce((a, m) => a + Object.keys(m).length, 0), [marcas]);
+  const filtrados = useMemo(() => {
+    const q = busqueda.toLowerCase();
+    return vehiculos.filter((v) =>
+      String(v.marca   ?? '').toLowerCase().includes(q) ||
+      String(v.modelo  ?? '').toLowerCase().includes(q) ||
+      String(v.placa   ?? '').toLowerCase().includes(q) ||
+      String(v.cliente_id ?? '').toLowerCase().includes(q) ||
+      clientes.find((c) => c.id === v.cliente_id && (c.nombre || '').toLowerCase().includes(q))
+    );
+  }, [vehiculos, clientes, busqueda]);
 
-  const openMarca = () => { setFormMarca(''); setModal('marca'); };
-  const openModelo = (preselect) => { setFormModelo({ marca: preselect || '', modelo: '', desde: 2020, hasta: '' }); setModal('modelo'); };
+  const nombreCliente = (id) => clientes.find((c) => c.id === id)?.nombre || id || '—';
 
-  const handleSaveMarca = () => {
-    const n = formMarca.trim();
-    if (!n) return toast.error('Ingrese un nombre');
-    if (marcas[n]) return toast.error('Esa marca ya existe');
-    agregarMarca(n); toast.success(`Marca "${n}" agregada`); setModal(null);
+  const openNuevo = () => { setForm(FORM_VEH_INIT); setModal('nuevo'); };
+  const openEditar = (v) => {
+    setForm({ cliente_id: v.cliente_id || '', marca: v.marca || '', modelo: v.modelo || '',
+              anio: v.anio || '', placa: v.placa || '', km: v.km || '' });
+    setModal(v);
   };
 
-  const handleSaveModelo = () => {
-    const { marca, modelo, desde, hasta } = formModelo;
-    if (!marca || !modelo.trim()) return toast.error('Complete marca y modelo');
-    if (marcas[marca]?.[modelo.trim()]) return toast.error('Modelo duplicado');
-    agregarModelo(marca, modelo.trim(), Number(desde), hasta ? Number(hasta) : undefined);
-    toast.success(`Modelo "${modelo.trim()}" agregado`); setModal(null);
+  const handleGuardar = async () => {
+    if (!form.marca.trim() || !form.modelo.trim()) return toast.error('Marca y modelo son obligatorios');
+    setGuardando(true);
+    try {
+      const datos = {
+        cliente_id: form.cliente_id,
+        marca:      form.marca.trim(),
+        modelo:     form.modelo.trim(),
+        anio:       form.anio ? Number(form.anio) : '',
+        placa:      form.placa.trim().toUpperCase(),
+        km:         form.km ? Number(form.km) : '',
+        creado_en:  new Date().toISOString(),
+      };
+      if (modal === 'nuevo') {
+        await agregarVehiculo(datos);
+        toast.success('Vehículo agregado');
+      } else {
+        await editarVehiculoCat(modal.id, datos);
+        toast.success('Vehículo actualizado');
+      }
+      setModal(null);
+    } catch (e) {
+      toast.error(e.message || 'Error al guardar');
+    } finally {
+      setGuardando(false);
+    }
   };
+
+  const handleEliminar = async () => {
+    await eliminarVehiculoCat(confirm.id);
+    toast.success('Vehículo eliminado');
+    setConfirm(null);
+  };
+
+  const f = (k) => (e) => setForm((p) => ({ ...p, [k]: e.target.value }));
 
   return (
     <div className="space-y-4">
-      <Toolbar busqueda={busqueda} onBusqueda={setBusqueda} placeholder="Buscar marca…" count={`${marcasList.length} marcas · ${totalModelos} modelos`} onAdd={openMarca} addLabel="Nueva marca" />
+      <Toolbar busqueda={busqueda} onBusqueda={setBusqueda} placeholder="Buscar marca, modelo o placa…"
+        count={`${filtrados.length} vehículo${filtrados.length !== 1 ? 's' : ''}`}
+        onAdd={openNuevo} addLabel="Nuevo vehículo" />
 
-      <div className="flex justify-end">
-        <button onClick={() => openModelo('')} className={btnSecondary}>
-          <I d={icons.plus} className="w-4 h-4" />
-          <span className="hidden sm:inline">Agregar modelo</span>
-          <span className="sm:hidden">Modelo</span>
-        </button>
-      </div>
-
-      <div className="space-y-1">
-        {marcasList.map((marca) => {
-          const modelos = Object.entries(marcas[marca]);
-          const isOpen = marcaAbierta === marca;
-          return (
-            <div key={marca} className="bg-white rounded-lg border border-slate-200 overflow-hidden">
-              <div className="flex items-center justify-between px-4 py-2.5 cursor-pointer hover:bg-slate-50 transition-colors" onClick={() => setMarcaAbierta(isOpen ? null : marca)}>
-                <div className="flex items-center gap-3">
-                  <div className="w-7 h-7 rounded bg-slate-100 flex items-center justify-center flex-shrink-0"><I d={icons.car} className="w-4 h-4 text-slate-500" /></div>
-                  <span className="text-[13px] font-semibold text-slate-800">{marca}</span>
-                  <span className="text-[11px] font-medium text-slate-400 bg-slate-100 px-1.5 py-0.5 rounded">{modelos.length}</span>
-                </div>
-                <div className="flex items-center gap-1">
-                  <button onClick={(e) => { e.stopPropagation(); openModelo(marca); }} title="Agregar modelo" className="p-1.5 rounded hover:bg-blue-50 text-slate-400 hover:text-blue-600 transition"><I d={icons.plus} className="w-4 h-4" /></button>
-                  <button onClick={(e) => { e.stopPropagation(); setConfirm({ tipo: 'marca', nombre: marca }); }} title="Eliminar marca" className="p-1.5 rounded hover:bg-red-50 text-slate-400 hover:text-red-600 transition"><I d={icons.trash} className="w-4 h-4" /></button>
-                  <svg className={`w-4 h-4 text-slate-400 transition-transform ml-1 ${isOpen ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d={icons.chevron} /></svg>
-                </div>
+      {/* Tarjetas móvil */}
+      <div className="sm:hidden space-y-2">
+        {filtrados.map((v) => (
+          <div key={v.id} className="bg-white rounded-xl border border-slate-100 shadow-sm p-3">
+            <div className="flex items-center justify-between mb-1">
+              <span className="font-semibold text-slate-800 text-[13px] uppercase">{v.marca} {v.modelo} {v.anio}</span>
+              <div className="flex gap-1">
+                <button onClick={() => openEditar(v)} className="p-1.5 rounded hover:bg-blue-50 text-slate-400 hover:text-blue-600 transition"><I d={icons.edit} className="w-3.5 h-3.5" /></button>
+                <button onClick={() => setConfirm(v)} className="p-1.5 rounded hover:bg-red-50 text-slate-400 hover:text-red-600 transition"><I d={icons.trash} className="w-3.5 h-3.5" /></button>
               </div>
-              {isOpen && (
-                <div className="border-t border-slate-100 bg-slate-50/50">
-                  {modelos.length === 0 && <p className="px-4 py-4 text-[12px] text-slate-400 italic">Sin modelos registrados</p>}
-                  <table className="w-full text-[13px]">
-                    <tbody className="divide-y divide-slate-100">
-                      {modelos.map(([modelo, info]) => (
-                        <tr key={modelo} className="hover:bg-white/60 transition-colors">
-                          <td className="pl-14 pr-4 py-2 text-slate-700">{modelo}</td>
-                          <td className="px-4 py-2 text-slate-400 text-[12px]">{info.desde}{info.hasta ? ` – ${info.hasta}` : '+'}</td>
-                          <td className="px-4 py-2 w-12">
-                            <button onClick={() => { eliminarModelo(marca, modelo); toast.success(`"${modelo}" eliminado`); }} title="Eliminar" className="p-1 rounded hover:bg-red-50 text-slate-400 hover:text-red-500 transition"><I d={icons.trash} className="w-3.5 h-3.5" /></button>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              )}
             </div>
-          );
-        })}
-        {marcasList.length === 0 && <div className="text-center py-14 text-slate-400 text-sm">Sin resultados</div>}
+            <p className="text-[11px] text-slate-400">Cliente: <span className="text-slate-600">{nombreCliente(v.cliente_id)}</span></p>
+            {v.placa && <p className="text-[11px] text-slate-400">Placa: <span className="text-slate-600">{v.placa}</span></p>}
+            {v.km    && <p className="text-[11px] text-slate-400">Km: <span className="text-slate-600">{Number(v.km).toLocaleString()}</span></p>}
+          </div>
+        ))}
+        {filtrados.length === 0 && <p className="text-center py-14 text-slate-400 text-sm">Sin resultados</p>}
       </div>
 
-      <Modal open={modal === 'marca'} onClose={() => setModal(null)} title="Nueva marca" width="max-w-sm">
-        <div className="space-y-4">
-          <div><label className={labelCls}>Nombre de la marca *</label><input className={inputCls} placeholder="Ej: Toyota" value={formMarca} onChange={(e) => setFormMarca(e.target.value)} autoFocus /></div>
-          <div className="flex justify-end gap-2 pt-2 border-t border-slate-100">
-            <button onClick={() => setModal(null)} className={btnSecondary}>Cancelar</button>
-            <button onClick={handleSaveMarca} className={btnPrimary}>Guardar</button>
-          </div>
-        </div>
-      </Modal>
+      {/* Tabla desktop */}
+      <div className="hidden sm:block bg-white rounded-xl border border-slate-100 shadow-sm overflow-x-auto">
+        <table className="w-full text-[13px]">
+          <thead>
+            <tr className="bg-slate-50 text-slate-500 text-[11px] uppercase tracking-wide">
+              <th className="text-left px-4 py-3">Marca / Modelo</th>
+              <th className="text-left px-4 py-3">Año</th>
+              <th className="text-left px-4 py-3">Placa</th>
+              <th className="text-left px-4 py-3">Km</th>
+              <th className="text-left px-4 py-3">Cliente</th>
+              <th className="px-4 py-3 w-20"></th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-slate-100">
+            {filtrados.map((v) => (
+              <tr key={v.id} className="hover:bg-slate-50 transition-colors">
+                <td className="px-4 py-2.5 font-semibold text-slate-800 uppercase">{v.marca} {v.modelo}</td>
+                <td className="px-4 py-2.5 text-slate-500">{v.anio || '—'}</td>
+                <td className="px-4 py-2.5 text-slate-600 font-mono">{v.placa || '—'}</td>
+                <td className="px-4 py-2.5 text-slate-500">{v.km ? Number(v.km).toLocaleString() : '—'}</td>
+                <td className="px-4 py-2.5 text-slate-600">{nombreCliente(v.cliente_id)}</td>
+                <td className="px-4 py-2.5">
+                  <div className="flex gap-1 justify-end">
+                    <button onClick={() => openEditar(v)} className="p-1.5 rounded hover:bg-blue-50 text-slate-400 hover:text-blue-600 transition"><I d={icons.edit} className="w-4 h-4" /></button>
+                    <button onClick={() => setConfirm(v)} className="p-1.5 rounded hover:bg-red-50 text-slate-400 hover:text-red-600 transition"><I d={icons.trash} className="w-4 h-4" /></button>
+                  </div>
+                </td>
+              </tr>
+            ))}
+            {filtrados.length === 0 && (
+              <tr><td colSpan={6} className="px-4 py-14 text-center text-slate-400">Sin resultados</td></tr>
+            )}
+          </tbody>
+        </table>
+      </div>
 
-      <Modal open={modal === 'modelo'} onClose={() => setModal(null)} title="Nuevo modelo">
+      {/* Modal nuevo / editar */}
+      <Modal open={!!modal} onClose={() => setModal(null)} title={modal === 'nuevo' ? 'Nuevo vehículo' : 'Editar vehículo'}>
         <div className="space-y-4">
-          <div><label className={labelCls}>Marca *</label>
-            <select className={inputCls} value={formModelo.marca} onChange={(e) => setFormModelo({ ...formModelo, marca: e.target.value })}>
-              <option value="">Seleccionar…</option>
-              {Object.keys(marcas).sort().map((m) => <option key={m}>{m}</option>)}
+          <div>
+            <label className={labelCls}>Cliente</label>
+            <select className={inputCls} value={form.cliente_id} onChange={f('cliente_id')}>
+              <option value="">Sin asignar</option>
+              {clientes.map((c) => <option key={c.id} value={c.id}>{c.nombre}</option>)}
             </select>
           </div>
-          <div><label className={labelCls}>Modelo *</label><input className={inputCls} placeholder="Ej: Corolla" value={formModelo.modelo} onChange={(e) => setFormModelo({ ...formModelo, modelo: e.target.value })} /></div>
           <div className="grid grid-cols-2 gap-3">
-            <div><label className={labelCls}>Año desde</label><input type="number" className={inputCls} value={formModelo.desde} onChange={(e) => setFormModelo({ ...formModelo, desde: e.target.value })} /></div>
-            <div><label className={labelCls}>Año hasta (vacío = vigente)</label><input type="number" className={inputCls} placeholder="—" value={formModelo.hasta} onChange={(e) => setFormModelo({ ...formModelo, hasta: e.target.value })} /></div>
+            <div><label className={labelCls}>Marca *</label><input className={inputCls} placeholder="Toyota" value={form.marca} onChange={f('marca')} autoFocus /></div>
+            <div><label className={labelCls}>Modelo *</label><input className={inputCls} placeholder="Yaris" value={form.modelo} onChange={f('modelo')} /></div>
+          </div>
+          <div className="grid grid-cols-3 gap-3">
+            <div><label className={labelCls}>Año</label><input type="number" className={inputCls} placeholder="2008" value={form.anio} onChange={f('anio')} /></div>
+            <div><label className={labelCls}>Placa</label><input className={inputCls} placeholder="P123ABC" value={form.placa} onChange={f('placa')} /></div>
+            <div><label className={labelCls}>Km</label><input type="number" className={inputCls} placeholder="85000" value={form.km} onChange={f('km')} /></div>
           </div>
           <div className="flex justify-end gap-2 pt-2 border-t border-slate-100">
-            <button onClick={() => setModal(null)} className={btnSecondary}>Cancelar</button>
-            <button onClick={handleSaveModelo} className={btnPrimary}>Guardar</button>
+            <button onClick={() => setModal(null)} className={btnSecondary} disabled={guardando}>Cancelar</button>
+            <button onClick={handleGuardar} className={btnPrimary} disabled={guardando}>
+              {guardando ? 'Guardando…' : 'Guardar'}
+            </button>
           </div>
         </div>
       </Modal>
 
-      <ConfirmModal open={!!confirm} title="Eliminar marca" message={`¿Eliminar "${confirm?.nombre}" y todos sus modelos?`}
-        onConfirm={() => { eliminarMarca(confirm.nombre); toast.success(`"${confirm.nombre}" eliminada`); setConfirm(null); if (marcaAbierta === confirm.nombre) setMarcaAbierta(null); }}
+      <ConfirmModal open={!!confirm}
+        title="Eliminar vehículo"
+        message={`¿Eliminar ${confirm?.marca} ${confirm?.modelo}${confirm?.placa ? ` (${confirm.placa})` : ''}?`}
+        onConfirm={handleEliminar}
         onCancel={() => setConfirm(null)}
       />
     </div>
@@ -650,8 +713,8 @@ function TabMecanicos() {
 
   const filtrados = useMemo(
     () => mecanicos.filter((m) =>
-      m.nombre.toLowerCase().includes(busqueda.toLowerCase()) ||
-      m.especialidad.toLowerCase().includes(busqueda.toLowerCase())
+      String(m.nombre ?? '').toLowerCase().includes(busqueda.toLowerCase()) ||
+      String(m.especialidad ?? '').toLowerCase().includes(busqueda.toLowerCase())
     ),
     [mecanicos, busqueda]
   );
@@ -696,9 +759,9 @@ function TabMecanicos() {
                 <td className="px-4 py-2.5 text-slate-600 hidden md:table-cell">{m.especialidad || '—'}</td>
                 <td className="px-4 py-2.5 text-slate-600 hidden lg:table-cell">{m.telefono || '—'}</td>
                 <td className="px-4 py-2.5">
-                  <button onClick={() => toggleActivo(m)}
-                    className={`px-2 py-0.5 rounded-full text-[11px] font-semibold ${m.activo ? 'bg-green-100 text-green-700' : 'bg-slate-100 text-slate-400'}`}>
-                    {m.activo ? 'Activo' : 'Inactivo'}
+                  <button onClick={() => toggleActivo(m)} title={m.activo ? 'Desactivar' : 'Activar'}
+                    className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ${m.activo ? 'bg-green-500' : 'bg-slate-300'}`}>
+                    <span className={`inline-block h-4 w-4 rounded-full bg-white shadow transform transition-transform duration-200 ${m.activo ? 'translate-x-4' : 'translate-x-0'}`} />
                   </button>
                 </td>
                 <td className="px-4 py-2.5">
@@ -1067,14 +1130,12 @@ function TabConfig() {
    ═══════════════════════════════════════════════════════════════════════════════ */
 export default function Catalogos() {
   const [tab, setTab] = useState('clientes');
-  const { resetCatalogos, clientes, marcas, servicios, estados, mecanicos, tiposDano } = useCatalogos();
+  const { resetCatalogos, clientes, vehiculos, servicios, estados, mecanicos, tiposDano } = useCatalogos();
 
-  const totalMarcas  = Object.keys(marcas).length;
-  const totalModelos = Object.values(marcas).reduce((a, m) => a + Object.keys(m).length, 0);
-  const totalServ    = servicios.reduce((a, c) => a + (c.servicios?.length ?? 0), 0);
+  const totalServ = servicios.reduce((a, c) => a + (c.servicios?.length ?? 0), 0);
   const kpis = [
-    { label: 'Clientes',  value: clientes.length,  iconPath: icons.users  },
-    { label: 'Marcas',    value: totalMarcas,       iconPath: icons.car    },
+    { label: 'Clientes',   value: clientes.length,  iconPath: icons.users  },
+    { label: 'Vehículos',  value: vehiculos.length,  iconPath: icons.car    },
     { label: 'Servicios', value: totalServ,         iconPath: icons.wrench },
     { label: 'Estados',   value: estados.length,    iconPath: icons.flag   },
     { label: 'Mecánicos', value: mecanicos.length,  iconPath: icons.mec    },

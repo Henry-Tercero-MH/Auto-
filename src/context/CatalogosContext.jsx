@@ -1,6 +1,5 @@
 import { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { CATEGORIAS_SERVICIOS as SERV_INICIAL } from '../data/servicios';
-import { MARCAS_INICIAL } from '../data/marcas';
 import { api } from '../services/sheetsApi';
 
 const CatalogosContext = createContext();
@@ -48,20 +47,22 @@ export function CatalogosProvider({ children }) {
   // ── Estado conectado a Sheets ──────────────────────────────────────────
   const [clientes,  setClientes]  = useState([]);
   const [mecanicos, setMecanicos] = useState([]);
-  const [marcas,    setMarcas]    = useState(MARCAS_INICIAL);
+  const [marcas,    setMarcas]    = useState({});
   const [servicios, setServicios] = useState([]);
   const [vehiculos, setVehiculos] = useState([]);
 
   // ── Carga inicial desde Google Sheets ─────────────────────────────────
+  const normActivo = (v) => v === true || v === 'TRUE' || v === 'true';
+
   useEffect(() => {
     // Clientes
     api.getClientes()
-      .then((data) => { if (data?.length) setClientes(data); })
+      .then((data) => { if (data?.length) setClientes(data.map((c) => ({ ...c, activo: normActivo(c.activo) }))); })
       .catch(() => {});
 
     // Mecánicos
     api.getMecanicos()
-      .then((data) => { if (data?.length) setMecanicos(data); })
+      .then((data) => { if (data?.length) setMecanicos(data.map((m) => ({ ...m, activo: normActivo(m.activo) }))); })
       .catch(() => {});
 
     // Marcas
@@ -379,7 +380,7 @@ export function CatalogosProvider({ children }) {
   // ─────────────────────────────────────────────────────────────────────
   const resetCatalogos = useCallback(() => {
     setClientes([]);
-    setMarcas(MARCAS_INICIAL);
+    setMarcas({});
     setServicios([]);
     setEstados(ESTADOS_INICIAL);
     setMecanicos([]);
