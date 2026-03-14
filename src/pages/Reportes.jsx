@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import * as XLSX from 'xlsx';
 import { useSolicitudes } from '../context/SolicitudesContext';
 import { useCatalogos } from '../context/CatalogosContext';
 import { usePagos } from '../context/PagosContext';
@@ -11,27 +12,18 @@ const Icon = ({ path, className = 'w-4 h-4' }) => (
   </svg>
 );
 
-function exportCsv(filename, headers, rows) {
+function exportXlsx(filename, headers, rows) {
   if (!rows.length) return;
-  const escape = (value) => {
-    if (value == null) return '';
-    const str = String(value);
-    if (str.includes('"') || str.includes(',') || str.includes('\n')) {
-      return `"${str.replace(/"/g, '""')}"`;
-    }
-    return str;
-  };
-  const csv = [
-    headers.map((h) => escape(h.label)).join(','),
-    ...rows.map((row) => headers.map((h) => escape(row[h.key])).join(',')),
-  ].join('\n');
-  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement('a');
-  link.href = url;
-  link.download = filename;
-  link.click();
-  URL.revokeObjectURL(url);
+  const wsData = [
+    headers.map((h) => h.label),
+    ...rows.map((row) => headers.map((h) => row[h.key] ?? '')),
+  ];
+  const ws = XLSX.utils.aoa_to_sheet(wsData);
+  // Ancho de columnas automático
+  ws['!cols'] = headers.map((h) => ({ wch: Math.max(h.label.length, 14) }));
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Reporte');
+  XLSX.writeFile(wb, filename);
 }
 
 const TABS = [
@@ -144,14 +136,13 @@ export default function Reportes() {
       { key: 'mecanico', label: 'Mecánico' }, { key: 'estado', label: 'Estado' },
       { key: 'total', label: 'Total (Q)' },
     ];
-    exportCsv('ordenes.csv', headers, solicitudesFiltradas.map((s) => ({
+    exportXlsx('ordenes.xlsx', headers, solicitudesFiltradas.map((s) => ({
       ...s, mecanico: s.mecanico?.name || s.mecanico?.nombre || '', total: calcularTotal(s).toFixed(2),
     })));
   };
 
-
   const exportarServicios = () => {
-    exportCsv('servicios.csv',
+    exportXlsx('servicios.xlsx',
       [{ key: 'servicio', label: 'Servicio' }, { key: 'cantidad', label: 'Cantidad' },
        { key: 'ingresos', label: 'Ingresos estimados (Q)' }],
       serviciosVendidos.map((s) => ({ ...s, ingresos: s.ingresos.toFixed(2) })),
@@ -252,11 +243,6 @@ export default function Reportes() {
                 <Icon path="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-8 0V5a2 2 0 012-2h4a2 2 0 012 2v2M9 12h6m-6 4h3" />
                 <span className="hidden sm:inline">Exportar a Excel</span>
                 <span className="sm:hidden">Excel</span>
-              </button>
-              <button type="button" onClick={() => window.print()} className={btnPrimario}>
-                <Icon path="M6 9V4a2 2 0 012-2h8a2 2 0 012 2v5m-2 4h2a2 2 0 002-2v-1a2 2 0 00-2-2H4a2 2 0 00-2 2v1a2 2 0 002 2h2m0 0v3a2 2 0 002 2h8a2 2 0 002-2v-3m-12 0h12" />
-                <span className="hidden sm:inline">Imprimir listado</span>
-                <span className="sm:hidden">Imprimir</span>
               </button>
             </div>
           </div>
