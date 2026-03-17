@@ -708,7 +708,7 @@ function TabMecanicos() {
   const { mecanicos, agregarMecanico, editarMecanico, eliminarMecanico } = useCatalogos();
   const [busqueda, setBusqueda] = useState('');
   const [modal, setModal] = useState(null);
-  const [form, setForm] = useState({ nombre: '', especialidad: '', telefono: '' });
+  const [form, setForm] = useState({ nombre: '', especialidad: '', pin: '', telefono: '' });
   const [confirm, setConfirm] = useState(null);
 
   const filtrados = useMemo(
@@ -719,12 +719,21 @@ function TabMecanicos() {
     [mecanicos, busqueda]
   );
 
-  const openNew = () => { setForm({ nombre: '', especialidad: '', telefono: '' }); setModal('nuevo'); };
-  const openEdit = (m) => { setForm({ nombre: m.nombre, especialidad: m.especialidad, telefono: m.telefono }); setModal(m); };
+  const openNew = () => { setForm({ nombre: '', especialidad: '', pin: '', telefono: '' }); setModal('nuevo'); };
+  const openEdit = (m) => { setForm({ nombre: m.nombre, especialidad: m.especialidad, pin: m.pin || '', telefono: m.telefono }); setModal(m); };
   const closeModal = () => setModal(null);
 
   const handleSave = () => {
     if (!form.nombre.trim()) return toast.error('El nombre es obligatorio');
+    if (!form.pin.trim()) return toast.error('El PIN es obligatorio');
+    // Validación PIN: mínimo 6 caracteres, mayúsculas, minúsculas y números
+    const pin = form.pin;
+    if (pin.length < 6) return toast.error('El PIN debe tener al menos 6 caracteres');
+    if (!/[A-Z]/.test(pin)) return toast.error('El PIN debe incluir al menos una mayúscula');
+    if (!/[a-z]/.test(pin)) return toast.error('El PIN debe incluir al menos una minúscula');
+    if (!/[0-9]/.test(pin)) return toast.error('El PIN debe incluir al menos un número');
+    const tel = String(form.telefono ?? '').replace(/\D/g, '');
+    if (tel.length !== 8) return toast.error('El teléfono debe tener exactamente 8 dígitos');
     if (modal === 'nuevo') { agregarMecanico(form); toast.success('Mecánico registrado'); }
     else { editarMecanico(modal.id, form); toast.success('Mecánico actualizado'); }
     closeModal();
@@ -788,11 +797,67 @@ function TabMecanicos() {
             <input className={inputCls} placeholder="Ej: Motor y transmisión" value={form.especialidad} onChange={(e) => setForm({ ...form, especialidad: e.target.value })} />
           </div>
           <div>
+            <label className={labelCls}>PIN de acceso *</label>
+            <input className={inputCls} placeholder="Mínimo 6 caracteres, mayúsculas, minúsculas y números (Ej: Taller2024)" value={form.pin} onChange={(e) => setForm({ ...form, pin: e.target.value })} />
+          </div>
+          <div>
             <label className={labelCls}>Teléfono</label>
             <input className={inputCls} placeholder="Ej: 5555-2001" value={form.telefono} onChange={(e) => setForm({ ...form, telefono: e.target.value })} />
           </div>
           <div className="flex justify-end gap-2 pt-2 border-t border-slate-100">
             <button onClick={closeModal} className={btnSecondary}>Cancelar</button>
+            <button
+              onClick={() => {
+                let letraInput = '';
+                toast((t) => (
+                  <div className="flex flex-col gap-3 min-w-[220px]">
+                    <p className="text-sm font-semibold text-slate-700">Palabra clave para el PIN</p>
+                    <input
+                      autoFocus
+                      maxLength={12}
+                      placeholder="Ej: Taller"
+                      className="border border-slate-300 rounded px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 uppercase tracking-widest"
+                      onChange={(e) => { letraInput = e.target.value; }}
+                      onKeyDown={(e) => {
+                        if (e.key !== 'Enter') return;
+                        const letra = letraInput.trim();
+                        if (!letra || !/^[A-Za-z]+$/.test(letra)) { toast.error('Solo letras, sin espacios ni caracteres especiales'); return; }
+                        const mayus = Array.from({ length: 2 }, () => String.fromCharCode(65 + Math.floor(Math.random() * 26))).join('');
+                        const minus = Array.from({ length: 2 }, () => String.fromCharCode(97 + Math.floor(Math.random() * 26))).join('');
+                        const nums = Array.from({ length: 2 }, () => Math.floor(Math.random() * 10)).join('');
+                        let pin = letra + mayus + minus + nums;
+                        pin = pin.split('').sort(() => Math.random() - 0.5).join('');
+                        setForm((prev) => ({ ...prev, pin }));
+                        toast.dismiss(t.id);
+                        toast.success('PIN generado automáticamente');
+                      }}
+                    />
+                    <div className="flex gap-2 justify-end">
+                      <button
+                        onClick={() => toast.dismiss(t.id)}
+                        className="text-xs px-3 py-1.5 rounded border border-slate-200 text-slate-600 hover:bg-slate-50 transition"
+                      >Cancelar</button>
+                      <button
+                        onClick={() => {
+                          const letra = letraInput.trim();
+                          if (!letra || !/^[A-Za-z]+$/.test(letra)) { toast.error('Solo letras, sin espacios ni caracteres especiales'); return; }
+                          const mayus = Array.from({ length: 2 }, () => String.fromCharCode(65 + Math.floor(Math.random() * 26))).join('');
+                          const minus = Array.from({ length: 2 }, () => String.fromCharCode(97 + Math.floor(Math.random() * 26))).join('');
+                          const nums = Array.from({ length: 2 }, () => Math.floor(Math.random() * 10)).join('');
+                          let pin = letra + mayus + minus + nums;
+                          pin = pin.split('').sort(() => Math.random() - 0.5).join('');
+                          setForm((prev) => ({ ...prev, pin }));
+                          toast.dismiss(t.id);
+                          toast.success('PIN generado automáticamente');
+                        }}
+                        className="text-xs px-3 py-1.5 rounded bg-[#1F2A56] text-white hover:bg-[#1F2A56]/90 transition"
+                      >Generar</button>
+                    </div>
+                  </div>
+                ), { duration: Infinity });
+              }}
+              className={btnSecondary}
+            >Generar PIN automático</button>
             <button onClick={handleSave} className={btnPrimary}>{modal === 'nuevo' ? 'Guardar' : 'Actualizar'}</button>
           </div>
         </div>
