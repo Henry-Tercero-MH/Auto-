@@ -434,9 +434,8 @@ export default function Reportes() {
                         size: 72mm auto;
                         margin: 0;
                       }
-                      body * { display: none !important; }
-                      #print-recibo { display: block !important; }
-                      #print-recibo * { display: revert !important; }
+                      body * { visibility: hidden !important; }
+                      #print-recibo, #print-recibo * { visibility: visible !important; }
 
                       /* Todo negro puro y negrita */
                       #print-recibo, #print-recibo * {
@@ -449,7 +448,9 @@ export default function Reportes() {
                       }
 
                       #print-recibo {
-                        position: static !important;
+                        position: fixed !important;
+                        top: 0 !important;
+                        left: 0 !important;
                         width: 72mm !important;
                         max-width: 72mm !important;
                         font-family: 'Courier New', monospace !important;

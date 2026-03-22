@@ -1703,9 +1703,8 @@ export default function NuevaSolicitud() {
                     margin: 0;
                   }
 
-                  body * { display: none !important; }
-                  #print-area { display: block !important; }
-                  #print-area * { display: revert !important; }
+                  body * { visibility: hidden !important; }
+                  #print-area, #print-area * { visibility: visible !important; }
 
                   /* Todo negro puro y negrita */
                   #print-area, #print-area * {
@@ -1718,7 +1717,9 @@ export default function NuevaSolicitud() {
                   }
 
                   #print-area {
-                    position: static !important;
+                    position: fixed !important;
+                    top: 0 !important;
+                    left: 0 !important;
                     width: 72mm !important;
                     padding: 2mm 3mm !important;
                     font-family: 'Courier New', monospace !important;
