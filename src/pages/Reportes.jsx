@@ -434,14 +434,9 @@ export default function Reportes() {
                         size: 72mm auto;
                         margin: 0;
                       }
-                      html, body {
-                        width: 72mm !important;
-                        margin: 0 !important;
-                        padding: 0 !important;
-                      }
-
-                      body * { visibility: hidden !important; }
-                      #print-recibo, #print-recibo * { visibility: visible !important; }
+                      body * { display: none !important; }
+                      #print-recibo { display: block !important; }
+                      #print-recibo * { display: revert !important; }
 
                       /* Todo negro puro y negrita */
                       #print-recibo, #print-recibo * {

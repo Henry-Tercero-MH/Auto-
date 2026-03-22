@@ -1703,14 +1703,9 @@ export default function NuevaSolicitud() {
                     margin: 0;
                   }
 
-                  html, body {
-                    width: 72mm !important;
-                    margin: 0 !important;
-                    padding: 0 !important;
-                  }
-
-                  body * { visibility: hidden !important; }
-                  #print-area, #print-area * { visibility: visible !important; }
+                  body * { display: none !important; }
+                  #print-area { display: block !important; }
+                  #print-area * { display: revert !important; }
 
                   /* Todo negro puro y negrita */
                   #print-area, #print-area * {
