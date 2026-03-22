@@ -427,7 +427,7 @@ export default function Reportes() {
               <>
                 {/* ── Ticket térmico 80mm ── */}
                 <div className="print-wrapper flex justify-center px-4 sm:px-8">
-                <div id="print-recibo" className="bg-white border border-gray-300 rounded-none select-none text-sm w-full" style={{ fontFamily: "'Courier New', monospace", maxWidth: '480px' }}>
+                <div id="print-recibo" className="bg-white border border-gray-300 rounded-none select-none text-sm w-full" style={{ fontFamily: "'Courier New', monospace", maxWidth: '272px' }}>
                   <style>{`
                     @media print {
                       @page {

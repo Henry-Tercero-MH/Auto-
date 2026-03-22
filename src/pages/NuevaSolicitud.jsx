@@ -526,7 +526,7 @@ function OrdenTrabajo({ form, ordenNum, tiposDano, onPrecioChange }) {
   if (Object.keys(EC).length === 0) Object.assign(EC, ESTADO_CONFIG_DEFAULT);
 
   return (
-    <div className="bg-white border border-gray-300 rounded-none select-none text-sm w-full" style={{ fontFamily: "'Courier New', monospace", maxWidth: '480px' }}>
+    <div className="bg-white border border-gray-300 rounded-none select-none text-sm w-full" style={{ fontFamily: "'Courier New', monospace", maxWidth: '272px' }}>
 
       {/* ── Encabezado ── */}
       <div className="thermal-header border-b border-gray-400 px-2 py-1.5 flex items-center justify-between gap-2">
