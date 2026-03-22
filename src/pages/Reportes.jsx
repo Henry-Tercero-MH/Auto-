@@ -431,38 +431,46 @@ export default function Reportes() {
                   <style>{`
                     @media print {
                       @page {
-                        size: 72.1mm auto;
-                        margin: 0;
+                        size: 72mm auto;
+                        margin: 3mm 2mm;
                       }
-                      * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
                       body * { visibility: hidden !important; }
                       #print-recibo, #print-recibo * { visibility: visible !important; }
+
+                      /* Todo negro puro y negrita — densidad 5/8 requiere máximo contraste */
+                      #print-recibo, #print-recibo * {
+                        color: #000 !important;
+                        -webkit-text-fill-color: #000 !important;
+                        background: transparent !important;
+                        font-weight: 900 !important;
+                        -webkit-print-color-adjust: exact !important;
+                        print-color-adjust: exact !important;
+                      }
+
                       #print-recibo {
-                        position: fixed !important;
-                        top: 0 !important; left: 0 !important;
-                        width: 72.1mm !important;
+                        position: static !important;
+                        width: 100% !important;
                         font-family: 'Courier New', monospace !important;
                         font-size: 10pt !important;
-                        line-height: 1.3 !important;
-                        color: #000 !important;
-                        background: transparent !important;
+                        line-height: 1.4 !important;
                         margin: 0 !important;
-                        padding: 2mm !important;
+                        padding: 0 !important;
                         box-sizing: border-box !important;
                       }
-                      #print-recibo * { color: #000 !important; -webkit-text-fill-color: #000 !important; background: transparent !important; }
-                      #print-recibo .r-header { display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 2px solid #000; padding-bottom: 3px; margin-bottom: 4px; }
-                      #print-recibo .r-logo { height: 28px !important; filter: grayscale(100%) contrast(300%) !important; }
-                      #print-recibo .r-section { border-bottom: 1px dashed #000; padding: 3px 0; margin-bottom: 3px; }
-                      #print-recibo .r-section-title { font-size: 8.5pt !important; font-weight: 900 !important; text-transform: uppercase; margin-bottom: 3px; }
-                      #print-recibo .r-label { font-size: 8pt !important; font-weight: 700 !important; text-transform: uppercase; }
-                      #print-recibo .r-value { font-size: 10pt !important; font-weight: 700 !important; word-break: break-word; }
-                      #print-recibo .r-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 2px 6px; }
-                      #print-recibo .r-table-head { background: transparent !important; color: #000 !important; border-top: 2px solid #000; border-bottom: 2px solid #000; font-weight: 900 !important; font-size: 9pt !important; padding: 2px 0; }
-                      #print-recibo .r-serv-row { display: flex; justify-content: space-between; font-size: 10pt !important; font-weight: 600 !important; border-bottom: 1px dotted #000; padding: 2px 0; }
-                      #print-recibo .r-orden-num { font-size: 13pt !important; font-weight: 900 !important; line-height: 1.1; }
-                      #print-recibo .r-firma { display: block; padding-top: 5px; font-size: 9pt !important; font-weight: 700 !important; }
-                      #print-recibo .r-firma-line { border-bottom: 1.5px solid #000; width: 100%; margin-top: 10px; }
+
+                      #print-recibo .r-header { display: flex !important; justify-content: space-between !important; align-items: flex-start !important; border-bottom: 2px solid #000 !important; padding-bottom: 2mm !important; margin-bottom: 2mm !important; }
+                      #print-recibo .r-logo { height: 24px !important; filter: grayscale(100%) contrast(500%) brightness(0%) !important; }
+                      #print-recibo .r-orden-num { font-size: 14pt !important; line-height: 1.1 !important; }
+                      #print-recibo .r-section { border-bottom: 1.5px dashed #000 !important; padding: 1.5mm 0 !important; margin-bottom: 1mm !important; }
+                      #print-recibo .r-section-title { font-size: 10pt !important; text-transform: uppercase !important; margin-bottom: 1mm !important; display: block !important; }
+                      #print-recibo .r-label { font-size: 9pt !important; text-transform: uppercase !important; display: inline !important; }
+                      #print-recibo .r-value { font-size: 10pt !important; word-break: break-all !important; display: inline !important; }
+                      #print-recibo .r-grid { display: block !important; }
+                      #print-recibo .r-grid > div { display: block !important; width: 100% !important; }
+                      #print-recibo .r-table-head { border-top: 2px solid #000 !important; border-bottom: 2px solid #000 !important; font-size: 10pt !important; padding: 1mm 0 !important; display: flex !important; justify-content: space-between !important; }
+                      #print-recibo .r-serv-row { display: flex !important; justify-content: space-between !important; font-size: 10pt !important; border-bottom: 1.5px dotted #000 !important; padding: 1mm 0 !important; }
+                      #print-recibo .r-firma { display: block !important; padding-top: 3mm !important; font-size: 9pt !important; }
+                      #print-recibo .r-firma-line { border-bottom: 2px solid #000 !important; width: 100% !important; margin-top: 8mm !important; display: block !important; }
                       .no-print { display: none !important; }
                     }
                   `}</style>

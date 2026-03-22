@@ -1699,37 +1699,39 @@ export default function NuevaSolicitud() {
               <style>{`
                 @media print {
                   @page {
-                    size: 72.1mm auto;
-                    margin: 0;
-                  }
-
-                  * {
-                    -webkit-print-color-adjust: exact !important;
-                    print-color-adjust: exact !important;
+                    size: 72mm auto;
+                    margin: 3mm 2mm;
                   }
 
                   body * { visibility: hidden !important; }
                   #print-area, #print-area * { visibility: visible !important; }
 
-                  #print-area {
-                    position: fixed !important;
-                    top: 0 !important; left: 0 !important;
-                    width: 72.1mm !important;
-                    font-family: 'Courier New', monospace !important;
-                    font-size: 10pt !important;
-                    line-height: 1.3 !important;
-                    color: #000 !important;
-                    background: transparent !important;
-                    margin: 0 !important;
-                    padding: 2mm !important;
-                    box-sizing: border-box !important;
-                  }
-
-                  /* Negro forzado en todo */
-                  #print-area * {
+                  /* Todo negro puro y negrita — densidad 5/8 requiere máximo contraste */
+                  #print-area, #print-area * {
                     color: #000 !important;
                     -webkit-text-fill-color: #000 !important;
                     background: transparent !important;
+                    font-weight: 900 !important;
+                    -webkit-print-color-adjust: exact !important;
+                    print-color-adjust: exact !important;
+                  }
+
+                  #print-area {
+                    position: static !important;
+                    width: 100% !important;
+                    font-family: 'Courier New', monospace !important;
+                    font-size: 10pt !important;
+                    line-height: 1.4 !important;
+                    margin: 0 !important;
+                    padding: 0 !important;
+                    box-sizing: border-box !important;
+                  }
+
+                  /* Ocultar el wrapper de pantalla que rodea #print-area */
+                  #print-area > div {
+                    max-width: 100% !important;
+                    border: none !important;
+                    border-radius: 0 !important;
                   }
 
                   /* Encabezado */
@@ -1738,59 +1740,61 @@ export default function NuevaSolicitud() {
                     justify-content: space-between !important;
                     align-items: flex-start !important;
                     border-bottom: 2px solid #000 !important;
-                    padding-bottom: 3px !important;
-                    margin-bottom: 4px !important;
+                    padding-bottom: 2mm !important;
+                    margin-bottom: 2mm !important;
                   }
                   #print-area .thermal-logo {
-                    height: 28px !important;
-                    filter: grayscale(100%) contrast(300%) !important;
+                    height: 24px !important;
+                    filter: grayscale(100%) contrast(500%) brightness(0%) !important;
                   }
                   #print-area .thermal-orden-num {
-                    font-size: 13pt !important;
-                    font-weight: 900 !important;
+                    font-size: 14pt !important;
                     line-height: 1.1 !important;
                   }
 
                   /* Secciones */
                   #print-area .thermal-section {
-                    border-bottom: 1px dashed #000 !important;
-                    padding: 3px 0 !important;
-                    margin-bottom: 3px !important;
+                    border-bottom: 1.5px dashed #000 !important;
+                    padding: 1.5mm 0 !important;
+                    margin-bottom: 1mm !important;
                   }
                   #print-area .thermal-section-title {
-                    font-size: 8.5pt !important;
-                    font-weight: 900 !important;
+                    font-size: 10pt !important;
                     text-transform: uppercase !important;
-                    margin-bottom: 3px !important;
+                    margin-bottom: 1mm !important;
+                    display: block !important;
                   }
 
-                  /* Etiquetas y valores */
+                  /* Etiquetas y valores — en bloque para que no se corte */
                   #print-area .thermal-label {
-                    font-size: 8pt !important;
-                    font-weight: 700 !important;
+                    font-size: 9pt !important;
                     text-transform: uppercase !important;
+                    display: inline !important;
                   }
                   #print-area .thermal-value {
                     font-size: 10pt !important;
-                    font-weight: 700 !important;
-                    word-break: break-word !important;
+                    word-break: break-all !important;
+                    display: inline !important;
                   }
 
-                  /* Grid vehículo */
-                  #print-area .thermal-grid { display: block !important; }
+                  /* Grid vehículo — 1 columna para no cortar texto */
+                  #print-area .thermal-grid,
                   #print-area .thermal-grid-3 {
-                    display: grid !important;
-                    grid-template-columns: 1fr 1fr !important;
-                    gap: 2px 6px !important;
+                    display: block !important;
+                  }
+                  #print-area .thermal-grid-3 > div {
+                    display: block !important;
+                    width: 100% !important;
                   }
 
                   /* Cabecera tabla servicios */
                   #print-area .thermal-table-head {
                     border-top: 2px solid #000 !important;
                     border-bottom: 2px solid #000 !important;
-                    font-weight: 900 !important;
-                    font-size: 9pt !important;
-                    padding: 2px 0 !important;
+                    font-size: 10pt !important;
+                    padding: 1mm 0 !important;
+                    display: flex !important;
+                    justify-content: space-between !important;
                   }
 
                   /* Filas servicios */
@@ -1798,26 +1802,24 @@ export default function NuevaSolicitud() {
                     display: flex !important;
                     justify-content: space-between !important;
                     font-size: 10pt !important;
-                    font-weight: 600 !important;
-                    border-bottom: 1px dotted #000 !important;
-                    padding: 2px 0 !important;
+                    border-bottom: 1.5px dotted #000 !important;
+                    padding: 1mm 0 !important;
                   }
 
-                  /* Total */
                   #print-area .thermal-row-even,
                   #print-area .thermal-row-odd { background: transparent !important; }
 
                   /* Firma */
                   #print-area .thermal-firma {
                     display: block !important;
-                    padding-top: 5px !important;
+                    padding-top: 3mm !important;
                     font-size: 9pt !important;
-                    font-weight: 700 !important;
                   }
                   #print-area .thermal-firma-line {
-                    border-bottom: 1.5px solid #000 !important;
+                    border-bottom: 2px solid #000 !important;
                     width: 100% !important;
-                    margin-top: 10px !important;
+                    margin-top: 8mm !important;
+                    display: block !important;
                   }
                 }
               `}</style>
