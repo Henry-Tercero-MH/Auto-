@@ -1820,6 +1820,7 @@ export default function NuevaSolicitud() {
                     display: block !important;
                     padding-top: 3mm !important;
                     font-size: 9pt !important;
+                    padding-bottom: 15mm !important;
                   }
                   #print-area .thermal-firma-line {
                     border-bottom: 2px solid #000 !important;

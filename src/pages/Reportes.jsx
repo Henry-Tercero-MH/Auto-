@@ -479,7 +479,7 @@ export default function Reportes() {
                       #print-recibo .r-grid > div { display: block !important; width: 100% !important; }
                       #print-recibo .r-table-head { border-top: 2px solid #000 !important; border-bottom: 2px solid #000 !important; font-size: 10pt !important; padding: 1mm 0 !important; display: flex !important; justify-content: space-between !important; }
                       #print-recibo .r-serv-row { display: flex !important; justify-content: space-between !important; font-size: 10pt !important; border-bottom: 1.5px dotted #000 !important; padding: 1mm 0 !important; }
-                      #print-recibo .r-firma { display: block !important; padding-top: 3mm !important; font-size: 9pt !important; }
+                      #print-recibo .r-firma { display: block !important; padding-top: 3mm !important; font-size: 9pt !important; padding-bottom: 15mm !important; }
                       #print-recibo .r-firma-line { border-bottom: 2px solid #000 !important; width: 100% !important; margin-top: 8mm !important; display: block !important; }
                       .no-print { display: none !important; }
                     }
