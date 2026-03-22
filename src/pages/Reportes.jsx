@@ -448,16 +448,17 @@ export default function Reportes() {
                       }
 
                       #print-recibo {
-                        position: fixed !important;
-                        top: 0 !important;
-                        left: 0 !important;
+                        position: relative !important;
+                        top: auto !important;
+                        left: auto !important;
                         width: 72mm !important;
                         max-width: 72mm !important;
+                        height: auto !important;
                         font-family: 'Courier New', monospace !important;
                         font-size: 10pt !important;
                         line-height: 1.4 !important;
                         margin: 0 !important;
-                        padding: 2mm 3mm !important;
+                        padding: 2mm 3mm 30mm 3mm !important;
                         box-sizing: border-box !important;
                         border: none !important;
                         border-radius: 0 !important;
