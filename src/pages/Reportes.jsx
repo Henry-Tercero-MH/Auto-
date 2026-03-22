@@ -426,7 +426,7 @@ export default function Reportes() {
             {solicitudSeleccionada ? (
               <>
                 {/* ── Ticket térmico 80mm ── */}
-                <div className="flex justify-center px-4 sm:px-8">
+                <div className="print-wrapper flex justify-center px-4 sm:px-8">
                 <div id="print-recibo" className="bg-white border border-gray-300 rounded-none select-none text-sm w-full" style={{ fontFamily: "'Courier New', monospace", maxWidth: '480px' }}>
                   <style>{`
                     @media print {
@@ -436,6 +436,13 @@ export default function Reportes() {
                       }
                       body * { visibility: hidden !important; }
                       #print-recibo, #print-recibo * { visibility: visible !important; }
+
+                      /* Neutralizar wrapper de pantalla */
+                      .print-wrapper {
+                        display: block !important;
+                        padding: 0 !important;
+                        margin: 0 !important;
+                      }
 
                       /* Todo negro puro y negrita — densidad 5/8 requiere máximo contraste */
                       #print-recibo, #print-recibo * {
@@ -450,12 +457,15 @@ export default function Reportes() {
                       #print-recibo {
                         position: static !important;
                         width: 100% !important;
+                        max-width: 100% !important;
                         font-family: 'Courier New', monospace !important;
                         font-size: 10pt !important;
                         line-height: 1.4 !important;
                         margin: 0 !important;
                         padding: 0 !important;
                         box-sizing: border-box !important;
+                        border: none !important;
+                        border-radius: 0 !important;
                       }
 
                       #print-recibo .r-header { display: flex !important; justify-content: space-between !important; align-items: flex-start !important; border-bottom: 2px solid #000 !important; padding-bottom: 2mm !important; margin-bottom: 2mm !important; }

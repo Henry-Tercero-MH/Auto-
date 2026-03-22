@@ -1695,7 +1695,7 @@ export default function NuevaSolicitud() {
 
           {/* ── PASO 5: Resumen ── */}
           {step === 5 && (
-            <div className="flex justify-center my-4 px-4 sm:px-8">
+            <div className="print-wrapper flex justify-center my-4 px-4 sm:px-8">
               <style>{`
                 @media print {
                   @page {
@@ -1705,6 +1705,13 @@ export default function NuevaSolicitud() {
 
                   body * { visibility: hidden !important; }
                   #print-area, #print-area * { visibility: visible !important; }
+
+                  /* Neutralizar wrapper de pantalla */
+                  .print-wrapper {
+                    display: block !important;
+                    padding: 0 !important;
+                    margin: 0 !important;
+                  }
 
                   /* Todo negro puro y negrita — densidad 5/8 requiere máximo contraste */
                   #print-area, #print-area * {
@@ -1719,19 +1726,25 @@ export default function NuevaSolicitud() {
                   #print-area {
                     position: static !important;
                     width: 100% !important;
+                    max-width: 100% !important;
                     font-family: 'Courier New', monospace !important;
                     font-size: 10pt !important;
                     line-height: 1.4 !important;
                     margin: 0 !important;
                     padding: 0 !important;
                     box-sizing: border-box !important;
+                    overflow: visible !important;
                   }
 
-                  /* Ocultar el wrapper de pantalla que rodea #print-area */
+                  /* Quitar estilos de pantalla del OrdenTrabajo */
                   #print-area > div {
                     max-width: 100% !important;
+                    width: 100% !important;
                     border: none !important;
                     border-radius: 0 !important;
+                    padding: 0 !important;
+                    margin: 0 !important;
+                    box-sizing: border-box !important;
                   }
 
                   /* Encabezado */
