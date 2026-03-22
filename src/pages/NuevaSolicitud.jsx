@@ -1700,7 +1700,7 @@ export default function NuevaSolicitud() {
                 @media print {
                   @page {
                     size: 72mm auto;
-                    margin: 3mm 2mm;
+                    margin: 0;
                   }
 
                   body * { visibility: hidden !important; }
@@ -1735,7 +1735,7 @@ export default function NuevaSolicitud() {
                     max-width: 72mm !important;
                     border: none !important;
                     border-radius: 0 !important;
-                    padding: 0 !important;
+                    padding: 2mm 3mm !important;
                     margin: 0 !important;
                     box-sizing: border-box !important;
                   }

@@ -432,7 +432,7 @@ export default function Reportes() {
                     @media print {
                       @page {
                         size: 72mm auto;
-                        margin: 3mm 2mm;
+                        margin: 0;
                       }
                       body * { visibility: hidden !important; }
                       #print-recibo, #print-recibo * { visibility: visible !important; }
@@ -457,7 +457,7 @@ export default function Reportes() {
                         font-size: 10pt !important;
                         line-height: 1.4 !important;
                         margin: 0 !important;
-                        padding: 0 !important;
+                        padding: 2mm 3mm !important;
                         box-sizing: border-box !important;
                         border: none !important;
                         border-radius: 0 !important;
