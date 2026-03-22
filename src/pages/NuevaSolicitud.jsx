@@ -1695,108 +1695,135 @@ export default function NuevaSolicitud() {
 
           {/* ── PASO 5: Resumen ── */}
           {step === 5 && (
-            <div id="print-area" className="flex justify-center my-4 px-4 sm:px-8">
+            <div className="flex justify-center my-4 px-4 sm:px-8">
               <style>{`
                 @media print {
-                  @page { size: 72mm auto; margin: 2mm 3mm; }
+                  @page {
+                    size: 72.1mm auto;
+                    margin: 0;
+                  }
+
+                  * {
+                    -webkit-print-color-adjust: exact !important;
+                    print-color-adjust: exact !important;
+                  }
 
                   body * { visibility: hidden !important; }
                   #print-area, #print-area * { visibility: visible !important; }
 
-                  * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
-
                   #print-area {
-                    position: static !important;
-                    width: 100% !important;
-                    max-width: 72mm !important;
-                    box-sizing: border-box !important;
-                    font-family: 'Courier New', monospace;
-                    font-size: 8pt; color: #000 !important;
+                    position: fixed !important;
+                    top: 0 !important; left: 0 !important;
+                    width: 72.1mm !important;
+                    font-family: 'Courier New', monospace !important;
+                    font-size: 10pt !important;
+                    line-height: 1.3 !important;
+                    color: #000 !important;
                     background: transparent !important;
                     margin: 0 !important;
-                    padding: 0 !important;
+                    padding: 2mm !important;
+                    box-sizing: border-box !important;
+                  }
+
+                  /* Negro forzado en todo */
+                  #print-area * {
+                    color: #000 !important;
+                    -webkit-text-fill-color: #000 !important;
+                    background: transparent !important;
                   }
 
                   /* Encabezado */
                   #print-area .thermal-header {
-                    display: flex; justify-content: space-between;
-                    align-items: flex-start; border-bottom: 1.5px solid #000;
-                    padding-bottom: 3px; margin-bottom: 3px;
+                    display: flex !important;
+                    justify-content: space-between !important;
+                    align-items: flex-start !important;
+                    border-bottom: 2px solid #000 !important;
+                    padding-bottom: 3px !important;
+                    margin-bottom: 4px !important;
                   }
-                  #print-area .thermal-logo { height: 26px !important; filter: grayscale(100%) contrast(200%); }
-
-                  /* Tabla de servicios */
-                  #print-area .thermal-table-head {
-                    background: transparent !important; color: #000 !important;
-                    border-top: 1.5px solid #000; border-bottom: 1.5px solid #000;
-                    font-weight: bold; font-size: 7pt;
+                  #print-area .thermal-logo {
+                    height: 28px !important;
+                    filter: grayscale(100%) contrast(300%) !important;
+                  }
+                  #print-area .thermal-orden-num {
+                    font-size: 13pt !important;
+                    font-weight: 900 !important;
+                    line-height: 1.1 !important;
                   }
 
                   /* Secciones */
                   #print-area .thermal-section {
-                    border-bottom: 1px dashed #000;
-                    padding: 2px 0; margin-bottom: 2px;
+                    border-bottom: 1px dashed #000 !important;
+                    padding: 3px 0 !important;
+                    margin-bottom: 3px !important;
                   }
                   #print-area .thermal-section-title {
-                    font-size: 7pt; font-weight: bold;
-                    text-transform: uppercase; letter-spacing: 0.3px;
-                    margin-bottom: 2px; color: #000 !important;
+                    font-size: 8.5pt !important;
+                    font-weight: 900 !important;
+                    text-transform: uppercase !important;
+                    margin-bottom: 3px !important;
                   }
 
-                  /* Grids de datos */
-                  #print-area .thermal-grid {
-                    display: block;
-                  }
-                  #print-area .thermal-grid-3 {
-                    display: grid; grid-template-columns: 1fr 1fr; gap: 1px 4px;
-                  }
+                  /* Etiquetas y valores */
                   #print-area .thermal-label {
-                    font-size: 6.5pt; text-transform: uppercase; color: #000 !important;
+                    font-size: 8pt !important;
+                    font-weight: 700 !important;
+                    text-transform: uppercase !important;
                   }
                   #print-area .thermal-value {
-                    font-size: 8pt; font-weight: bold;
-                    border-bottom: 1px dotted #000; min-height: 10px;
-                    word-break: break-word; color: #000 !important;
+                    font-size: 10pt !important;
+                    font-weight: 700 !important;
+                    word-break: break-word !important;
                   }
 
-                  /* Filas de servicios */
+                  /* Grid vehículo */
+                  #print-area .thermal-grid { display: block !important; }
+                  #print-area .thermal-grid-3 {
+                    display: grid !important;
+                    grid-template-columns: 1fr 1fr !important;
+                    gap: 2px 6px !important;
+                  }
+
+                  /* Cabecera tabla servicios */
+                  #print-area .thermal-table-head {
+                    border-top: 2px solid #000 !important;
+                    border-bottom: 2px solid #000 !important;
+                    font-weight: 900 !important;
+                    font-size: 9pt !important;
+                    padding: 2px 0 !important;
+                  }
+
+                  /* Filas servicios */
+                  #print-area .thermal-serv-row {
+                    display: flex !important;
+                    justify-content: space-between !important;
+                    font-size: 10pt !important;
+                    font-weight: 600 !important;
+                    border-bottom: 1px dotted #000 !important;
+                    padding: 2px 0 !important;
+                  }
+
+                  /* Total */
                   #print-area .thermal-row-even,
-                  #print-area .thermal-row-odd { background: transparent !important; color: #000 !important; }
-
-                  /* Número de orden */
-                  #print-area .thermal-orden-num {
-                    font-size: 11pt; font-weight: 900; color: #000 !important;
-                  }
+                  #print-area .thermal-row-odd { background: transparent !important; }
 
                   /* Firma */
                   #print-area .thermal-firma {
-                    display: block;
-                    padding-top: 4px; font-size: 7pt; color: #000 !important;
+                    display: block !important;
+                    padding-top: 5px !important;
+                    font-size: 9pt !important;
+                    font-weight: 700 !important;
                   }
                   #print-area .thermal-firma-line {
-                    border-bottom: 1.5px solid #000;
-                    width: 100%; margin-top: 8px;
+                    border-bottom: 1.5px solid #000 !important;
+                    width: 100% !important;
+                    margin-top: 10px !important;
                   }
-
-                  /* Fila de servicio compacta */
-                  #print-area .thermal-serv-row {
-                    display: flex; justify-content: space-between;
-                    font-size: 7.5pt; border-bottom: 1px dotted #000;
-                    padding: 1px 0; color: #000 !important;
-                  }
-
-                  /* Forzar negro en todo el área */
-                  #print-area, #print-area * {
-                    color: #000 !important;
-                    background: transparent !important;
-                    border-color: #000 !important;
-                    -webkit-text-fill-color: #000 !important;
-                  }
-                  #print-area .thermal-section { border-bottom-color: #000 !important; }
-                  #print-area .thermal-serv-row { border-bottom-color: #000 !important; }
                 }
               `}</style>
-              <OrdenTrabajo form={form} ordenNum={ordenNum} tiposDano={tiposDano} onPrecioChange={(nombre, precio) => setForm(prev => ({ ...prev, preciosManuales: { ...prev.preciosManuales, [nombre]: precio } }))} />
+              <div id="print-area">
+                <OrdenTrabajo form={form} ordenNum={ordenNum} tiposDano={tiposDano} onPrecioChange={(nombre, precio) => setForm(prev => ({ ...prev, preciosManuales: { ...prev.preciosManuales, [nombre]: precio } }))} />
+              </div>
             </div>
           )}
         </div>

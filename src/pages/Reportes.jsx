@@ -430,34 +430,39 @@ export default function Reportes() {
                 <div id="print-recibo" className="bg-white border border-gray-300 rounded-none select-none text-sm w-full" style={{ fontFamily: "'Courier New', monospace", maxWidth: '480px' }}>
                   <style>{`
                     @media print {
-                      @page { size: 72mm auto; margin: 2mm 3mm; }
+                      @page {
+                        size: 72.1mm auto;
+                        margin: 0;
+                      }
+                      * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
                       body * { visibility: hidden !important; }
                       #print-recibo, #print-recibo * { visibility: visible !important; }
-                      * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
                       #print-recibo {
-                        position: static !important;
-                        width: 100% !important;
-                        max-width: 72mm !important;
-                        box-sizing: border-box !important;
-                        font-family: 'Courier New', monospace;
-                        font-size: 8pt; color: #000 !important;
+                        position: fixed !important;
+                        top: 0 !important; left: 0 !important;
+                        width: 72.1mm !important;
+                        font-family: 'Courier New', monospace !important;
+                        font-size: 10pt !important;
+                        line-height: 1.3 !important;
+                        color: #000 !important;
                         background: transparent !important;
                         margin: 0 !important;
-                        padding: 0 !important;
+                        padding: 2mm !important;
+                        box-sizing: border-box !important;
                       }
-                      #print-recibo, #print-recibo * { color: #000 !important; background: transparent !important; -webkit-text-fill-color: #000 !important; }
-                      #print-recibo .r-header { display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 1.5px solid #000; padding-bottom: 3px; margin-bottom: 3px; }
-                      #print-recibo .r-logo { height: 26px !important; filter: grayscale(100%) contrast(200%); }
-                      #print-recibo .r-section { border-bottom: 1px dashed #000; padding: 2px 0; margin-bottom: 2px; }
-                      #print-recibo .r-section-title { font-size: 7pt; font-weight: bold; text-transform: uppercase; letter-spacing: 0.3px; margin-bottom: 2px; color: #000 !important; }
-                      #print-recibo .r-label { font-size: 6.5pt; text-transform: uppercase; color: #000 !important; }
-                      #print-recibo .r-value { font-size: 8pt; font-weight: bold; word-break: break-word; color: #000 !important; }
-                      #print-recibo .r-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1px 4px; }
-                      #print-recibo .r-table-head { background: transparent !important; color: #000 !important; border-top: 1.5px solid #000; border-bottom: 1.5px solid #000; font-weight: bold; font-size: 7pt; }
-                      #print-recibo .r-serv-row { display: flex; justify-content: space-between; font-size: 7.5pt; border-bottom: 1px dotted #000; padding: 1px 0; color: #000 !important; }
-                      #print-recibo .r-orden-num { font-size: 11pt; font-weight: 900; color: #000 !important; }
-                      #print-recibo .r-firma { display: block; padding-top: 4px; font-size: 7pt; color: #000 !important; }
-                      #print-recibo .r-firma-line { border-bottom: 1.5px solid #000; width: 100%; margin-top: 8px; }
+                      #print-recibo * { color: #000 !important; -webkit-text-fill-color: #000 !important; background: transparent !important; }
+                      #print-recibo .r-header { display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 2px solid #000; padding-bottom: 3px; margin-bottom: 4px; }
+                      #print-recibo .r-logo { height: 28px !important; filter: grayscale(100%) contrast(300%) !important; }
+                      #print-recibo .r-section { border-bottom: 1px dashed #000; padding: 3px 0; margin-bottom: 3px; }
+                      #print-recibo .r-section-title { font-size: 8.5pt !important; font-weight: 900 !important; text-transform: uppercase; margin-bottom: 3px; }
+                      #print-recibo .r-label { font-size: 8pt !important; font-weight: 700 !important; text-transform: uppercase; }
+                      #print-recibo .r-value { font-size: 10pt !important; font-weight: 700 !important; word-break: break-word; }
+                      #print-recibo .r-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 2px 6px; }
+                      #print-recibo .r-table-head { background: transparent !important; color: #000 !important; border-top: 2px solid #000; border-bottom: 2px solid #000; font-weight: 900 !important; font-size: 9pt !important; padding: 2px 0; }
+                      #print-recibo .r-serv-row { display: flex; justify-content: space-between; font-size: 10pt !important; font-weight: 600 !important; border-bottom: 1px dotted #000; padding: 2px 0; }
+                      #print-recibo .r-orden-num { font-size: 13pt !important; font-weight: 900 !important; line-height: 1.1; }
+                      #print-recibo .r-firma { display: block; padding-top: 5px; font-size: 9pt !important; font-weight: 700 !important; }
+                      #print-recibo .r-firma-line { border-bottom: 1.5px solid #000; width: 100%; margin-top: 10px; }
                       .no-print { display: none !important; }
                     }
                   `}</style>
