@@ -462,6 +462,11 @@ export default function Reportes() {
                         border: none !important;
                         border-radius: 0 !important;
                       }
+                      #print-recibo > * {
+                        width: 100% !important;
+                        max-width: 100% !important;
+                        box-sizing: border-box !important;
+                      }
 
                       #print-recibo .r-header { display: flex !important; justify-content: space-between !important; align-items: flex-start !important; border-bottom: 2px solid #000 !important; padding-bottom: 2mm !important; margin-bottom: 2mm !important; }
                       #print-recibo .r-logo { height: 24px !important; filter: grayscale(100%) contrast(500%) brightness(0%) !important; }

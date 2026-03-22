@@ -1721,21 +1721,21 @@ export default function NuevaSolicitud() {
                     top: 0 !important;
                     left: 0 !important;
                     width: 72mm !important;
+                    padding: 2mm 3mm !important;
                     font-family: 'Courier New', monospace !important;
                     font-size: 10pt !important;
                     line-height: 1.4 !important;
                     margin: 0 !important;
-                    padding: 0 !important;
                     box-sizing: border-box !important;
                   }
 
                   /* Quitar estilos de pantalla del OrdenTrabajo */
                   #print-area > div {
-                    width: 72mm !important;
-                    max-width: 72mm !important;
+                    width: 100% !important;
+                    max-width: 100% !important;
                     border: none !important;
                     border-radius: 0 !important;
-                    padding: 2mm 3mm !important;
+                    padding: 0 !important;
                     margin: 0 !important;
                     box-sizing: border-box !important;
                   }
