@@ -1706,11 +1706,15 @@ export default function NuevaSolicitud() {
                   * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
 
                   #print-area {
-                    position: fixed; inset: 0;
-                    width: 66mm;
+                    position: static !important;
+                    width: 100% !important;
+                    max-width: 72mm !important;
+                    box-sizing: border-box !important;
                     font-family: 'Courier New', monospace;
                     font-size: 8pt; color: #000 !important;
                     background: transparent !important;
+                    margin: 0 !important;
+                    padding: 0 !important;
                   }
 
                   /* Encabezado */
