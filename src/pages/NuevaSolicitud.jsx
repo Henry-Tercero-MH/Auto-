@@ -1698,45 +1698,48 @@ export default function NuevaSolicitud() {
             <div id="print-area" className="flex justify-center my-4 px-4 sm:px-8">
               <style>{`
                 @media print {
-                  @page { size: 80mm auto; margin: 3mm 4mm; }
+                  @page { size: 72mm auto; margin: 2mm 3mm; }
 
                   body * { visibility: hidden !important; }
                   #print-area, #print-area * { visibility: visible !important; }
 
+                  * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+
                   #print-area {
                     position: fixed; inset: 0;
-                    width: 72mm; background: white;
+                    width: 66mm;
                     font-family: 'Courier New', monospace;
-                    font-size: 7.5pt; color: #000;
+                    font-size: 8pt; color: #000 !important;
+                    background: transparent !important;
                   }
 
                   /* Encabezado */
                   #print-area .thermal-header {
                     display: flex; justify-content: space-between;
-                    align-items: flex-start; border-bottom: 1px solid #000;
+                    align-items: flex-start; border-bottom: 1.5px solid #000;
                     padding-bottom: 3px; margin-bottom: 3px;
                   }
-                  #print-area .thermal-logo { height: 26px !important; }
+                  #print-area .thermal-logo { height: 26px !important; filter: grayscale(100%) contrast(200%); }
 
                   /* Tabla de servicios */
                   #print-area .thermal-table-head {
-                    background: white !important; color: black !important;
-                    border-top: 1px solid #000; border-bottom: 1px solid #000;
-                    font-weight: bold; font-size: 6.5pt;
+                    background: transparent !important; color: #000 !important;
+                    border-top: 1.5px solid #000; border-bottom: 1.5px solid #000;
+                    font-weight: bold; font-size: 7pt;
                   }
 
                   /* Secciones */
                   #print-area .thermal-section {
-                    border-bottom: 1px dashed #666;
+                    border-bottom: 1px dashed #000;
                     padding: 2px 0; margin-bottom: 2px;
                   }
                   #print-area .thermal-section-title {
-                    font-size: 6.5pt; font-weight: bold;
+                    font-size: 7pt; font-weight: bold;
                     text-transform: uppercase; letter-spacing: 0.3px;
-                    margin-bottom: 2px; color: #000;
+                    margin-bottom: 2px; color: #000 !important;
                   }
 
-                  /* Grids de datos — en rollo de 80mm todo en 1 columna */
+                  /* Grids de datos */
                   #print-area .thermal-grid {
                     display: block;
                   }
@@ -1744,39 +1747,49 @@ export default function NuevaSolicitud() {
                     display: grid; grid-template-columns: 1fr 1fr; gap: 1px 4px;
                   }
                   #print-area .thermal-label {
-                    font-size: 6pt; text-transform: uppercase; color: #444;
+                    font-size: 6.5pt; text-transform: uppercase; color: #000 !important;
                   }
                   #print-area .thermal-value {
-                    font-size: 7.5pt; font-weight: bold;
-                    border-bottom: 1px dotted #999; min-height: 10px;
-                    word-break: break-word;
+                    font-size: 8pt; font-weight: bold;
+                    border-bottom: 1px dotted #000; min-height: 10px;
+                    word-break: break-word; color: #000 !important;
                   }
 
                   /* Filas de servicios */
                   #print-area .thermal-row-even,
-                  #print-area .thermal-row-odd { background: white !important; }
+                  #print-area .thermal-row-odd { background: transparent !important; color: #000 !important; }
 
                   /* Número de orden */
                   #print-area .thermal-orden-num {
-                    font-size: 11pt; font-weight: 900;
+                    font-size: 11pt; font-weight: 900; color: #000 !important;
                   }
 
-                  /* Firma — apilada en rollo angosto */
+                  /* Firma */
                   #print-area .thermal-firma {
                     display: block;
-                    padding-top: 4px; font-size: 6.5pt;
+                    padding-top: 4px; font-size: 7pt; color: #000 !important;
                   }
                   #print-area .thermal-firma-line {
-                    border-bottom: 1px solid #000;
+                    border-bottom: 1.5px solid #000;
                     width: 100%; margin-top: 8px;
                   }
 
                   /* Fila de servicio compacta */
                   #print-area .thermal-serv-row {
                     display: flex; justify-content: space-between;
-                    font-size: 7pt; border-bottom: 1px dotted #ccc;
-                    padding: 1px 0;
+                    font-size: 7.5pt; border-bottom: 1px dotted #000;
+                    padding: 1px 0; color: #000 !important;
                   }
+
+                  /* Forzar negro en todo el área */
+                  #print-area, #print-area * {
+                    color: #000 !important;
+                    background: transparent !important;
+                    border-color: #000 !important;
+                    -webkit-text-fill-color: #000 !important;
+                  }
+                  #print-area .thermal-section { border-bottom-color: #000 !important; }
+                  #print-area .thermal-serv-row { border-bottom-color: #000 !important; }
                 }
               `}</style>
               <OrdenTrabajo form={form} ordenNum={ordenNum} tiposDano={tiposDano} onPrecioChange={(nombre, precio) => setForm(prev => ({ ...prev, preciosManuales: { ...prev.preciosManuales, [nombre]: precio } }))} />
