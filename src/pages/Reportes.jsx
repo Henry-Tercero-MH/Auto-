@@ -448,11 +448,12 @@ export default function Reportes() {
                       }
 
                       #print-recibo {
-                        position: fixed !important;
+                        position: absolute !important;
                         top: 0 !important;
                         left: 0 !important;
                         width: 72mm !important;
                         max-width: 72mm !important;
+                        height: auto !important;
                         font-family: 'Courier New', monospace !important;
                         font-size: 10pt !important;
                         line-height: 1.4 !important;

@@ -1717,10 +1717,11 @@ export default function NuevaSolicitud() {
                   }
 
                   #print-area {
-                    position: fixed !important;
+                    position: absolute !important;
                     top: 0 !important;
                     left: 0 !important;
                     width: 72mm !important;
+                    height: auto !important;
                     padding: 2mm 3mm 30mm 3mm !important;
                     font-family: 'Courier New', monospace !important;
                     font-size: 10pt !important;
