@@ -1706,14 +1706,7 @@ export default function NuevaSolicitud() {
                   body * { visibility: hidden !important; }
                   #print-area, #print-area * { visibility: visible !important; }
 
-                  /* Neutralizar wrapper de pantalla */
-                  .print-wrapper {
-                    display: block !important;
-                    padding: 0 !important;
-                    margin: 0 !important;
-                  }
-
-                  /* Todo negro puro y negrita — densidad 5/8 requiere máximo contraste */
+                  /* Todo negro puro y negrita */
                   #print-area, #print-area * {
                     color: #000 !important;
                     -webkit-text-fill-color: #000 !important;
@@ -1724,22 +1717,22 @@ export default function NuevaSolicitud() {
                   }
 
                   #print-area {
-                    position: static !important;
-                    width: 100% !important;
-                    max-width: 100% !important;
+                    position: fixed !important;
+                    top: 0 !important;
+                    left: 0 !important;
+                    width: 72mm !important;
                     font-family: 'Courier New', monospace !important;
                     font-size: 10pt !important;
                     line-height: 1.4 !important;
                     margin: 0 !important;
                     padding: 0 !important;
                     box-sizing: border-box !important;
-                    overflow: visible !important;
                   }
 
                   /* Quitar estilos de pantalla del OrdenTrabajo */
                   #print-area > div {
-                    max-width: 100% !important;
-                    width: 100% !important;
+                    width: 72mm !important;
+                    max-width: 72mm !important;
                     border: none !important;
                     border-radius: 0 !important;
                     padding: 0 !important;

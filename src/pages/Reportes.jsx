@@ -437,14 +437,7 @@ export default function Reportes() {
                       body * { visibility: hidden !important; }
                       #print-recibo, #print-recibo * { visibility: visible !important; }
 
-                      /* Neutralizar wrapper de pantalla */
-                      .print-wrapper {
-                        display: block !important;
-                        padding: 0 !important;
-                        margin: 0 !important;
-                      }
-
-                      /* Todo negro puro y negrita — densidad 5/8 requiere máximo contraste */
+                      /* Todo negro puro y negrita */
                       #print-recibo, #print-recibo * {
                         color: #000 !important;
                         -webkit-text-fill-color: #000 !important;
@@ -455,9 +448,11 @@ export default function Reportes() {
                       }
 
                       #print-recibo {
-                        position: static !important;
-                        width: 100% !important;
-                        max-width: 100% !important;
+                        position: fixed !important;
+                        top: 0 !important;
+                        left: 0 !important;
+                        width: 72mm !important;
+                        max-width: 72mm !important;
                         font-family: 'Courier New', monospace !important;
                         font-size: 10pt !important;
                         line-height: 1.4 !important;
