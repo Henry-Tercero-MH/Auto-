@@ -1703,6 +1703,12 @@ export default function NuevaSolicitud() {
                     margin: 0;
                   }
 
+                  html, body {
+                    width: 72mm !important;
+                    margin: 0 !important;
+                    padding: 0 !important;
+                  }
+
                   body * { visibility: hidden !important; }
                   #print-area, #print-area * { visibility: visible !important; }
 
@@ -1717,9 +1723,7 @@ export default function NuevaSolicitud() {
                   }
 
                   #print-area {
-                    position: fixed !important;
-                    top: 0 !important;
-                    left: 0 !important;
+                    position: static !important;
                     width: 72mm !important;
                     padding: 2mm 3mm !important;
                     font-family: 'Courier New', monospace !important;

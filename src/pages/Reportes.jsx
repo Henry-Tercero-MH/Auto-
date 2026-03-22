@@ -434,6 +434,12 @@ export default function Reportes() {
                         size: 72mm auto;
                         margin: 0;
                       }
+                      html, body {
+                        width: 72mm !important;
+                        margin: 0 !important;
+                        padding: 0 !important;
+                      }
+
                       body * { visibility: hidden !important; }
                       #print-recibo, #print-recibo * { visibility: visible !important; }
 
@@ -448,9 +454,7 @@ export default function Reportes() {
                       }
 
                       #print-recibo {
-                        position: fixed !important;
-                        top: 0 !important;
-                        left: 0 !important;
+                        position: static !important;
                         width: 72mm !important;
                         max-width: 72mm !important;
                         font-family: 'Courier New', monospace !important;
