@@ -1717,12 +1717,11 @@ export default function NuevaSolicitud() {
                   }
 
                   #print-area {
-                    position: relative !important;
-                    top: auto !important;
-                    left: auto !important;
+                    position: fixed !important;
+                    top: 0 !important;
+                    left: 0 !important;
                     width: 72mm !important;
-                    height: auto !important;
-                    padding: 2mm 3mm 30mm 3mm !important;
+                    padding: 2mm 3mm !important;
                     font-family: 'Courier New', monospace !important;
                     font-size: 10pt !important;
                     line-height: 1.4 !important;
@@ -1821,7 +1820,7 @@ export default function NuevaSolicitud() {
                     display: block !important;
                     padding-top: 3mm !important;
                     font-size: 9pt !important;
-                    padding-bottom: 60mm !important;
+                    padding-bottom: 90mm !important;
                   }
                   #print-area .thermal-firma-line {
                     border-bottom: 2px solid #000 !important;

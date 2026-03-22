@@ -448,17 +448,16 @@ export default function Reportes() {
                       }
 
                       #print-recibo {
-                        position: relative !important;
-                        top: auto !important;
-                        left: auto !important;
+                        position: fixed !important;
+                        top: 0 !important;
+                        left: 0 !important;
                         width: 72mm !important;
                         max-width: 72mm !important;
-                        height: auto !important;
                         font-family: 'Courier New', monospace !important;
                         font-size: 10pt !important;
                         line-height: 1.4 !important;
                         margin: 0 !important;
-                        padding: 2mm 3mm 30mm 3mm !important;
+                        padding: 2mm 3mm !important;
                         box-sizing: border-box !important;
                         border: none !important;
                         border-radius: 0 !important;
@@ -480,7 +479,7 @@ export default function Reportes() {
                       #print-recibo .r-grid > div { display: block !important; width: 100% !important; }
                       #print-recibo .r-table-head { border-top: 2px solid #000 !important; border-bottom: 2px solid #000 !important; font-size: 10pt !important; padding: 1mm 0 !important; display: flex !important; justify-content: space-between !important; }
                       #print-recibo .r-serv-row { display: flex !important; justify-content: space-between !important; font-size: 10pt !important; border-bottom: 1.5px dotted #000 !important; padding: 1mm 0 !important; }
-                      #print-recibo .r-firma { display: block !important; padding-top: 3mm !important; font-size: 9pt !important; padding-bottom: 60mm !important; }
+                      #print-recibo .r-firma { display: block !important; padding-top: 3mm !important; font-size: 9pt !important; padding-bottom: 90mm !important; }
                       #print-recibo .r-firma-line { border-bottom: 2px solid #000 !important; width: 100% !important; margin-top: 8mm !important; display: block !important; }
                       .no-print { display: none !important; }
                     }
