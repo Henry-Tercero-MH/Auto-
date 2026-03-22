@@ -1,7 +1,9 @@
 import { useMemo, useState } from 'react';
+import toast from 'react-hot-toast';
 import * as XLSX from 'xlsx';
 import { useSolicitudes } from '../context/SolicitudesContext';
 import { useCatalogos } from '../context/CatalogosContext';
+import SpinnerBolitas from '../components/SpinnerBolitas';
 import { usePagos } from '../context/PagosContext';
 import logo from '../imagenes/logoMecanica.png';
 import { APP_SCRIPT_URL } from '../services/sheetsApi';
@@ -33,7 +35,7 @@ const TABS = [
 ];
 
 export default function Reportes() {
-  const { solicitudes } = useSolicitudes();
+  const { solicitudes, cargando } = useSolicitudes();
   const { mecanicos, estados, configNegocio, clientes } = useCatalogos();
   const { pagos } = usePagos();
 
@@ -55,11 +57,19 @@ export default function Reportes() {
 
   const calcularTotal = (s) => pagosMap[s.id] ?? 0;
 
+  const parseDate = (str) => {
+    if (!str) return null;
+    const d = new Date(str + 'T00:00:00');
+    return isNaN(d.getTime()) ? null : d;
+  };
+
   const solicitudesFiltradas = useMemo(() => {
+    const fechaDesde = parseDate(desde);
+    const fechaHasta = parseDate(hasta);
     return solicitudes.filter((s) => {
-      const f = s.fecha || '';
-      if (desde && f < desde) return false;
-      if (hasta && f > hasta) return false;
+      const fechaSol = parseDate(s.fecha);
+      if (fechaDesde && fechaSol && fechaSol < fechaDesde) return false;
+      if (fechaHasta && fechaSol && fechaSol > fechaHasta) return false;
       if (estadoFiltro !== 'Todos' && s.estado !== estadoFiltro) return false;
       if (mecanicoFiltro !== 'Todos') {
         if (!s.mecanico || String(s.mecanico.id) !== String(mecanicoFiltro)) return false;
@@ -153,6 +163,8 @@ export default function Reportes() {
     if (!solicitudSeleccionada) return;
     const prev = document.title;
     document.title = `${prefijo}-${solicitudSeleccionada.id}`;
+    // Inyectar estilos de impresión solo mientras se imprime
+    // Los estilos de impresión ya están incrustados en el componente #print-recibo
     window.print();
     document.title = prev;
   };
@@ -160,6 +172,8 @@ export default function Reportes() {
   /* ── Estilos compartidos ── */
   const btnSecundario = 'inline-flex items-center gap-1.5 px-3 py-2 rounded-md text-xs font-semibold border border-slate-300 text-slate-700 hover:bg-slate-50 transition';
   const btnPrimario   = 'inline-flex items-center gap-1.5 px-3 py-2 rounded-md text-xs font-semibold bg-primary text-white hover:bg-primary/90 transition';
+
+  if (cargando) return <SpinnerBolitas texto="Cargando reportes..." />;
 
   return (
     <div className="space-y-5">
@@ -182,12 +196,28 @@ export default function Reportes() {
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <div className="min-w-0">
             <label className="block text-[11px] font-semibold text-slate-500 uppercase tracking-wide mb-1">Desde</label>
-            <input type="date" value={desde} onChange={(e) => setDesde(e.target.value)}
+            <input type="date" value={desde}
+              onChange={(e) => {
+                const val = e.target.value;
+                if (hasta && val > hasta) {
+                  toast.error('La fecha "desde" no puede ser posterior a "hasta"');
+                  return;
+                }
+                setDesde(val);
+              }}
               className="w-full min-w-0 block border border-slate-300 rounded-md px-3 py-2 text-sm text-slate-700 focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none appearance-none box-border" />
           </div>
           <div className="min-w-0">
             <label className="block text-[11px] font-semibold text-slate-500 uppercase tracking-wide mb-1">Hasta</label>
-            <input type="date" value={hasta} onChange={(e) => setHasta(e.target.value)}
+            <input type="date" value={hasta}
+              onChange={(e) => {
+                const val = e.target.value;
+                if (desde && val < desde) {
+                  toast.error('La fecha "hasta" no puede ser anterior a "desde"');
+                  return;
+                }
+                setHasta(val);
+              }}
               className="w-full min-w-0 block border border-slate-300 rounded-md px-3 py-2 text-sm text-slate-700 focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none appearance-none box-border" />
           </div>
         </div>

@@ -1,4 +1,5 @@
 import { useMemo } from 'react';
+import SpinnerBolitas from '../components/SpinnerBolitas';
 import { Link } from 'react-router-dom';
 import {
   Plus, ClipboardList, CalendarDays, Clock, Wrench, CheckCircle2,
@@ -97,7 +98,7 @@ const formatQ = (n) => `Q ${Number(n).toLocaleString('es-GT', { minimumFractionD
 export default function Home() {
   const { user } = useAuth();
   const { estados } = useCatalogos();
-  const { solicitudes } = useSolicitudes();
+  const { solicitudes, cargando } = useSolicitudes();
   const { pagos } = usePagos();
 
   const today = new Date().toLocaleDateString('es-GT', {
@@ -151,6 +152,8 @@ export default function Home() {
     { label: 'Completada',  value: kpis.completadas, color: '#10b981' },
     { label: 'Sin asignar', value: kpis.sinAsignar,  color: '#06b6d4' },
   ];
+
+  if (cargando) return <SpinnerBolitas texto="Cargando dashboard..." />;
 
   return (
     <div className="space-y-5">
@@ -247,7 +250,7 @@ export default function Home() {
                   <td className="px-3 sm:px-6 py-3 text-slate-500 hidden sm:table-cell text-xs">{s.servicio}</td>
                   <td className="px-3 sm:px-6 py-3 hidden lg:table-cell">
                     {s.mecanico
-                      ? <span className="text-xs text-slate-600">{s.mecanico.name}</span>
+                      ? <span className="text-xs text-slate-600">{s.mecanico?.name ?? s.mecanico?.nombre ?? 'Asignado'}</span>
                       : <span className="text-xs text-amber-500 font-medium">Sin asignar</span>}
                   </td>
                   <td className="px-3 sm:px-6 py-3">

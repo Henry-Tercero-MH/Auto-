@@ -1,7 +1,8 @@
 import { useState, useEffect, useRef } from 'react';
-import { Outlet, useLocation } from 'react-router-dom';
+import { Outlet, useLocation, Link } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
 import Sidebar from './Sidebar';
+import ErrorBoundary from './ErrorBoundary';
 import { useAuth } from '../context/AuthContext';
 import { useNotificaciones } from '../context/NotificacionesContext';
 
@@ -13,6 +14,16 @@ const pageTitles = {
   '/servicios': 'Servicios',
   '/catalogos': 'Catálogos',
   '/reportes': 'Reportes',
+};
+
+const breadcrumbMap = {
+  '/':               [{ label: 'Dashboard' }],
+  '/solicitudes':    [{ label: 'Dashboard', to: '/' }, { label: 'Solicitudes' }],
+  '/nueva-solicitud':[{ label: 'Dashboard', to: '/' }, { label: 'Solicitudes', to: '/solicitudes' }, { label: 'Nueva Solicitud' }],
+  '/catalogos':      [{ label: 'Dashboard', to: '/' }, { label: 'Catálogos' }],
+  '/reportes':       [{ label: 'Dashboard', to: '/' }, { label: 'Reportes' }],
+  '/servicios':      [{ label: 'Dashboard', to: '/' }, { label: 'Servicios' }],
+  '/seguimiento':    [{ label: 'Seguimiento de Vehículo' }],
 };
 
 function formatFecha(iso) {
@@ -106,7 +117,24 @@ export default function Layout() {
                 <path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16M4 18h16" />
               </svg>
             </button>
-            <h1 className="text-base md:text-lg font-semibold text-primary">{title}</h1>
+            <nav className="flex items-center gap-1 text-sm flex-wrap" aria-label="Breadcrumb">
+              {(breadcrumbMap[location.pathname] ?? [{ label: title }]).map((crumb, i, arr) => (
+                <span key={i} className="flex items-center gap-1">
+                  {i > 0 && (
+                    <svg className="w-3.5 h-3.5 text-slate-300 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+                    </svg>
+                  )}
+                  {crumb.to && i < arr.length - 1 ? (
+                    <Link to={crumb.to} className="text-slate-400 hover:text-primary transition-colors font-medium text-sm">
+                      {crumb.label}
+                    </Link>
+                  ) : (
+                    <span className="text-primary font-semibold text-sm md:text-base">{crumb.label}</span>
+                  )}
+                </span>
+              ))}
+            </nav>
           </div>
 
           <div className="flex items-center gap-2 md:gap-3">
@@ -194,7 +222,9 @@ export default function Layout() {
 
         {/* Contenido */}
         <main className="flex-1 p-4 md:p-6 overflow-auto">
-          <Outlet />
+          <ErrorBoundary>
+            <Outlet />
+          </ErrorBoundary>
         </main>
       </div>
 

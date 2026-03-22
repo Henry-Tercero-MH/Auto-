@@ -50,6 +50,8 @@ function enviarNotificacionNativa(titulo, cuerpo) {
 const POLL_INTERVAL = 30_000;
 const NOTIFS_KEY = 'drivebot_notifs';
 const SEEN_KEY = 'drivebot_seen_ids';
+const STALE_ALERTED_KEY = 'drivebot_stale_alerted';
+const STALE_THRESHOLD_HOURS = 24;
 
 // ── Helpers localStorage ────────────────────────────────────────────────────
 function loadFromStorage(key, fallback) {
@@ -67,10 +69,12 @@ export function NotificacionesProvider({ children }) {
   const [noLeidas, setNoLeidas] = useState(0);
   const knownIdsRef = useRef(new Set());
   const firstLoadRef = useRef(true);
+  const alertedStaleRef = useRef(new Set());
 
   // Cargar IDs conocidos del localStorage
   useEffect(() => {
     loadFromStorage(SEEN_KEY, []).forEach((id) => knownIdsRef.current.add(id));
+    loadFromStorage(STALE_ALERTED_KEY, []).forEach((id) => alertedStaleRef.current.add(id));
   }, []);
 
   // Persistir notificaciones cada vez que cambien
@@ -133,6 +137,42 @@ export function NotificacionesProvider({ children }) {
             });
           });
           playNotifSound();
+        }
+
+        // ── Detección de órdenes estancadas (> STALE_THRESHOLD_HOURS en proceso) ──
+        const ahora = new Date();
+        const stales = data.filter((s) => {
+          if (s.estado !== 'En proceso') return false;
+          if (alertedStaleRef.current.has(s.id)) return false;
+          const fechaIngreso = new Date((s.fecha || '') + 'T00:00:00');
+          if (isNaN(fechaIngreso.getTime())) return false;
+          const horas = (ahora - fechaIngreso) / (1000 * 60 * 60);
+          return horas >= STALE_THRESHOLD_HOURS;
+        });
+
+        if (stales.length > 0) {
+          stales.forEach((s) => alertedStaleRef.current.add(s.id));
+          saveToStorage(STALE_ALERTED_KEY, [...alertedStaleRef.current].slice(-500));
+
+          const staleNotifs = stales.map((s) => ({
+            id: `stale-${s.id}-${Date.now()}`,
+            solicitudId: s.id,
+            titulo: 'Orden sin actualizar',
+            mensaje: `#${s.id} — ${s.cliente} · ${s.vehiculo}`,
+            detalle: `Lleva más de ${STALE_THRESHOLD_HOURS}h en proceso`,
+            fecha: new Date().toISOString(),
+            leida: false,
+          }));
+
+          setNotificaciones((prev) => [...staleNotifs, ...prev].slice(0, 100));
+
+          stales.forEach((s) => {
+            toast.warning(`Orden #${s.id} sin actualizar`, {
+              description: `${s.cliente} lleva más de ${STALE_THRESHOLD_HOURS}h en proceso`,
+              duration: 8000,
+              icon: '⚠️',
+            });
+          });
         }
       } catch { /* silencio en error de red */ }
     };

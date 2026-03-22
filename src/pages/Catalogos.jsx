@@ -1,5 +1,6 @@
 import { useState, useMemo } from 'react';
 import { useCatalogos } from '../context/CatalogosContext';
+import SpinnerBolitas from '../components/SpinnerBolitas';
 import { formatQ, CategoryIcon, ICON_MAP } from '../data/servicios';
 import toast from 'react-hot-toast';
 
@@ -127,8 +128,16 @@ function TabClientes() {
 
   const handleSave = () => {
     if (!form.nombre.trim()) return toast.error('El nombre es obligatorio');
-    if (modal === 'nuevo') { agregarCliente({ ...form, activo: true }); toast.success('Cliente registrado'); }
-    else { editarCliente(modal.id, form); toast.success('Cliente actualizado'); }
+    if (modal === 'nuevo') {
+      const nombreNorm = form.nombre.trim().toLowerCase();
+      const existe = clientes.some((c) => (c.nombre || '').trim().toLowerCase() === nombreNorm);
+      if (existe) return toast.error(`Ya existe un cliente con el nombre "${form.nombre.trim()}"`);
+      agregarCliente({ ...form, activo: true });
+      toast.success('Cliente registrado');
+    } else {
+      editarCliente(modal.id, form);
+      toast.success('Cliente actualizado');
+    }
     closeModal();
   };
 
@@ -725,8 +734,16 @@ function TabMecanicos() {
 
   const handleSave = () => {
     if (!form.nombre.trim()) return toast.error('El nombre es obligatorio');
-    if (modal === 'nuevo') { agregarMecanico(form); toast.success('Mecánico registrado'); }
-    else { editarMecanico(modal.id, form); toast.success('Mecánico actualizado'); }
+    if (modal === 'nuevo') {
+      const nombreNorm = form.nombre.trim().toLowerCase();
+      const existe = mecanicos.some((m) => (m.nombre || '').trim().toLowerCase() === nombreNorm);
+      if (existe) return toast.error(`Ya existe un mecánico con el nombre "${form.nombre.trim()}"`);
+      agregarMecanico(form);
+      toast.success('Mecánico registrado');
+    } else {
+      editarMecanico(modal.id, form);
+      toast.success('Mecánico actualizado');
+    }
     closeModal();
   };
 
@@ -1130,7 +1147,9 @@ function TabConfig() {
    ═══════════════════════════════════════════════════════════════════════════════ */
 export default function Catalogos() {
   const [tab, setTab] = useState('clientes');
-  const { resetCatalogos, clientes, vehiculos, servicios, estados, mecanicos, tiposDano } = useCatalogos();
+  const { cargando, resetCatalogos, clientes, vehiculos, servicios, estados, mecanicos, tiposDano } = useCatalogos();
+
+  if (cargando) return <SpinnerBolitas texto="Cargando catálogos..." />;
 
   const totalServ = servicios.reduce((a, c) => a + (c.servicios?.length ?? 0), 0);
   const kpis = [

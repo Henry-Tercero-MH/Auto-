@@ -238,38 +238,49 @@ function Combobox({ id, value, onChange, options, placeholder, error, disabled, 
 
 // ── StepIndicator ───────────────────────────────────────────────────────────
 function StepIndicator({ current }) {
+  const pct = ((current - 1) / (STEPS.length - 1)) * 100;
   return (
-    <div className="flex items-center justify-center mb-8">
-      {STEPS.map((s, i) => {
-        const idx = i + 1;
-        const done = current > idx;
-        const active = current === idx;
-        return (
-          <div key={s.label} className="flex items-center">
-            <div className="flex flex-col items-center gap-1">
-              <div
-                className={`w-9 h-9 rounded-full flex items-center justify-center font-bold text-sm transition-all ${
-                  done    ? 'bg-primary text-white'
-                  : active ? 'bg-accent text-white shadow-md'
-                           : 'border-2 border-gray-300 text-gray-400 bg-white'
-                }`}
-              >
-                {done ? (
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={3}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-                  </svg>
-                ) : idx}
+    <div className="mb-8">
+      {/* Barra de progreso */}
+      <div className="h-1 bg-gray-200 rounded-full mb-5 mx-4">
+        <div
+          className="h-full bg-accent rounded-full transition-all duration-500"
+          style={{ width: `${pct}%` }}
+        />
+      </div>
+      {/* Círculos de paso */}
+      <div className="flex items-center justify-center">
+        {STEPS.map((s, i) => {
+          const idx = i + 1;
+          const done = current > idx;
+          const active = current === idx;
+          return (
+            <div key={s.label} className="flex items-center">
+              <div className="flex flex-col items-center gap-1">
+                <div
+                  className={`w-9 h-9 rounded-full flex items-center justify-center font-bold text-sm transition-all duration-300 ${
+                    done    ? 'bg-primary text-white'
+                    : active ? 'bg-accent text-white shadow-lg ring-4 ring-accent/20 scale-110'
+                             : 'border-2 border-gray-300 text-gray-400 bg-white'
+                  }`}
+                >
+                  {done ? (
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={3}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                    </svg>
+                  ) : idx}
+                </div>
+                <span className={`text-xs font-medium hidden sm:block transition-colors ${active ? 'text-accent font-bold' : done ? 'text-primary' : 'text-gray-400'}`}>
+                  {s.label}
+                </span>
               </div>
-              <span className={`text-xs font-medium hidden sm:block ${active ? 'text-accent' : done ? 'text-primary' : 'text-gray-400'}`}>
-                {s.label}
-              </span>
+              {i < STEPS.length - 1 && (
+                <div className={`h-0.5 w-7 sm:w-12 mx-1 sm:mx-2 mb-4 transition-all duration-500 ${current > idx ? 'bg-primary' : 'bg-gray-200'}`} />
+              )}
             </div>
-            {i < STEPS.length - 1 && (
-              <div className={`h-0.5 w-7 sm:w-12 mx-1 sm:mx-2 mb-4 transition-all ${current > idx ? 'bg-primary' : 'bg-gray-200'}`} />
-            )}
-          </div>
-        );
-      })}
+          );
+        })}
+      </div>
     </div>
   );
 }
@@ -666,7 +677,15 @@ function loadDraft() {
     if (!raw) return null;
     const parsed = JSON.parse(raw);
     // Merge con initialState para asegurar campos nuevos en borradores viejos
-    if (parsed?.form) parsed.form = { ...initialState, ...parsed.form };
+    if (parsed?.form) {
+      parsed.form = { ...initialState, ...parsed.form };
+      // Limpiar entradas null/undefined de inspeccion para evitar zonas fantasma
+      if (parsed.form.inspeccion && typeof parsed.form.inspeccion === 'object') {
+        parsed.form.inspeccion = Object.fromEntries(
+          Object.entries(parsed.form.inspeccion).filter(([, v]) => v != null)
+        );
+      }
+    }
     return parsed;
   } catch { return null; }
 }
@@ -683,7 +702,16 @@ function FotoUploader({ fotos = [], onChange }) {
   const handleFiles = useCallback(async (files) => {
     const nuevas = Array.from(files).filter(f => f.type.startsWith('image/'));
     if (!nuevas.length) return;
-    for (const file of nuevas) {
+    const disponibles = 10 - fotos.length;
+    if (disponibles <= 0) {
+      toast.error('Límite máximo de 10 fotos alcanzado');
+      return;
+    }
+    const aSubir = nuevas.slice(0, disponibles);
+    if (nuevas.length > disponibles) {
+      toast.error(`Solo se subirán ${disponibles} foto(s). Límite máximo: 10`);
+    }
+    for (const file of aSubir) {
       const key = `${file.name}_${file.size}`;
       setSubiendo(p => ({ ...p, [key]: true }));
       try {
@@ -721,6 +749,13 @@ function FotoUploader({ fotos = [], onChange }) {
 
   return (
     <div className="space-y-3">
+      {/* Contador de fotos */}
+      <div className="flex items-center justify-between">
+        <span className="text-xs text-slate-400">Fotos adjuntas (opcional)</span>
+        <span className={`text-xs font-semibold tabular-nums ${fotos.length >= 10 ? 'text-red-500' : 'text-slate-400'}`}>
+          {fotos.length}/10
+        </span>
+      </div>
       {/* Botones de acción */}
       <div className="grid grid-cols-2 gap-2">
         {/* Tomar foto con cámara */}

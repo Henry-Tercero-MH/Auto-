@@ -50,28 +50,27 @@ export function CatalogosProvider({ children }) {
   const [marcas,    setMarcas]    = useState({});
   const [servicios, setServicios] = useState([]);
   const [vehiculos, setVehiculos] = useState([]);
+  const [cargando,  setCargando]  = useState(true);
 
   // ── Carga inicial desde Google Sheets ─────────────────────────────────
   const normActivo = (v) => v === true || v === 'TRUE' || v === 'true';
 
   useEffect(() => {
-    // Clientes
-    api.getClientes()
+    const SYNC_KEY = 'drivebot_servicios_sync';
+
+    const pClientes = api.getClientes()
       .then((data) => { if (data?.length) setClientes(data.map((c) => ({ ...c, activo: normActivo(c.activo) }))); })
       .catch(() => {});
 
-    // Mecánicos
-    api.getMecanicos()
+    const pMecanicos = api.getMecanicos()
       .then((data) => { if (data?.length) setMecanicos(data.map((m) => ({ ...m, activo: normActivo(m.activo) }))); })
       .catch(() => {});
 
-    // Marcas
-    api.getMarcas()
+    const pMarcas = api.getMarcas()
       .then((data) => { if (data && Object.keys(data).length) setMarcas(data); })
       .catch(() => {});
 
-    // Config negocio + horario
-    api.getConfig()
+    const pConfig = api.getConfig()
       .then((cfg) => {
         if (!cfg) return;
         if (cfg.taller_nombre) {
@@ -101,32 +100,23 @@ export function CatalogosProvider({ children }) {
       })
       .catch(() => {});
 
-    // Vehículos
-    api.getVehiculos()
+    const pVehiculos = api.getVehiculos()
       .then((data) => { if (data?.length) setVehiculos(data); })
       .catch(() => {});
 
-    // Servicios desde Sheets — si está vacío se auto-sube el catálogo local (primera vez)
-    const SYNC_KEY = 'drivebot_servicios_sync';
-    api.getServicios()
+    const pServicios = api.getServicios()
       .then((data) => {
-        console.log('[Servicios] data recibida:', data);
-        console.log('[Servicios] primer item completo:', JSON.stringify(data[0]));
         if (!data?.length) {
-          // Auto-subir catálogo si aún no se ha hecho
           if (!localStorage.getItem(SYNC_KEY)) {
             localStorage.setItem(SYNC_KEY, '1');
             api.sincronizarCatalogoServicios(SERV_INICIAL).catch(() => {});
           }
-          return; // mantiene estado vacío
+          return;
         }
-        // Lookup nombre→categoría desde catálogo local (por si Sheets no tiene categoría)
         const nombreToCat = {};
         SERV_INICIAL.forEach(cat => {
           (cat.servicios || []).forEach(sv => { nombreToCat[sv.nombre] = cat.categoria; });
         });
-
-        // Reconstruir categorías preservando metadata visual del catálogo local
         const catMap = {};
         data.forEach((s) => {
           const cat = s.categoria || nombreToCat[s.nombre] || 'Sin categoría';
@@ -144,10 +134,12 @@ export function CatalogosProvider({ children }) {
           }
           catMap[cat].servicios.push({ nombre: s.nombre, precio: s.precio });
         });
-        console.log('[Servicios] catMap keys:', Object.keys(catMap));
         setServicios(Object.values(catMap));
       })
       .catch((err) => console.error('[Servicios] error:', err));
+
+    Promise.all([pClientes, pMecanicos, pMarcas, pConfig, pVehiculos, pServicios])
+      .finally(() => setCargando(false));
   }, []);
 
   // ─────────────────────────────────────────────────────────────────────
@@ -402,6 +394,7 @@ export function CatalogosProvider({ children }) {
   return (
     <CatalogosContext.Provider
       value={{
+        cargando,
         clientes, marcas, servicios, preciosMap, estados, mecanicos, tiposDano, configNegocio, horarioAcceso,
         vehiculos, agregarVehiculo, editarVehiculoCat, eliminarVehiculoCat, vehiculosPorCliente,
         agregarCliente, editarCliente, eliminarCliente,

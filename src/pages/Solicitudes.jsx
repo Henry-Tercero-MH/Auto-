@@ -1,11 +1,14 @@
 import { useState, useMemo, useEffect, useCallback } from 'react';
-import { Link } from 'react-router-dom';
+import { useDebounce } from '../hooks/useDebounce';
+import { Link, useSearchParams } from 'react-router-dom';
 import toast from 'react-hot-toast';
+import * as XLSX from 'xlsx';
 import { useSolicitudes } from '../context/SolicitudesContext';
 import { useCatalogos } from '../context/CatalogosContext';
 import { useAuth } from '../context/AuthContext';
 import { usePagos } from '../context/PagosContext';
 import { isFeatureEnabled } from '../config/rbac';
+import SpinnerBolitas from '../components/SpinnerBolitas';
 
 // Extrae el FILE_ID de una URL de Google Drive y devuelve URL de thumbnail
 function driveThumb(url = '', size = 200) {
@@ -116,11 +119,13 @@ function CarruselModal({ urls, inicial = 0, onClose }) {
 }
 
 export default function Solicitudes() {
-  const { solicitudes, cambiarEstado, tomarSolicitud } = useSolicitudes();
+  const { solicitudes, cargando, cambiarEstado, tomarSolicitud, eliminarSolicitud } = useSolicitudes();
   const { sincronizarEstado } = usePagos();
   const { estados } = useCatalogos();
   const { user, esAdmin, esMecanico } = useAuth();
   const [carrusel, setCarrusel] = useState(null); // { urls, idx }
+  const [seleccionados, setSeleccionados] = useState(new Set());
+  const [confirmEliminar, setConfirmEliminar] = useState(null); // { eliminables: [], bloqueadas: [] }
 
   // Config de estados dinámicos
   const estadoConfig = useMemo(() => {
@@ -132,9 +137,16 @@ export default function Solicitudes() {
   const ESTADOS = useMemo(() => estados.map((e) => e.nombre), [estados]);
   const FILTROS = useMemo(() => ['Todos', ...ESTADOS], [ESTADOS]);
 
+  const [searchParams] = useSearchParams();
   const [filtro, setFiltro] = useState('Todos');
-  const [busqueda, setBusqueda] = useState('');
+  const [busquedaInput, setBusquedaInput] = useState('');
+  const busqueda = useDebounce(busquedaInput, 300);
   const [expandido, setExpandido] = useState(null);
+  const [clienteFiltro, setClienteFiltro] = useState(searchParams.get('cliente') || '');
+
+  const clientesUnicos = useMemo(() =>
+    [...new Set(solicitudes.map((s) => s.cliente).filter(Boolean))].sort(),
+  [solicitudes]);
 
   // El mecánico solo ve sus solicitudes + las Pendientes sin asignar
   const datosFiltrados = useMemo(() => {
@@ -145,6 +157,7 @@ export default function Solicitudes() {
         if (!esMia && !disponible) return false;
       }
       const matchFiltro = filtro === 'Todos' || s.estado === filtro;
+      const matchCliente = !clienteFiltro || s.cliente === clienteFiltro;
       const q = busqueda.toLowerCase();
       const matchBusqueda =
         !q ||
@@ -153,9 +166,9 @@ export default function Solicitudes() {
         String(s.placa || '').toLowerCase().includes(q) ||
         (s.servicio || '').toLowerCase().includes(q) ||
         (s.id || '').includes(q);
-      return matchFiltro && matchBusqueda;
+      return matchFiltro && matchCliente && matchBusqueda;
     });
-  }, [solicitudes, filtro, busqueda, esMecanico, user]);
+  }, [solicitudes, filtro, busqueda, clienteFiltro, esMecanico, user]);
 
   const conteo = useMemo(() => {
     const base = esMecanico
@@ -181,7 +194,7 @@ export default function Solicitudes() {
   }, [solicitudes, esAdmin]);
 
   const actividadDia = useMemo(() => {
-    const hoy = new Date().toISOString().slice(0, 10);
+    const hoy = new Date().toLocaleDateString('en-CA'); // YYYY-MM-DD en hora local
     const creadasHoy = solicitudes.filter((s) => s.fecha === hoy).length;
     const completadasHoy = solicitudes.filter((s) => s.fecha === hoy && s.estado === 'Completada').length;
     return { creadasHoy, completadasHoy };
@@ -197,6 +210,61 @@ export default function Solicitudes() {
     tomarSolicitud(s.id, { id: user.id, name: user.name });
     toast.success(`Tomaste la solicitud #${s.id}`);
     setExpandido(s.id);
+  };
+
+  const toggleSeleccion = (id) => {
+    setSeleccionados((prev) => {
+      const next = new Set(prev);
+      next.has(id) ? next.delete(id) : next.add(id);
+      return next;
+    });
+  };
+
+  const toggleSeleccionarTodos = () => {
+    if (seleccionados.size === datosFiltrados.length) {
+      setSeleccionados(new Set());
+    } else {
+      setSeleccionados(new Set(datosFiltrados.map((s) => s.id)));
+    }
+  };
+
+  const handleExportarSeleccionados = () => {
+    const filas = solicitudes.filter((s) => seleccionados.has(s.id));
+    const headers = ['ID', 'Fecha', 'Cliente', 'Vehículo', 'Placa', 'Servicio', 'Mecánico', 'Estado'];
+    const wsData = [
+      headers,
+      ...filas.map((s) => [
+        s.id, s.fecha, s.cliente, s.vehiculo, s.placa,
+        s.servicio, s.mecanico?.name ?? s.mecanico?.nombre ?? '', s.estado,
+      ]),
+    ];
+    const ws = XLSX.utils.aoa_to_sheet(wsData);
+    ws['!cols'] = headers.map(() => ({ wch: 18 }));
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Solicitudes');
+    XLSX.writeFile(wb, `solicitudes_seleccionadas.xlsx`);
+    toast.success(`${filas.length} solicitud(es) exportada(s)`);
+  };
+
+  const handleEliminarSeleccionados = () => {
+    const filas = solicitudes.filter((s) => seleccionados.has(s.id));
+    const eliminables = filas.filter((s) => !s.mecanico);
+    const bloqueadas  = filas.filter((s) => !!s.mecanico);
+    if (eliminables.length === 0) {
+      toast.error('Ninguna solicitud se puede eliminar: todas tienen mecánico asignado o están en proceso.');
+      return;
+    }
+    setConfirmEliminar({ eliminables, bloqueadas });
+  };
+
+  const confirmarEliminar = async () => {
+    const { eliminables } = confirmEliminar;
+    setConfirmEliminar(null);
+    for (const s of eliminables) {
+      await eliminarSolicitud(s.id);
+    }
+    toast.success(`${eliminables.length} solicitud(es) eliminada(s)`);
+    setSeleccionados(new Set());
   };
 
   return (
@@ -259,18 +327,35 @@ export default function Solicitudes() {
         ))}
       </div>
 
-      {/* Buscador */}
-      <div className="relative">
-        <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
-          <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-4.35-4.35M17 11A6 6 0 115 11a6 6 0 0112 0z" />
-        </svg>
-        <input
-          type="text"
-          placeholder="Buscar por cliente, vehículo, placa, servicio o ticket..."
-          value={busqueda}
-          onChange={(e) => setBusqueda(e.target.value)}
-          className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-gray-200 bg-white text-sm text-slate-700 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary transition"
-        />
+      {/* Buscador + filtro cliente */}
+      <div className="flex flex-col sm:flex-row gap-2">
+        <div className="relative flex-1">
+          <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-4.35-4.35M17 11A6 6 0 115 11a6 6 0 0112 0z" />
+          </svg>
+          <input
+            type="text"
+            placeholder="Buscar por cliente, vehículo, placa, servicio o ticket..."
+            value={busquedaInput}
+            onChange={(e) => setBusquedaInput(e.target.value)}
+            className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-gray-200 bg-white text-sm text-slate-700 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary transition"
+          />
+        </div>
+        {/* Historial por cliente */}
+        {esAdmin && clientesUnicos.length > 0 && (
+          <select
+            value={clienteFiltro}
+            onChange={(e) => setClienteFiltro(e.target.value)}
+            className={`sm:w-52 py-2.5 px-3 rounded-xl border text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary transition ${
+              clienteFiltro ? 'border-primary bg-primary/5 text-primary font-semibold' : 'border-gray-200 bg-white text-slate-600'
+            }`}
+          >
+            <option value="">Todos los clientes</option>
+            {clientesUnicos.map((c) => (
+              <option key={c} value={c}>{c}</option>
+            ))}
+          </select>
+        )}
       </div>
 
       {/* Layout principal: lista + panel lateral */}
@@ -278,12 +363,28 @@ export default function Solicitudes() {
         {/* Lista */}
         <div>
           <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-            {datosFiltrados.length === 0 ? (
-              <div className="py-16 text-center text-slate-400">
-                <svg className="w-10 h-10 mx-auto mb-3 opacity-40" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
+            {cargando ? (
+              <SpinnerBolitas texto="Cargando solicitudes..." />
+            ) : datosFiltrados.length === 0 ? (
+              <div className="py-16 text-center px-6">
+                <svg className="w-10 h-10 mx-auto mb-3 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
                 </svg>
-                <p className="text-sm font-medium">Sin resultados</p>
+                <p className="text-sm font-semibold text-slate-600 mb-1">Sin solicitudes</p>
+                <p className="text-xs text-slate-400 mb-4">
+                  {busqueda ? `No hay resultados para "${busqueda}"` : 'Aún no hay órdenes de servicio registradas.'}
+                </p>
+                {!busqueda && (
+                  <Link
+                    to="/nueva-solicitud"
+                    className="inline-flex items-center gap-2 bg-primary text-white font-semibold px-4 py-2 rounded-xl shadow-sm hover:bg-primary/90 transition text-sm"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
+                    </svg>
+                    Crear nueva solicitud
+                  </Link>
+                )}
               </div>
             ) : (
               <div className="divide-y divide-gray-100">
@@ -299,24 +400,48 @@ export default function Solicitudes() {
                   return (
                     <div key={s.id}>
                       {/* Fila */}
+                      <div className="flex items-stretch">
+                      {esAdmin && (
+                        <div className="flex items-center px-3 border-r border-gray-100 bg-slate-50/50">
+                          <input
+                            type="checkbox"
+                            checked={seleccionados.has(s.id)}
+                            onChange={(e) => { e.stopPropagation(); toggleSeleccion(s.id); }}
+                            className="w-4 h-4 accent-primary cursor-pointer"
+                          />
+                        </div>
+                      )}
                       <button
                         onClick={() => setExpandido(abierto ? null : s.id)}
-                        className={`w-full text-left px-4 sm:px-6 py-4 hover:bg-slate-50 transition-colors ${
+                        className={`flex-1 text-left px-4 sm:px-6 py-4 hover:bg-slate-50 transition-colors ${
                           disponibleParaTomar ? 'border-l-4 border-blue-400' : esMiaSolicitud ? 'border-l-4 border-primary' : ''
                         }`}
                       >
                         <div className="flex items-center gap-3 sm:gap-4">
                           <div className={`w-2.5 h-2.5 rounded-full flex-shrink-0 ${cfg.dot}`} />
-                          <div className="flex-1 min-w-0 grid grid-cols-1 sm:grid-cols-4 gap-1 sm:gap-4">
+                          <div className="flex-1 min-w-0">
+                            {/* Vista móvil: card compacto */}
+                            <div className="sm:hidden">
+                              <div className="flex items-center justify-between">
+                                <p className="font-semibold text-slate-800 text-sm truncate uppercase">{s.cliente}</p>
+                                <p className="text-xs text-slate-400 font-mono ml-2 flex-shrink-0">#{s.id}</p>
+                              </div>
+                              <p className="text-xs text-slate-500 truncate uppercase mt-0.5">
+                                {s.vehiculo}{s.placa ? ` · ${s.placa}` : ''}
+                              </p>
+                              <p className="text-xs text-slate-400 truncate mt-0.5">{s.servicio} · {s.fecha}</p>
+                            </div>
+                            {/* Vista desktop: grid 4 columnas */}
+                            <div className="hidden sm:grid grid-cols-4 gap-4">
                             <div>
                               <p className="font-semibold text-slate-800 text-sm truncate uppercase">{s.cliente}</p>
                               <p className="text-xs text-slate-400 font-mono">#{s.id}</p>
                             </div>
-                            <div className="hidden sm:block">
+                            <div>
                               <p className="text-sm text-slate-600 truncate uppercase">{s.vehiculo}</p>
                               <p className="text-xs text-slate-400 uppercase">{s.placa}</p>
                             </div>
-                            <div className="hidden sm:block">
+                            <div>
                               <p className="text-sm text-slate-600 truncate">{s.servicio}</p>
                               <p className="text-xs text-slate-400">{s.fecha}</p>
                             </div>
@@ -334,7 +459,8 @@ export default function Solicitudes() {
                                 <span className="text-amber-500 font-medium">Sin asignar</span>
                               )}
                             </div>
-                          </div>
+                            </div>{/* fin grid desktop */}
+                          </div>{/* fin flex-1 wrapper */}
 
                           {/* Badge "disponible" para mecánico */}
                           {disponibleParaTomar && (
@@ -355,6 +481,7 @@ export default function Solicitudes() {
                           </svg>
                         </div>
                       </button>
+                      </div>{/* fin flex items-stretch */}
 
                       {/* Detalle expandido */}
                       {abierto && (
@@ -579,6 +706,79 @@ export default function Solicitudes() {
           inicial={carrusel.idx}
           onClose={() => setCarrusel(null)}
         />
+      )}
+
+      {/* ── Modal confirmación eliminar ── */}
+      {confirmEliminar && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center px-4 bg-black/50 backdrop-blur-sm">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm p-6">
+            <div className="flex items-start gap-3 mb-4">
+              <div className="w-10 h-10 rounded-full bg-red-100 flex items-center justify-center flex-shrink-0">
+                <svg className="w-5 h-5 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01M10.29 3.86l-8.9 15.54A1 1 0 002.27 21h19.46a1 1 0 00.88-1.6l-8.9-15.54a1.14 1.14 0 00-2.02 0z" />
+                </svg>
+              </div>
+              <div>
+                <h3 className="text-sm font-bold text-slate-800">Eliminar solicitudes</h3>
+                <p className="text-xs text-slate-500 mt-1">
+                  Se eliminarán <span className="font-semibold text-slate-700">{confirmEliminar.eliminables.length}</span> solicitud(es) sin mecánico asignado.
+                </p>
+                {confirmEliminar.bloqueadas.length > 0 && (
+                  <p className="text-xs text-amber-600 mt-2 bg-amber-50 rounded-lg px-3 py-2 border border-amber-200">
+                    <span className="font-semibold">{confirmEliminar.bloqueadas.length}</span> solicitud(es) no se eliminarán porque tienen mecánico asignado o están en proceso:
+                    <span className="block mt-1 text-amber-700">
+                      {confirmEliminar.bloqueadas.map((s) => `#${s.id} ${s.cliente}`).join(', ')}
+                    </span>
+                  </p>
+                )}
+              </div>
+            </div>
+            <div className="flex gap-2 justify-end">
+              <button
+                onClick={() => setConfirmEliminar(null)}
+                className="px-4 py-2 text-sm font-medium text-slate-600 border border-slate-300 rounded-xl hover:bg-slate-50 transition"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={confirmarEliminar}
+                className="px-4 py-2 text-sm font-semibold text-white bg-red-600 hover:bg-red-700 rounded-xl transition"
+              >
+                Sí, eliminar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Toolbar de bulk actions ── */}
+      {esAdmin && seleccionados.size > 0 && (
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 bg-primary text-white rounded-2xl shadow-2xl px-5 py-3 flex items-center gap-4 animate-in slide-in-from-bottom-2">
+          <span className="text-sm font-semibold whitespace-nowrap">
+            {seleccionados.size} seleccionada{seleccionados.size > 1 ? 's' : ''}
+          </span>
+          <button
+            onClick={handleExportarSeleccionados}
+            className="text-xs bg-white/20 hover:bg-white/30 px-3 py-1.5 rounded-lg font-semibold transition whitespace-nowrap"
+          >
+            Exportar Excel
+          </button>
+          <button
+            onClick={handleEliminarSeleccionados}
+            className="text-xs bg-red-500 hover:bg-red-600 px-3 py-1.5 rounded-lg font-semibold transition whitespace-nowrap"
+          >
+            Eliminar
+          </button>
+          <button
+            onClick={() => setSeleccionados(new Set())}
+            className="text-white/60 hover:text-white transition"
+            title="Cancelar selección"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2.5}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
       )}
     </div>
   );
