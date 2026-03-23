@@ -18,6 +18,14 @@ export function SolicitudesProvider({ children }) {
     return () => { mounted = false; };
   }, []);
 
+  // ── Polling automático cada 45 s (sincroniza todas las instancias) ──────
+  useEffect(() => {
+    const interval = setInterval(() => {
+      api.getSolicitudes().then(setSolicitudes).catch(() => {});
+    }, 45_000);
+    return () => clearInterval(interval);
+  }, []);
+
   // ── Cambiar estado ──────────────────────────────────────────────────────
   const cambiarEstado = useCallback(async (id, nuevoEstado) => {
     // optimista
