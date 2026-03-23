@@ -551,10 +551,6 @@ export default function Reportes() {
                           <span className="r-value font-semibold text-gray-800 text-sm print:text-[10px]">{solicitudSeleccionada.placa}</span>
                         </div>
                       )}
-                      <div>
-                        <span className="r-label text-gray-400 uppercase text-[11px] print:text-[7px]">Estado: </span>
-                        <span className="r-value font-semibold text-gray-800 text-sm print:text-[10px]">{solicitudSeleccionada.estado}</span>
-                      </div>
                     </div>
                   </div>
 

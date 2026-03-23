@@ -1355,6 +1355,16 @@ export default function NuevaSolicitud() {
   const [guardando, setGuardando] = useState(false);
   const [nuevoServForm, setNuevoServForm] = useState({ open: false, nombre: '', categoria: '', precio: '' });
 
+  // ── Combobox servicio principal ─────────────────────────────────────────
+  const [servBusq, setServBusq] = useState('');
+  const [servOpen, setServOpen] = useState(false);
+  const servRef = useRef(null);
+  useEffect(() => {
+    const handler = (e) => { if (servRef.current && !servRef.current.contains(e.target)) setServOpen(false); };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, []);
+
   const handleWhatsApp = async () => {
     const el = document.getElementById('print-area');
     if (!el) return;
@@ -1790,18 +1800,94 @@ export default function NuevaSolicitud() {
           {step === 4 && (
             <div className="px-6 sm:px-8 py-7 space-y-5">
               <h3 className="text-xs font-semibold uppercase tracking-widest text-accent mb-4">Servicio</h3>
-              <div>
-                <label htmlFor="tipoServicio" className="block text-sm font-medium text-slate-700 mb-1">Tipo de servicio principal</label>
-                <select id="tipoServicio" name="tipoServicio" value={form.tipoServicio} onChange={handleChange} className={inputCls(errores.tipoServicio)}>
-                  <option value="">Selecciona una opción</option>
-                  {CATEGORIAS_SERVICIOS.map((cat) => (
-                    <optgroup key={cat.categoria} label={cat.categoria}>
-                      {cat.servicios.map((s, si) => <option key={`${cat.categoria}::${s.nombre}::${si}`} value={s.nombre}>{s.nombre}</option>)}
-                    </optgroup>
-                  ))}
-                </select>
-                {errores.tipoServicio && <p className="mt-1 text-xs text-red-500">{errores.tipoServicio}</p>}
-              </div>
+              {/* ── Combobox buscable: servicio principal ── */}
+              {(() => {
+                const todosServicios = CATEGORIAS_SERVICIOS.flatMap(cat =>
+                  cat.servicios.map(s => ({ nombre: s.nombre, categoria: cat.categoria }))
+                );
+                const filtrados = servBusq.trim()
+                  ? todosServicios.filter(s =>
+                      s.nombre.toLowerCase().includes(servBusq.toLowerCase()) ||
+                      s.categoria.toLowerCase().includes(servBusq.toLowerCase())
+                    )
+                  : todosServicios;
+                const grupos = filtrados.reduce((acc, s) => {
+                  if (!acc[s.categoria]) acc[s.categoria] = [];
+                  acc[s.categoria].push(s.nombre);
+                  return acc;
+                }, {});
+                return (
+                  <div ref={servRef} className="relative">
+                    <label className="block text-sm font-medium text-slate-700 mb-1">Tipo de servicio principal</label>
+                    <div
+                      className={`flex items-center gap-2 w-full rounded-xl border px-3 py-2.5 bg-white cursor-pointer transition ${errores.tipoServicio ? 'border-red-400 ring-1 ring-red-400' : servOpen ? 'border-primary ring-1 ring-primary' : 'border-gray-200 hover:border-slate-300'}`}
+                      onClick={() => setServOpen(o => !o)}
+                    >
+                      <svg className="w-4 h-4 text-slate-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-4.35-4.35M17 11A6 6 0 111 11a6 6 0 0116 0z" />
+                      </svg>
+                      {servOpen ? (
+                        <input
+                          autoFocus
+                          type="text"
+                          value={servBusq}
+                          onChange={e => setServBusq(e.target.value)}
+                          onClick={e => e.stopPropagation()}
+                          placeholder="Buscar servicio…"
+                          className="flex-1 text-sm bg-transparent outline-none text-slate-700 placeholder-slate-400"
+                        />
+                      ) : (
+                        <span className={`flex-1 text-sm ${form.tipoServicio ? 'text-slate-800 font-medium' : 'text-slate-400'}`}>
+                          {form.tipoServicio || 'Selecciona un servicio…'}
+                        </span>
+                      )}
+                      {form.tipoServicio && !servOpen && (
+                        <button
+                          type="button"
+                          onClick={e => { e.stopPropagation(); setForm(p => ({ ...p, tipoServicio: '' })); }}
+                          className="text-slate-400 hover:text-red-500 transition shrink-0"
+                        >
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                          </svg>
+                        </button>
+                      )}
+                      <svg className={`w-4 h-4 text-slate-400 shrink-0 transition-transform ${servOpen ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+                      </svg>
+                    </div>
+                    {servOpen && (
+                      <div className="absolute z-30 mt-1 w-full bg-white border border-gray-200 rounded-xl shadow-lg max-h-60 overflow-y-auto">
+                        {Object.keys(grupos).length === 0 ? (
+                          <p className="px-4 py-3 text-sm text-slate-400 text-center">Sin resultados</p>
+                        ) : (
+                          Object.entries(grupos).map(([cat, nombres]) => (
+                            <div key={cat}>
+                              <p className="px-3 pt-2 pb-1 text-[10px] font-bold uppercase tracking-widest text-slate-400">{cat}</p>
+                              {nombres.map(nombre => (
+                                <button
+                                  key={nombre}
+                                  type="button"
+                                  onMouseDown={() => {
+                                    setForm(p => ({ ...p, tipoServicio: nombre }));
+                                    setServBusq('');
+                                    setServOpen(false);
+                                    if (errores.tipoServicio) setErrores(p => ({ ...p, tipoServicio: '' }));
+                                  }}
+                                  className={`w-full text-left px-4 py-2 text-sm transition ${form.tipoServicio === nombre ? 'bg-red-50 text-accent font-semibold' : 'text-slate-700 hover:bg-slate-50'}`}
+                                >
+                                  {nombre}
+                                </button>
+                              ))}
+                            </div>
+                          ))
+                        )}
+                      </div>
+                    )}
+                    {errores.tipoServicio && <p className="mt-1 text-xs text-red-500">{errores.tipoServicio}</p>}
+                  </div>
+                );
+              })()}
               <div>
                 <p className="block text-sm font-medium text-slate-700 mb-2">
                   Servicios adicionales <span className="text-gray-400 font-normal">(opcional)</span>
