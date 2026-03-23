@@ -147,30 +147,26 @@ export default function Layout() {
 
           <div className="flex items-center gap-2 md:gap-3">
 
-            {/* Botón recarga manual — útil en PWA standalone sin barra de navegador */}
+            {/* Botón PWA: busca actualizaciones o instala nueva versión si está disponible */}
             <button
-              onClick={() => location.reload()}
-              className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-colors"
-              title="Recargar página"
+              onClick={() => {
+                if (updateSW) {
+                  updateSW(true);
+                } else {
+                  navigator.serviceWorker?.ready.then(reg => reg.update()).catch(() => {});
+                  location.reload();
+                }
+              }}
+              className={`relative p-2 rounded-lg transition-colors ${updateSW ? 'text-white bg-accent hover:bg-red-700 animate-pulse' : 'text-slate-400 hover:text-slate-600 hover:bg-slate-100'}`}
+              title={updateSW ? 'Nueva versión disponible — clic para actualizar' : 'Buscar actualización'}
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.8}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
               </svg>
+              {updateSW && (
+                <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-white rounded-full border-2 border-accent" />
+              )}
             </button>
-
-            {/* Botón de actualización PWA — solo visible cuando hay nueva versión */}
-            {updateSW && (
-              <button
-                onClick={() => updateSW(true)}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-accent text-white text-xs font-semibold shadow hover:bg-red-700 transition-colors animate-pulse"
-                title="Nueva versión disponible"
-              >
-                <svg className="w-3.5 h-3.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2.5}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                </svg>
-                <span className="hidden sm:inline">Actualizar app</span>
-              </button>
-            )}
 
             {/* Campana con panel */}
             <div className="relative" ref={campanaRef}>
