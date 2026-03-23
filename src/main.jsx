@@ -5,15 +5,12 @@ import './index.css'
 import App from './App.jsx'
 
 // Registrar Service Worker para PWA
-registerSW({
+// Cuando hay nueva versión, emite un evento global que el Layout escucha
+const updateSW = registerSW({
   onNeedRefresh() {
-    if (confirm('Hay una nueva versión de AUTO+. ¿Actualizar?')) {
-      location.reload()
-    }
+    window.dispatchEvent(new CustomEvent('pwa-update-available', { detail: { updateSW } }));
   },
-  onOfflineReady() {
-    console.log('AUTO+ disponible offline')
-  },
+  onOfflineReady() {},
 })
 
 createRoot(document.getElementById('root')).render(

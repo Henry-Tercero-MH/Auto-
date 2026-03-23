@@ -44,6 +44,7 @@ export default function Layout() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
   const [campanaPanelOpen, setCampanaPanelOpen] = useState(false);
+  const [updateSW, setUpdateSW] = useState(null);
   const location = useLocation();
   const { user } = useAuth();
   const { notificaciones, noLeidas, marcarLeida, marcarTodasLeidas, eliminarNotificacion } = useNotificaciones();
@@ -67,6 +68,13 @@ export default function Layout() {
   useEffect(() => {
     if (window.innerWidth < 1024) setSidebarOpen(false);
   }, [location.pathname]);
+
+  // Escuchar evento de actualización PWA
+  useEffect(() => {
+    const handler = (e) => setUpdateSW(() => e.detail.updateSW);
+    window.addEventListener('pwa-update-available', handler);
+    return () => window.removeEventListener('pwa-update-available', handler);
+  }, []);
 
   // Cerrar panel de campana al hacer clic fuera
   useEffect(() => {
@@ -138,6 +146,20 @@ export default function Layout() {
           </div>
 
           <div className="flex items-center gap-2 md:gap-3">
+
+            {/* Botón de actualización PWA — solo visible cuando hay nueva versión */}
+            {updateSW && (
+              <button
+                onClick={() => updateSW(true)}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-accent text-white text-xs font-semibold shadow hover:bg-red-700 transition-colors animate-pulse"
+                title="Nueva versión disponible"
+              >
+                <svg className="w-3.5 h-3.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2.5}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                </svg>
+                <span className="hidden sm:inline">Actualizar app</span>
+              </button>
+            )}
 
             {/* Campana con panel */}
             <div className="relative" ref={campanaRef}>

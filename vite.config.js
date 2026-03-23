@@ -7,7 +7,7 @@ export default defineConfig({
   plugins: [
     react(),
     VitePWA({
-      registerType: 'autoUpdate',
+      registerType: 'prompt',
       includeAssets: ['logoMecanica.png'],
       manifest: {
         name: 'AUTO+ Taller Automotriz',
