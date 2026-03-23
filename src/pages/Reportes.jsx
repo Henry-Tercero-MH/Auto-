@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 import toast from 'react-hot-toast';
 import * as XLSX from 'xlsx';
 import { useSolicitudes } from '../context/SolicitudesContext';
@@ -6,7 +6,7 @@ import { useCatalogos } from '../context/CatalogosContext';
 import SpinnerBolitas from '../components/SpinnerBolitas';
 import { usePagos } from '../context/PagosContext';
 import logo from '../imagenes/logoMecanica.png';
-import { APP_SCRIPT_URL } from '../services/sheetsApi';
+import { APP_SCRIPT_URL, api } from '../services/sheetsApi';
 
 const Icon = ({ path, className = 'w-4 h-4' }) => (
   <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.8}>
@@ -36,7 +36,9 @@ const TABS = [
 
 export default function Reportes() {
   const { solicitudes, cargando } = useSolicitudes();
-  const { mecanicos, estados, configNegocio, clientes } = useCatalogos();
+  const { mecanicos, estados, configNegocio, clientes, servicios: catalogoServicios, agregarServicio, agregarCategoria } = useCatalogos();
+  const [catalogoRepuestos, setCatalogoRepuestos] = useState([]);
+  useEffect(() => { api.getRepuestos().then(setCatalogoRepuestos).catch(() => {}); }, []);
   const { pagos } = usePagos();
 
   const hoy = new Date().toISOString().slice(0, 10);
@@ -94,11 +96,25 @@ export default function Reportes() {
   }, [solicitudesFiltradas, pagosMap]);
 
   const [idSeleccionado, setIdSeleccionado] = useState('');
+  const [extrasManoObra, setExtrasManoObra] = useState([]); // [{ descripcion, precio }]
+  const [extrasRepuestos, setExtrasRepuestos] = useState([]); // [{ descripcion, precio }]
+  const [nuevaManoObra, setNuevaManoObra] = useState('');
+  const [nuevoRepuesto, setNuevoRepuesto] = useState('');
+  const [miniFormMO, setMiniFormMO] = useState(null);   // { nombre, categoria, categoriaCustom, precio }
+  const [miniFormRep, setMiniFormRep] = useState(null); // { nombre, precio }
+  const [creandoMO, setCreandoMO] = useState(false);
+  const [creandoRep, setCreandoRep] = useState(false);
+
+  // Limpiar extras al cambiar de solicitud
+  const handleSeleccion = (id) => { setIdSeleccionado(id); setExtrasManoObra([]); setExtrasRepuestos([]); setMiniFormMO(null); setMiniFormRep(null); setNuevaManoObra(''); setNuevoRepuesto(''); };
+
   const solicitudSeleccionada = useMemo(
     () => solicitudes.find((s) => String(s.id) === String(idSeleccionado)) || null,
     [solicitudes, idSeleccionado],
   );
-  const totalSeleccionada = solicitudSeleccionada ? calcularTotal(solicitudSeleccionada) : 0;
+  const totalBase = solicitudSeleccionada ? calcularTotal(solicitudSeleccionada) : 0;
+  const totalExtrasImpresion = extrasManoObra.reduce((s, m) => s + (m.precio || 0), 0) + extrasRepuestos.reduce((s, r) => s + (r.precio || 0), 0);
+  const totalSeleccionada = totalBase + totalExtrasImpresion;
 
   // Teléfono del cliente (busca en catálogo por cliente_id o nombre)
   const telefonoCliente = useMemo(() => {
@@ -285,8 +301,8 @@ export default function Reportes() {
             <>
               {/* Tarjetas móvil */}
               <div className="sm:hidden space-y-2">
-                {solicitudesFiltradas.map((s) => (
-                  <div key={s.id} className="bg-white rounded-xl border border-gray-100 shadow-sm p-3 space-y-1.5">
+                {solicitudesFiltradas.map((s, i) => (
+                  <div key={`${s.id}-${i}`} className="bg-white rounded-xl border border-gray-100 shadow-sm p-3 space-y-1.5">
                     <div className="flex items-center justify-between">
                       <span className="font-mono text-[11px] text-slate-400">#{s.id}</span>
                       <span className="text-[11px] text-slate-400">{s.fecha}</span>
@@ -318,8 +334,8 @@ export default function Reportes() {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-100">
-                    {solicitudesFiltradas.map((s) => (
-                      <tr key={s.id} className="hover:bg-slate-50">
+                    {solicitudesFiltradas.map((s, i) => (
+                      <tr key={`${s.id}-${i}`} className="hover:bg-slate-50">
                         <td className="px-4 py-2 text-xs font-mono text-slate-500">#{s.id}</td>
                         <td className="px-4 py-2 text-xs text-slate-600">{s.fecha}</td>
                         <td className="px-4 py-2 text-xs text-slate-800 uppercase">{s.cliente}</td>
@@ -411,11 +427,11 @@ export default function Reportes() {
               <label className="block text-[11px] font-semibold text-slate-500 uppercase tracking-wide mb-1">
                 Seleccionar orden
               </label>
-              <select value={idSeleccionado} onChange={(e) => setIdSeleccionado(e.target.value)}
+              <select value={idSeleccionado} onChange={(e) => handleSeleccion(e.target.value)}
                 className="w-full border border-slate-300 rounded-md px-3 py-2 text-sm text-slate-700 bg-white focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none">
                 <option value="">Buscar por ID…</option>
-                {solicitudes.slice().sort((a, b) => (b.id > a.id ? 1 : -1)).map((s) => (
-                  <option key={s.id} value={s.id}>
+                {solicitudes.slice().sort((a, b) => (b.id > a.id ? 1 : -1)).map((s, i) => (
+                  <option key={`${s.id}-${i}`} value={s.id}>
                     #{s.id} · {(s.cliente || '').toUpperCase()} · {(s.vehiculo || '').toUpperCase()}
                   </option>
                 ))}
@@ -545,21 +561,237 @@ export default function Reportes() {
                   {/* Trabajos */}
                   <div className="r-section border-b border-dashed border-gray-300">
                     <div className="r-table-head flex justify-between bg-primary text-white text-xs print:text-[7px] uppercase font-bold px-2 py-1.5 print:py-1">
-                      <span>Descripción</span>
+                      <span>Mano de obra</span>
                       <span>Precio</span>
                     </div>
                     {(() => {
+                      // Parsear campo "marca": "R:id:desc:precio" repuestos, "M:desc:precio" mano de obra extra
+                      const entradas = (solicitudSeleccionada.marca || '').split('|').map(r => r.trim()).filter(Boolean);
+                      const manoObraRows = entradas.filter(e => e.startsWith('M:')).map(e => { const p = e.split(':'); return { desc: p[1] || '', precio: parseFloat(p[2]) || 0 }; });
+                      const repuestosRows = entradas.filter(e => e.startsWith('R:')).map(e => { const p = e.split(':'); return { desc: p[2] || '', precio: parseFloat(p[3]) || 0 }; });
+                      const totalExtras = [...manoObraRows, ...repuestosRows].reduce((s, r) => s + r.precio, 0);
                       const nombres = (solicitudSeleccionada.servicio || '').split(',').map(n => n.trim()).filter(Boolean);
-                      const porServicio = nombres.length > 0 ? totalSeleccionada / nombres.length : 0;
-                      return nombres.map((nombre) => (
-                        <div key={nombre} className="r-serv-row flex items-center justify-between px-2 py-1.5 print:py-1 border-b border-dotted border-gray-200">
-                          <span className="text-gray-800 font-medium text-sm print:text-[9px] flex-1 pr-1 uppercase">{nombre}</span>
-                          <span className="font-bold text-gray-700 text-sm print:text-[9px]">
-                            {porServicio > 0 ? `Q ${porServicio.toFixed(2)}` : '—'}
-                          </span>
-                        </div>
-                      ));
+                      const totalServicios = totalSeleccionada - totalExtras;
+                      const porServicio = nombres.length > 0 ? totalServicios / nombres.length : 0;
+                      return (
+                        <>
+                          {nombres.map((nombre, i) => (
+                            <div key={`srv-${i}-${nombre}`} className="r-serv-row flex items-center justify-between px-2 py-1.5 print:py-1 border-b border-dotted border-gray-200">
+                              <span className="text-gray-800 font-medium text-sm print:text-[9px] flex-1 pr-1 uppercase">{nombre}</span>
+                              <span className="font-bold text-gray-700 text-sm print:text-[9px]">
+                                {porServicio > 0 ? `Q ${porServicio.toFixed(2)}` : '—'}
+                              </span>
+                            </div>
+                          ))}
+                          {manoObraRows.map((m, i) => (
+                            <div key={`mo-${i}`} className="r-serv-row flex items-center justify-between px-2 py-1.5 print:py-1 border-b border-dotted border-gray-200">
+                              <span className="text-gray-800 font-medium text-sm print:text-[9px] flex-1 pr-1">{m.desc}</span>
+                              <span className="font-bold text-gray-700 text-sm print:text-[9px]">{m.precio > 0 ? `Q ${m.precio.toFixed(2)}` : '—'}</span>
+                            </div>
+                          ))}
+                          {repuestosRows.length > 0 && (
+                            <div className="r-table-head flex justify-between bg-primary text-white text-xs print:text-[7px] uppercase font-bold px-2 py-1 print:py-0.5">
+                              <span>Repuestos</span>
+                              <span>Precio</span>
+                            </div>
+                          )}
+                          {repuestosRows.map((r, i) => (
+                            <div key={`rep-${i}`} className="r-serv-row flex items-center justify-between px-2 py-1.5 print:py-1 border-b border-dotted border-gray-200">
+                              <span className="text-gray-800 font-medium text-sm print:text-[9px] flex-1 pr-1">{r.desc}</span>
+                              <span className="font-bold text-gray-700 text-sm print:text-[9px]">{r.precio > 0 ? `Q ${r.precio.toFixed(2)}` : '—'}</span>
+                            </div>
+                          ))}
+                        </>
+                      );
                     })()}
+                    {/* ── Extras de impresión: mano de obra ── */}
+                    {extrasManoObra.map((m, i) => (
+                      <div key={`emo-${i}`} className="flex items-center justify-between px-2 py-1.5 print:py-1 border-b border-dotted border-gray-200 gap-1">
+                        <span className="text-gray-800 font-medium text-sm print:text-[9px] flex-1 pr-1">{m.descripcion}</span>
+                        <div className="flex items-center gap-0.5 flex-shrink-0">
+                          <span className="text-gray-400 text-xs">Q</span>
+                          <input type="number" min="0" step="0.01" value={m.precio || ''} placeholder="0.00"
+                            onChange={(e) => { const a = [...extrasManoObra]; a[i] = { ...a[i], precio: parseFloat(e.target.value) || 0 }; setExtrasManoObra(a); }}
+                            className="w-20 text-right font-bold text-gray-700 bg-transparent border-b border-dashed border-gray-400 focus:border-accent focus:outline-none py-0 text-sm print:border-none print:w-16 print:text-[9px]"
+                          />
+                          <button onClick={() => setExtrasManoObra(extrasManoObra.filter((_, j) => j !== i))} className="ml-1 text-red-400 hover:text-red-600 print:hidden">✕</button>
+                        </div>
+                      </div>
+                    ))}
+                    {/* ── Extras de impresión: repuestos ── */}
+                    {extrasRepuestos.length > 0 && (
+                      <div className="flex justify-between bg-primary text-white text-xs uppercase font-bold px-2 py-1 print:py-0.5">
+                        <span>Repuestos</span><span>Precio</span>
+                      </div>
+                    )}
+                    {extrasRepuestos.map((r, i) => (
+                      <div key={`erep-${i}`} className="flex items-center justify-between px-2 py-1.5 print:py-1 border-b border-dotted border-gray-200 gap-1">
+                        <span className="text-gray-800 font-medium text-sm print:text-[9px] flex-1 pr-1">{r.descripcion}</span>
+                        <div className="flex items-center gap-0.5 flex-shrink-0">
+                          <span className="text-gray-400 text-xs">Q</span>
+                          <input type="number" min="0" step="0.01" value={r.precio || ''} placeholder="0.00"
+                            onChange={(e) => { const a = [...extrasRepuestos]; a[i] = { ...a[i], precio: parseFloat(e.target.value) || 0 }; setExtrasRepuestos(a); }}
+                            className="w-20 text-right font-bold text-gray-700 bg-transparent border-b border-dashed border-gray-400 focus:border-accent focus:outline-none py-0 text-sm print:border-none print:w-16 print:text-[9px]"
+                          />
+                          <button onClick={() => setExtrasRepuestos(extrasRepuestos.filter((_, j) => j !== i))} className="ml-1 text-red-400 hover:text-red-600 print:hidden">✕</button>
+                        </div>
+                      </div>
+                    ))}
+                    {/* ── Formulario agregar extras — oculto al imprimir ── */}
+                    <div className="px-2 py-2 border-b border-dotted border-gray-200 print:hidden space-y-2">
+                      <p className="text-[10px] uppercase text-gray-400 font-bold tracking-wider">+ Agregar antes de imprimir</p>
+                      {/* Mano de obra con autocompletado + crear en catálogo */}
+                      {(() => {
+                        const serviciosPlanos = (catalogoServicios || []).flatMap(cat => cat.servicios || []);
+                        const sugerenciasMO = nuevaManoObra.length >= 2 && !miniFormMO
+                          ? serviciosPlanos.filter(s => s.nombre?.toLowerCase().includes(nuevaManoObra.toLowerCase())).slice(0, 6)
+                          : [];
+                        const exactoExisteMO = serviciosPlanos.some(s => s.nombre?.toLowerCase() === nuevaManoObra.trim().toLowerCase());
+                        const agregarMO = (desc, precio = 0) => { setExtrasManoObra(p => [...p, { descripcion: desc, precio }]); setNuevaManoObra(''); setMiniFormMO(null); };
+                        const guardarNuevoMO = async () => {
+                          if (!miniFormMO || creandoMO) return;
+                          const { nombre, categoria, categoriaCustom, precio } = miniFormMO;
+                          const catFinal = categoria === '__nueva__' ? categoriaCustom.trim() : categoria;
+                          if (!catFinal) { toast.error('Selecciona una categoría'); return; }
+                          setCreandoMO(true);
+                          try {
+                            const catExiste = (catalogoServicios || []).some(c => c.categoria === catFinal);
+                            if (!catExiste) agregarCategoria({ nombre: catFinal });
+                            await agregarServicio(catFinal, { nombre, precio: parseFloat(precio) || 0 });
+                            agregarMO(nombre, parseFloat(precio) || 0);
+                            toast.success(`Servicio "${nombre}" creado en catálogo`);
+                          } catch { toast.error('No se pudo crear el servicio'); }
+                          finally { setCreandoMO(false); }
+                        };
+                        return (
+                          <div className="relative">
+                            <div className="flex gap-1">
+                              <input type="text" value={nuevaManoObra} onChange={(e) => setNuevaManoObra(e.target.value)}
+                                placeholder="Mano de obra adicional…"
+                                onKeyDown={(e) => { if (e.key === 'Enter' && nuevaManoObra.trim()) agregarMO(nuevaManoObra.trim()); }}
+                                className="flex-1 text-xs border border-gray-300 rounded px-2 py-1 focus:border-accent focus:outline-none" />
+                              <button type="button" onClick={() => { if (nuevaManoObra.trim()) agregarMO(nuevaManoObra.trim()); }}
+                                className="text-xs bg-primary text-white px-2 py-1 rounded hover:bg-[#162048]">+</button>
+                            </div>
+                            {nuevaManoObra.length >= 2 && !miniFormMO && (
+                              <ul className="absolute z-10 left-0 right-0 bg-white border border-gray-300 rounded shadow text-xs max-h-32 overflow-y-auto">
+                                {sugerenciasMO.map((s, i) => (
+                                  <li key={i} onMouseDown={() => agregarMO(s.nombre, Number(s.precio) || 0)}
+                                    className="px-2 py-1 hover:bg-red-50 cursor-pointer flex justify-between gap-2">
+                                    <span className="truncate">{s.nombre}</span>
+                                    <span className="text-gray-400 flex-shrink-0">{s.precio ? `Q ${Number(s.precio).toFixed(2)}` : ''}</span>
+                                  </li>
+                                ))}
+                                {!exactoExisteMO && (
+                                  <li onMouseDown={() => setMiniFormMO({ nombre: nuevaManoObra.trim(), categoria: '', categoriaCustom: '', precio: '' })}
+                                    className="px-2 py-1.5 hover:bg-green-50 cursor-pointer text-green-700 font-semibold border-t border-gray-100">
+                                    ＋ Crear &quot;{nuevaManoObra.trim()}&quot; en catálogo
+                                  </li>
+                                )}
+                              </ul>
+                            )}
+                            {miniFormMO && (
+                              <div className="mt-1 p-2 border border-green-300 rounded bg-green-50 text-xs flex flex-col gap-1.5">
+                                <p className="font-semibold text-green-800 truncate">Nuevo servicio: {miniFormMO.nombre}</p>
+                                <select value={miniFormMO.categoria}
+                                  onChange={e => setMiniFormMO(p => ({ ...p, categoria: e.target.value, categoriaCustom: '' }))}
+                                  className="w-full rounded px-2 py-1 border border-gray-200 bg-white focus:outline-none focus:ring-1 focus:ring-accent">
+                                  <option value="">Categoría…</option>
+                                  {(catalogoServicios || []).map(c => (
+                                    <option key={c.categoria} value={c.categoria}>{c.categoria}</option>
+                                  ))}
+                                  <option value="__nueva__">+ Nueva categoría</option>
+                                </select>
+                                {miniFormMO.categoria === '__nueva__' && (
+                                  <input type="text" placeholder="Nombre de categoría *"
+                                    value={miniFormMO.categoriaCustom}
+                                    onChange={e => setMiniFormMO(p => ({ ...p, categoriaCustom: e.target.value }))}
+                                    className="w-full rounded px-2 py-1 border border-gray-200 bg-white focus:outline-none focus:ring-1 focus:ring-accent" />
+                                )}
+                                <input type="number" min="0" step="0.01" placeholder="Precio (Q)"
+                                  value={miniFormMO.precio}
+                                  onChange={e => setMiniFormMO(p => ({ ...p, precio: e.target.value }))}
+                                  className="w-full rounded px-2 py-1 border border-gray-200 bg-white focus:outline-none focus:ring-1 focus:ring-accent" />
+                                <div className="flex gap-1">
+                                  <button type="button" onMouseDown={guardarNuevoMO} disabled={creandoMO}
+                                    className="flex-1 rounded bg-accent text-white py-1 font-semibold hover:bg-red-700 disabled:opacity-50 transition">
+                                    {creandoMO ? 'Guardando…' : 'Guardar y agregar'}
+                                  </button>
+                                  <button type="button" onMouseDown={() => setMiniFormMO(null)}
+                                    className="px-2 rounded border border-gray-200 bg-white text-gray-500 hover:bg-slate-100 transition">✕</button>
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })()}
+                      {/* Repuesto con autocompletado + crear en catálogo */}
+                      {(() => {
+                        const sugerenciasRep = nuevoRepuesto.length >= 2 && !miniFormRep
+                          ? catalogoRepuestos.filter(r => r.nombre?.toLowerCase().includes(nuevoRepuesto.toLowerCase()) || r.descripcion?.toLowerCase().includes(nuevoRepuesto.toLowerCase())).slice(0, 6)
+                          : [];
+                        const exactoExisteRep = catalogoRepuestos.some(r => r.nombre?.toLowerCase() === nuevoRepuesto.trim().toLowerCase());
+                        const agregarRep = (desc, precio = 0) => { setExtrasRepuestos(p => [...p, { descripcion: desc, precio }]); setNuevoRepuesto(''); setMiniFormRep(null); };
+                        const guardarNuevoRep = async () => {
+                          if (!miniFormRep || creandoRep) return;
+                          const { nombre, precio } = miniFormRep;
+                          setCreandoRep(true);
+                          try {
+                            const data = await api.crearRepuesto({ nombre, descripcion: nombre, precio: parseFloat(precio) || 0, stock: 0, categoria: 'General' });
+                            agregarRep(nombre, parseFloat(precio) || 0);
+                            setCatalogoRepuestos(p => [...p, { ...data, nombre, precio: parseFloat(precio) || 0 }]);
+                            toast.success(`Repuesto "${nombre}" creado en catálogo`);
+                          } catch { toast.error('No se pudo crear el repuesto'); }
+                          finally { setCreandoRep(false); }
+                        };
+                        return (
+                          <div className="relative">
+                            <div className="flex gap-1">
+                              <input type="text" value={nuevoRepuesto} onChange={(e) => setNuevoRepuesto(e.target.value)}
+                                placeholder="Repuesto / Refacción…"
+                                onKeyDown={(e) => { if (e.key === 'Enter' && nuevoRepuesto.trim()) agregarRep(nuevoRepuesto.trim()); }}
+                                className="flex-1 text-xs border border-gray-300 rounded px-2 py-1 focus:border-accent focus:outline-none" />
+                              <button type="button" onClick={() => { if (nuevoRepuesto.trim()) agregarRep(nuevoRepuesto.trim()); }}
+                                className="text-xs bg-primary text-white px-2 py-1 rounded hover:bg-[#162048]">+</button>
+                            </div>
+                            {nuevoRepuesto.length >= 2 && !miniFormRep && (
+                              <ul className="absolute z-10 left-0 right-0 bg-white border border-gray-300 rounded shadow text-xs max-h-32 overflow-y-auto">
+                                {sugerenciasRep.map((r, i) => (
+                                  <li key={i} onMouseDown={() => agregarRep(r.nombre, Number(r.precio) || 0)}
+                                    className="px-2 py-1 hover:bg-red-50 cursor-pointer flex justify-between gap-2">
+                                    <span className="truncate">{r.nombre}</span>
+                                    <span className="text-gray-400 flex-shrink-0">{r.precio ? `Q ${Number(r.precio).toFixed(2)}` : ''}</span>
+                                  </li>
+                                ))}
+                                {!exactoExisteRep && (
+                                  <li onMouseDown={() => setMiniFormRep({ nombre: nuevoRepuesto.trim(), precio: '' })}
+                                    className="px-2 py-1.5 hover:bg-green-50 cursor-pointer text-green-700 font-semibold border-t border-gray-100">
+                                    ＋ Crear &quot;{nuevoRepuesto.trim()}&quot; en catálogo
+                                  </li>
+                                )}
+                              </ul>
+                            )}
+                            {miniFormRep && (
+                              <div className="mt-1 p-2 border border-green-300 rounded bg-green-50 text-xs flex flex-col gap-1.5">
+                                <p className="font-semibold text-green-800 truncate">Nuevo repuesto: {miniFormRep.nombre}</p>
+                                <input type="number" min="0" step="0.01" placeholder="Precio (Q)"
+                                  value={miniFormRep.precio}
+                                  onChange={e => setMiniFormRep(p => ({ ...p, precio: e.target.value }))}
+                                  className="w-full rounded px-2 py-1 border border-gray-200 bg-white focus:outline-none focus:ring-1 focus:ring-accent" />
+                                <div className="flex gap-1">
+                                  <button type="button" onMouseDown={guardarNuevoRep} disabled={creandoRep}
+                                    className="flex-1 rounded bg-accent text-white py-1 font-semibold hover:bg-red-700 disabled:opacity-50 transition">
+                                    {creandoRep ? 'Guardando…' : 'Guardar y agregar'}
+                                  </button>
+                                  <button type="button" onMouseDown={() => setMiniFormRep(null)}
+                                    className="px-2 rounded border border-gray-200 bg-white text-gray-500 hover:bg-slate-100 transition">✕</button>
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })()}
+                    </div>
                     {/* Total */}
                     <div className="px-2 py-1.5 print:py-1 border-t border-gray-400">
                       <div className="flex justify-between text-base print:text-[11px] font-black text-primary">

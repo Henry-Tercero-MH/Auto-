@@ -136,6 +136,8 @@ const initialState = {
   mecanico: '',
   fotos: [],
   preciosManuales: {},
+  repuestosSeleccionados: [], // [{ id, descripcion, precio }]
+  manoObraExtra: [],          // [{ descripcion, precio }]
 };
 
 // Las marcas y servicios ahora vienen del CatalogosContext
@@ -510,14 +512,138 @@ function InspeccionVehiculo({ inspeccion, onChange, tiposDano }) {
   );
 }
 
+// ── ManoObraInput ─────────────────────────────────────────────────────────────
+function ManoObraInput({ onAgregar, catalogoServicios, onCrearServicio }) {
+  const [desc, setDesc] = useState('');
+  const [creando, setCreando] = useState(false);
+  const [miniForm, setMiniForm] = useState(null); // { nombre, categoria:'', categoriaCustom:'', precio:'' }
+
+  const serviciosPlanos = (catalogoServicios || []).flatMap(cat => cat.servicios || []);
+  const sugerencias = desc.length >= 2 && !miniForm
+    ? serviciosPlanos.filter(s => s.nombre?.toLowerCase().includes(desc.toLowerCase())).slice(0, 6)
+    : [];
+  const exactoExiste = serviciosPlanos.some(s => s.nombre?.toLowerCase() === desc.trim().toLowerCase());
+
+  const agregar = (nombre, precio = 0) => { onAgregar({ descripcion: nombre, precio }); setDesc(''); };
+
+  const abrirMiniForm = (nombre) => {
+    setMiniForm({ nombre, categoria: '', categoriaCustom: '', precio: '' });
+  };
+
+  const guardarNuevo = async () => {
+    if (!miniForm || creando) return;
+    const { nombre, categoria, categoriaCustom, precio } = miniForm;
+    const catFinal = categoria === '__nueva__' ? categoriaCustom.trim() : categoria;
+    if (!catFinal) { toast.error('Selecciona una categoría'); return; }
+    setCreando(true);
+    try {
+      await onCrearServicio(nombre, parseFloat(precio) || 0, catFinal);
+      agregar(nombre, parseFloat(precio) || 0);
+      toast.success(`Servicio "${nombre}" creado en catálogo`);
+      setMiniForm(null);
+    } catch { toast.error('No se pudo crear el servicio'); }
+    finally { setCreando(false); }
+  };
+
+  return (
+    <div className="relative">
+      <div className="flex gap-1">
+        <input
+          type="text"
+          value={desc}
+          onChange={(e) => setDesc(e.target.value)}
+          placeholder="Buscar o escribir mano de obra…"
+          className="flex-1 text-xs border border-gray-300 rounded px-2 py-1 focus:border-accent focus:outline-none"
+          onKeyDown={(e) => { if (e.key === 'Enter' && desc.trim()) agregar(desc.trim()); }}
+        />
+        <button type="button" onClick={() => { if (desc.trim()) agregar(desc.trim()); }}
+          className="text-xs bg-primary text-white px-2 py-1 rounded hover:bg-[#162048]">+</button>
+      </div>
+      {desc.length >= 2 && !miniForm && (
+        <ul className="absolute z-10 left-0 right-0 bg-white border border-gray-300 rounded shadow text-xs max-h-40 overflow-y-auto">
+          {sugerencias.map((s, i) => (
+            <li key={i} onMouseDown={() => agregar(s.nombre, Number(s.precio) || 0)}
+              className="px-2 py-1.5 hover:bg-red-50 cursor-pointer flex justify-between gap-2">
+              <span className="truncate">{s.nombre}</span>
+              <span className="text-gray-400 flex-shrink-0">{s.precio ? formatQ(Number(s.precio)) : ''}</span>
+            </li>
+          ))}
+          {!exactoExiste && (
+            <li onMouseDown={() => abrirMiniForm(desc.trim())}
+              className="px-2 py-1.5 hover:bg-green-50 cursor-pointer text-green-700 font-semibold border-t border-gray-100 flex items-center gap-1">
+              <span>＋ Crear &quot;{desc.trim()}&quot; en catálogo</span>
+            </li>
+          )}
+        </ul>
+      )}
+      {miniForm && (
+        <div className="mt-1 p-2 border border-green-300 rounded bg-green-50 text-xs flex flex-col gap-1.5">
+          <p className="font-semibold text-green-800 truncate">Nuevo servicio: {miniForm.nombre}</p>
+          <select
+            value={miniForm.categoria}
+            onChange={e => setMiniForm(p => ({ ...p, categoria: e.target.value, categoriaCustom: '' }))}
+            className="w-full rounded px-2 py-1 border border-gray-200 bg-white focus:outline-none focus:ring-1 focus:ring-accent"
+          >
+            <option value="">Categoría…</option>
+            {(catalogoServicios || []).map(c => (
+              <option key={c.categoria} value={c.categoria}>{c.categoria}</option>
+            ))}
+            <option value="__nueva__">+ Nueva categoría</option>
+          </select>
+          {miniForm.categoria === '__nueva__' && (
+            <input
+              type="text"
+              placeholder="Nombre de categoría *"
+              value={miniForm.categoriaCustom}
+              onChange={e => setMiniForm(p => ({ ...p, categoriaCustom: e.target.value }))}
+              className="w-full rounded px-2 py-1 border border-gray-200 bg-white focus:outline-none focus:ring-1 focus:ring-accent"
+            />
+          )}
+          <input
+            type="number"
+            min="0"
+            step="0.01"
+            placeholder="Precio (Q)"
+            value={miniForm.precio}
+            onChange={e => setMiniForm(p => ({ ...p, precio: e.target.value }))}
+            className="w-full rounded px-2 py-1 border border-gray-200 bg-white focus:outline-none focus:ring-1 focus:ring-accent"
+          />
+          <div className="flex gap-1">
+            <button type="button" onMouseDown={guardarNuevo} disabled={creando}
+              className="flex-1 rounded bg-accent text-white py-1 font-semibold hover:bg-red-700 disabled:opacity-50 transition">
+              {creando ? 'Guardando…' : 'Guardar y agregar'}
+            </button>
+            <button type="button" onMouseDown={() => setMiniForm(null)}
+              className="px-2 rounded border border-gray-200 bg-white text-gray-500 hover:bg-slate-100 transition">
+              ✕
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ── OrdenTrabajo ─────────────────────────────────────────────────────────────
-function OrdenTrabajo({ form, ordenNum, tiposDano, onPrecioChange }) {
+function OrdenTrabajo({ form, ordenNum, tiposDano, onPrecioChange, repuestos, onRepuestoChange, onAgregarRepuesto, onEliminarRepuesto, catalogoRepuestos, manoObraExtra, onManoObraChange, onAgregarManoObra, onEliminarManoObra, catalogoServicios, onCrearServicio }) {
   const fecha = new Date().toLocaleDateString('es-MX', { day: '2-digit', month: '2-digit', year: 'numeric' });
   const horaEntrada = new Date().toLocaleTimeString('es-GT', { hour: '2-digit', minute: '2-digit', hour12: true });
-  const serviciosNombres = [form.tipoServicio, ...form.adicionales].filter(Boolean);
+  const serviciosNombres = [...new Set([form.tipoServicio, ...form.adicionales].filter(Boolean))];
   const serviciosConPrecio = serviciosNombres.map((n) => ({ nombre: n, precio: form.preciosManuales[n] || 0 }));
-  const subtotal = serviciosConPrecio.reduce((sum, s) => sum + s.precio, 0);
+  const subtotalServicios = serviciosConPrecio.reduce((sum, s) => sum + s.precio, 0);
+  const subtotalManoObra  = (manoObraExtra || []).reduce((sum, m) => sum + (m.precio || 0), 0);
+  const subtotalRepuestos = (repuestos || []).reduce((sum, r) => sum + (r.precio || 0), 0);
+  const subtotal = subtotalServicios + subtotalManoObra + subtotalRepuestos;
   const total = subtotal;
+
+  // Sugerencias del catálogo filtradas por texto
+  const [busquedaRep, setBusquedaRep] = useState('');
+  const sugerencias = busquedaRep.length >= 2
+    ? (catalogoRepuestos || []).filter(r =>
+        r.nombre?.toLowerCase().includes(busquedaRep.toLowerCase()) ||
+        r.descripcion?.toLowerCase().includes(busquedaRep.toLowerCase())
+      ).slice(0, 6)
+    : [];
   const danos = Object.entries(form.inspeccion).filter(([, v]) => v);
 
   // Construir config de tipos de daño desde catálogo
@@ -612,7 +738,7 @@ function OrdenTrabajo({ form, ordenNum, tiposDano, onPrecioChange }) {
       {/* ── Trabajos ── */}
       <div className="thermal-section border-b border-dashed border-gray-300">
         <div className="thermal-table-head flex justify-between bg-primary text-white text-xs print:text-[7px] uppercase font-bold px-2 py-1.5 print:py-1">
-          <span>Descripción</span>
+          <span>Mano de obra</span>
           <span>Precio</span>
         </div>
         {serviciosConPrecio.map((s, i) => (
@@ -632,6 +758,101 @@ function OrdenTrabajo({ form, ordenNum, tiposDano, onPrecioChange }) {
             </div>
           </div>
         ))}
+        {/* ── Mano de obra extra ── */}
+        {(manoObraExtra || []).map((m, i) => (
+          <div key={i} className="thermal-serv-row flex items-center justify-between px-2 py-1.5 print:py-1 border-b border-dotted border-gray-200 gap-1">
+            <span className="text-gray-800 font-medium text-sm print:text-[9px] flex-1 pr-1 break-words min-w-0">{m.descripcion || '—'}</span>
+            <div className="flex items-center gap-0.5 flex-shrink-0">
+              <span className="text-gray-400 text-xs print:text-[8px]">Q</span>
+              <input
+                type="number"
+                min="0"
+                step="0.01"
+                value={m.precio || ''}
+                onChange={(e) => onManoObraChange(i, parseFloat(e.target.value) || 0)}
+                placeholder="0.00"
+                className="w-20 print:w-16 text-right font-bold text-gray-700 bg-transparent border-b border-dashed border-gray-400 focus:border-accent focus:outline-none py-0 text-sm print:text-[9px] print:border-none"
+              />
+              <button type="button" onClick={() => onEliminarManoObra(i)} className="ml-1 text-red-400 hover:text-red-600 print:hidden" title="Quitar">✕</button>
+            </div>
+          </div>
+        ))}
+        {/* Agregar mano de obra extra — oculto al imprimir */}
+        <div className="px-2 py-2 border-b border-dotted border-gray-200 print:hidden space-y-1.5">
+          <p className="text-[10px] uppercase text-gray-400 font-bold tracking-wider">+ Mano de obra adicional</p>
+          <ManoObraInput onAgregar={onAgregarManoObra} catalogoServicios={catalogoServicios} onCrearServicio={onCrearServicio} />
+        </div>
+
+        {/* ── Repuestos ── */}
+        {(repuestos || []).length > 0 && (
+          <div className="thermal-table-head flex justify-between bg-primary text-white text-xs print:text-[7px] uppercase font-bold px-2 py-1 print:py-0.5">
+            <span>Repuestos</span>
+            <span>Precio</span>
+          </div>
+        )}
+        {(repuestos || []).map((r, i) => (
+          <div key={i} className="thermal-serv-row flex items-center justify-between px-2 py-1.5 print:py-1 border-b border-dotted border-gray-200 gap-1">
+            <span className="text-gray-800 font-medium text-sm print:text-[9px] flex-1 pr-1 break-words min-w-0">{r.descripcion || '—'}</span>
+            <div className="flex items-center gap-0.5 flex-shrink-0">
+              <span className="text-gray-400 text-xs print:text-[8px]">Q</span>
+              <input
+                type="number"
+                min="0"
+                step="0.01"
+                value={r.precio || ''}
+                onChange={(e) => onRepuestoChange(i, 'precio', parseFloat(e.target.value) || 0)}
+                placeholder="0.00"
+                className="w-20 print:w-16 text-right font-bold text-gray-700 bg-transparent border-b border-dashed border-gray-400 focus:border-accent focus:outline-none py-0 text-sm print:text-[9px] print:border-none"
+              />
+              <button
+                type="button"
+                onClick={() => onEliminarRepuesto(i)}
+                className="ml-1 text-red-400 hover:text-red-600 print:hidden"
+                title="Quitar repuesto"
+              >✕</button>
+            </div>
+          </div>
+        ))}
+
+        {/* Agregar repuesto — oculto al imprimir */}
+        <div className="px-2 py-2 border-b border-dotted border-gray-200 print:hidden space-y-1.5">
+          <p className="text-[10px] uppercase text-gray-400 font-bold tracking-wider">+ Repuesto / Refacción</p>
+          <div className="relative">
+            <input
+              type="text"
+              value={busquedaRep}
+              onChange={(e) => setBusquedaRep(e.target.value)}
+              placeholder="Buscar en catálogo o escribir descripción…"
+              className="w-full text-xs border border-gray-300 rounded px-2 py-1 focus:border-accent focus:outline-none"
+            />
+            {busquedaRep.length >= 2 && (
+              <ul className="absolute z-10 left-0 right-0 bg-white border border-gray-300 rounded shadow text-xs max-h-40 overflow-y-auto">
+                {sugerencias.map((rep) => (
+                  <li key={rep.id} className="px-2 py-1.5 hover:bg-red-50 cursor-pointer flex justify-between gap-2"
+                    onMouseDown={() => { onAgregarRepuesto({ id: rep.id, descripcion: rep.nombre, precio: Number(rep.precio) || 0 }); setBusquedaRep(''); }}>
+                    <span className="truncate">{rep.nombre}</span>
+                    <span className="text-gray-400 flex-shrink-0">{formatQ(Number(rep.precio) || 0)}</span>
+                  </li>
+                ))}
+                {!(catalogoRepuestos || []).some(r => r.nombre?.toLowerCase() === busquedaRep.trim().toLowerCase()) && (
+                  <li className="px-2 py-1.5 hover:bg-green-50 cursor-pointer text-green-700 font-semibold border-t border-gray-100"
+                    onMouseDown={async () => {
+                      const nombre = busquedaRep.trim();
+                      try {
+                        const creado = await api.crearRepuesto({ nombre, descripcion: '', stock: 0, precio: 0, categoria: '' });
+                        onAgregarRepuesto({ id: creado.id, descripcion: nombre, precio: 0 });
+                        toast.success(`Repuesto "${nombre}" creado en catálogo`);
+                      } catch { toast.error('No se pudo crear el repuesto'); }
+                      setBusquedaRep('');
+                    }}>
+                    ＋ Crear &quot;{busquedaRep.trim()}&quot; en catálogo
+                  </li>
+                )}
+              </ul>
+            )}
+          </div>
+        </div>
+
         {/* Total */}
         <div className="px-2 py-1.5 print:py-1 border-t border-gray-400">
           <div className="flex justify-between text-sm print:text-[9px] text-gray-600 mb-0.5">
@@ -966,6 +1187,12 @@ export default function NuevaSolicitud() {
   const [errores, setErrores] = useState({});
   const [ordenNum, setOrdenNum] = useState(() => draft?.ordenNum ?? genOrden());
   const [clienteSeleccionado, setClienteSeleccionado] = useState(false);
+  const [catalogoRepuestos, setCatalogoRepuestos] = useState([]);
+
+  // Cargar catálogo de repuestos al montar
+  useEffect(() => {
+    api.getRepuestos().then(setCatalogoRepuestos).catch(() => {});
+  }, []);
 
   // Persistir borrador en cada cambio
   useEffect(() => {
@@ -1214,9 +1441,28 @@ export default function NuevaSolicitud() {
 
       const servicioFinal = [form.tipoServicio, ...form.adicionales].filter(Boolean).join(', ');
       const lc = (s) => (s || '').toLowerCase();
-      const totalOrden = [form.tipoServicio, ...form.adicionales]
+      const totalServicios = [form.tipoServicio, ...form.adicionales]
         .filter(Boolean)
         .reduce((sum, n) => sum + (form.preciosManuales[n] || 0), 0);
+      const totalManoObraExtra = (form.manoObraExtra || []).reduce((sum, m) => sum + (m.precio || 0), 0);
+      const totalRepuestos = (form.repuestosSeleccionados || []).reduce((sum, r) => sum + (r.precio || 0), 0);
+      const totalOrden = totalServicios + totalManoObraExtra + totalRepuestos;
+      // Primero crear repuestos nuevos (sin id) para obtener su id real
+      const repuestosResueltos = await Promise.all(
+        (form.repuestosSeleccionados || []).map(async (r) => {
+          if (r.id) return r; // ya existe en catálogo
+          const creado = await api.crearRepuesto({ nombre: r.descripcion, descripcion: '', stock: 0, precio: r.precio, categoria: '' });
+          return { ...r, id: creado.id };
+        })
+      );
+
+      // Guardar en campo "marca": repuestos "R:id:desc:precio" y mano de obra extra "M:desc:precio", separado por "|"
+      const manoObraStr = (form.manoObraExtra || [])
+        .filter(m => m.descripcion)
+        .map(m => `M:${m.descripcion}:${m.precio}`);
+      const repuestosStr = repuestosResueltos.map(r => `R:${r.id}:${r.descripcion}:${r.precio}`);
+      const marcaStr = [...manoObraStr, ...repuestosStr].join('|');
+
       const ahora = new Date();
       const horaEntrada = ahora.toLocaleTimeString('es-GT', { hour: '2-digit', minute: '2-digit', hour12: true });
       const datos = {
@@ -1234,8 +1480,16 @@ export default function NuevaSolicitud() {
         precio:      totalOrden,
         mecanico:    null,
         fotos:       form.fotos.map(f => f.url).join(','),
+        marca:       marcaStr,
       };
+
       const solicitudId = await agregarSolicitud(datos);
+
+      // Descontar stock de repuestos del catálogo
+      await Promise.allSettled(
+        repuestosResueltos.map(r => api.ajustarStock(r.id, -1))
+      );
+
       // Registrar pago vinculado a la solicitud
       await agregarPago({
         solicitud_id: solicitudId,
@@ -1252,7 +1506,6 @@ export default function NuevaSolicitud() {
       setClienteSeleccionado(false);
       toast.success('¡Solicitud registrada exitosamente!');
     } catch (err) {
-      console.error('[NuevaSolicitud] error:', err);
       toast.error(`Error: ${err.message || 'No se pudo guardar la solicitud'}`);
     } finally {
       setGuardando(false);
@@ -1543,7 +1796,7 @@ export default function NuevaSolicitud() {
                   <option value="">Selecciona una opción</option>
                   {CATEGORIAS_SERVICIOS.map((cat) => (
                     <optgroup key={cat.categoria} label={cat.categoria}>
-                      {cat.servicios.map((s) => <option key={s.nombre} value={s.nombre}>{s.nombre}</option>)}
+                      {cat.servicios.map((s, si) => <option key={`${cat.categoria}::${s.nombre}::${si}`} value={s.nombre}>{s.nombre}</option>)}
                     </optgroup>
                   ))}
                 </select>
@@ -1565,8 +1818,8 @@ export default function NuevaSolicitud() {
                           <svg className="w-4 h-4 text-slate-400 transition-transform group-open:rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" /></svg>
                         </summary>
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5 mt-1.5 pl-2">
-                          {cat.servicios.map((serv) => (
-                            <label key={serv.nombre} className={`flex items-center gap-2.5 px-3 py-2 rounded-lg border cursor-pointer transition text-xs ${form.adicionales.includes(serv.nombre) ? 'border-accent bg-red-50 text-red-700' : 'border-gray-200 bg-slate-50 text-gray-600 hover:border-red-300'}`}>
+                          {cat.servicios.map((serv, si) => (
+                            <label key={`${cat.categoria}::${serv.nombre}::${si}`} className={`flex items-center gap-2.5 px-3 py-2 rounded-lg border cursor-pointer transition text-xs ${form.adicionales.includes(serv.nombre) ? 'border-accent bg-red-50 text-red-700' : 'border-gray-200 bg-slate-50 text-gray-600 hover:border-red-300'}`}>
                               <input type="checkbox" name="adicionales" value={serv.nombre} checked={form.adicionales.includes(serv.nombre)} onChange={handleChange} className="w-3.5 h-3.5 accent-red-600 flex-shrink-0" />
                               <span className="font-medium leading-tight flex-1">{serv.nombre}</span>
                             </label>
@@ -1832,25 +2085,89 @@ export default function NuevaSolicitud() {
                 }
               `}</style>
               <div id="print-area">
-                <OrdenTrabajo form={form} ordenNum={ordenNum} tiposDano={tiposDano} onPrecioChange={(nombre, precio) => setForm(prev => ({ ...prev, preciosManuales: { ...prev.preciosManuales, [nombre]: precio } }))} />
+                <OrdenTrabajo
+                  form={form}
+                  ordenNum={ordenNum}
+                  tiposDano={tiposDano}
+                  onPrecioChange={(nombre, precio) => setForm(prev => ({ ...prev, preciosManuales: { ...prev.preciosManuales, [nombre]: precio } }))}
+                  repuestos={form.repuestosSeleccionados}
+                  onRepuestoChange={(idx, campo, valor) => setForm(prev => {
+                    const arr = [...prev.repuestosSeleccionados];
+                    arr[idx] = { ...arr[idx], [campo]: valor };
+                    return { ...prev, repuestosSeleccionados: arr };
+                  })}
+                  onAgregarRepuesto={(rep) => setForm(prev => ({ ...prev, repuestosSeleccionados: [...prev.repuestosSeleccionados, rep] }))}
+                  onEliminarRepuesto={(idx) => setForm(prev => ({ ...prev, repuestosSeleccionados: prev.repuestosSeleccionados.filter((_, i) => i !== idx) }))}
+                  catalogoRepuestos={catalogoRepuestos}
+                  manoObraExtra={form.manoObraExtra}
+                  onManoObraChange={(idx, valor) => setForm(prev => {
+                    const arr = [...prev.manoObraExtra];
+                    arr[idx] = { ...arr[idx], precio: valor };
+                    return { ...prev, manoObraExtra: arr };
+                  })}
+                  onAgregarManoObra={(m) => setForm(prev => ({ ...prev, manoObraExtra: [...prev.manoObraExtra, m] }))}
+                  onEliminarManoObra={(idx) => setForm(prev => ({ ...prev, manoObraExtra: prev.manoObraExtra.filter((_, i) => i !== idx) }))}
+                  catalogoServicios={CATEGORIAS_SERVICIOS}
+                  onCrearServicio={async (nombre, precio, categoria) => {
+                    const catExiste = CATEGORIAS_SERVICIOS.some(c => c.categoria === categoria);
+                    if (!catExiste) agregarCategoria({ nombre: categoria });
+                    await agregarServicio(categoria, { nombre, precio });
+                  }}
+                />
               </div>
             </div>
           )}
         </div>
 
         {/* ── Navegación ── */}
-        <div className={`mt-4 flex ${step > 1 ? 'justify-between' : 'justify-end'} gap-2`}>
-          {step > 1 && (
+        <div className={`mt-4 flex justify-between gap-2`}>
+          <div className="flex gap-2">
+            {step > 1 && (
+              <button
+                onClick={handleBack}
+                className="flex items-center gap-1.5 sm:gap-2 px-4 sm:px-5 py-2.5 rounded-xl border border-gray-200 bg-white text-slate-600 hover:bg-slate-50 hover:border-slate-300 font-medium text-sm transition shadow-sm min-h-[44px]"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
+                </svg>
+                Anterior
+              </button>
+            )}
             <button
-              onClick={handleBack}
-              className="flex items-center gap-1.5 sm:gap-2 px-4 sm:px-5 py-2.5 rounded-xl border border-gray-200 bg-white text-slate-600 hover:bg-slate-50 hover:border-slate-300 font-medium text-sm transition shadow-sm min-h-[44px]"
+              onClick={() => {
+                toast((t) => (
+                  <div className="flex flex-col gap-2">
+                    <p className="text-sm font-medium">¿Limpiar todos los datos?</p>
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => {
+                          toast.dismiss(t.id);
+                          localStorage.removeItem(DRAFT_KEY);
+                          setForm(initialState);
+                          setStep(1);
+                          setErrores({});
+                          setClienteSeleccionado(false);
+                          setOrdenNum(genOrden());
+                          toast.success('Formulario limpiado');
+                        }}
+                        className="flex-1 bg-red-500 text-white text-xs font-semibold px-3 py-1.5 rounded-lg hover:bg-red-600"
+                      >Sí, limpiar</button>
+                      <button
+                        onClick={() => toast.dismiss(t.id)}
+                        className="flex-1 border border-gray-300 text-xs font-semibold px-3 py-1.5 rounded-lg hover:bg-gray-50"
+                      >Cancelar</button>
+                    </div>
+                  </div>
+                ), { duration: Infinity });
+              }}
+              className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl border border-gray-200 bg-white text-slate-400 hover:text-red-500 hover:border-red-300 font-medium text-sm transition shadow-sm min-h-[44px]"
             >
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
+                <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
               </svg>
-              Anterior
+              Limpiar
             </button>
-          )}
+          </div>
 
           {step < 5 ? (
             <button
