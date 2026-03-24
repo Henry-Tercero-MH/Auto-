@@ -129,7 +129,6 @@ const initialState = {
   anio: '',
   placa: '',
   kilometraje: '',
-  tipoServicio: '',
   adicionales: [],
   observaciones: '',
   inspeccion: {},
@@ -628,7 +627,7 @@ function ManoObraInput({ onAgregar, catalogoServicios, onCrearServicio }) {
 function OrdenTrabajo({ form, ordenNum, tiposDano, onPrecioChange, repuestos, onRepuestoChange, onAgregarRepuesto, onEliminarRepuesto, catalogoRepuestos, manoObraExtra, onManoObraChange, onAgregarManoObra, onEliminarManoObra, catalogoServicios, onCrearServicio }) {
   const fecha = new Date().toLocaleDateString('es-MX', { day: '2-digit', month: '2-digit', year: 'numeric' });
   const horaEntrada = new Date().toLocaleTimeString('es-GT', { hour: '2-digit', minute: '2-digit', hour12: true });
-  const serviciosNombres = [...new Set([form.tipoServicio, ...form.adicionales].filter(Boolean))];
+  const serviciosNombres = [...new Set((form.adicionales || []).filter(Boolean))];
   const serviciosConPrecio = serviciosNombres.map((n) => ({ nombre: n, precio: form.preciosManuales[n] || 0 }));
   const subtotalServicios = serviciosConPrecio.reduce((sum, s) => sum + s.precio, 0);
   const subtotalManoObra  = (manoObraExtra || []).reduce((sum, m) => sum + (m.precio || 0), 0);
@@ -655,13 +654,12 @@ function OrdenTrabajo({ form, ordenNum, tiposDano, onPrecioChange, repuestos, on
     <div className="bg-white border border-gray-300 rounded-none select-none text-sm w-full" style={{ fontFamily: "'Courier New', monospace", maxWidth: '272px' }}>
 
       {/* ── Encabezado ── */}
-      <div className="thermal-header border-b border-gray-400 px-2 py-1.5 flex items-center justify-between gap-2">
-        <img src={logo} alt="AUTO+" className="thermal-logo h-8 object-contain" />
-        <div className="text-right leading-tight">
-          <p className="thermal-label text-xs print:text-[8px] text-gray-500 uppercase tracking-wider">Orden de Trabajo</p>
-          <p className="thermal-orden-num text-accent font-black text-2xl print:text-lg tracking-wide">No. {ordenNum}</p>
-          <p className="thermal-label text-gray-500 text-xs print:text-[8px]">{fecha} · {horaEntrada}</p>
-        </div>
+      <div className="thermal-header border-b border-gray-400 px-2 py-1.5 flex flex-col items-center text-center gap-1">
+        <img src={logo} alt="AUTO+" className="thermal-logo h-14 object-contain mx-auto" />
+        <p className="thermal-address text-[12px] print:text-[9px] text-gray-600">1ra avenida, 10 calle, zona 1 Retalhuleu</p>
+        <p className="thermal-label text-xs print:text-[8px] text-gray-500 uppercase tracking-wider">Orden de Trabajo</p>
+        <p className="thermal-orden-num text-accent font-black text-2xl print:text-lg tracking-wide">No. {ordenNum}</p>
+        <p className="thermal-label text-gray-500 text-xs print:text-[8px]">{fecha} · {horaEntrada}</p>
       </div>
 
       {/* ── Cliente ── */}
@@ -1254,9 +1252,7 @@ export default function NuevaSolicitud() {
         e.kilometraje = 'Kilometraje no válido';
       }
     }
-    if (paso === 4) {
-      if (!form.tipoServicio) e.tipoServicio = 'Selecciona un tipo de servicio';
-    }
+    // Paso 4: no se requiere servicio principal (se usan solo servicios adicionales)
     return e;
   };
 
@@ -1355,22 +1351,14 @@ export default function NuevaSolicitud() {
   const [guardando, setGuardando] = useState(false);
   const [nuevoServForm, setNuevoServForm] = useState({ open: false, nombre: '', categoria: '', precio: '' });
 
-  // ── Combobox servicio principal ─────────────────────────────────────────
-  const [servBusq, setServBusq] = useState('');
-  const [servOpen, setServOpen] = useState(false);
-  const servRef = useRef(null);
-  useEffect(() => {
-    const handler = (e) => { if (servRef.current && !servRef.current.contains(e.target)) setServOpen(false); };
-    document.addEventListener('mousedown', handler);
-    return () => document.removeEventListener('mousedown', handler);
-  }, []);
+  // Nota: ya no usamos un "servicio principal"; solo se usan los servicios listados en `adicionales`.
 
   const handleWhatsApp = async () => {
     const el = document.getElementById('print-area');
     if (!el) return;
 
-    // Construir mensaje de resumen
-    const serviciosList = [form.tipoServicio, ...form.adicionales].filter(Boolean);
+    // Construir mensaje de resumen (solo servicios adicionales)
+    const serviciosList = [...(form.adicionales || [])].filter(Boolean);
     const total = serviciosList.reduce((sum, n) => sum + (form.preciosManuales[n] || 0), 0);
     const moneda = 'Q';
     const mensaje = [
@@ -1449,9 +1437,9 @@ export default function NuevaSolicitud() {
         });
       }
 
-      const servicioFinal = [form.tipoServicio, ...form.adicionales].filter(Boolean).join(', ');
+      const servicioFinal = (form.adicionales || []).filter(Boolean).join(', ');
       const lc = (s) => (s || '').toLowerCase();
-      const totalServicios = [form.tipoServicio, ...form.adicionales]
+      const totalServicios = (form.adicionales || [])
         .filter(Boolean)
         .reduce((sum, n) => sum + (form.preciosManuales[n] || 0), 0);
       const totalManoObraExtra = (form.manoObraExtra || []).reduce((sum, m) => sum + (m.precio || 0), 0);
@@ -1800,98 +1788,8 @@ export default function NuevaSolicitud() {
           {step === 4 && (
             <div className="px-6 sm:px-8 py-7 space-y-5">
               <h3 className="text-xs font-semibold uppercase tracking-widest text-accent mb-4">Servicio</h3>
-              {/* ── Combobox buscable: servicio principal ── */}
-              {(() => {
-                const todosServicios = CATEGORIAS_SERVICIOS.flatMap(cat =>
-                  cat.servicios.map(s => ({ nombre: s.nombre, categoria: cat.categoria }))
-                );
-                const filtrados = servBusq.trim()
-                  ? todosServicios.filter(s =>
-                      s.nombre.toLowerCase().includes(servBusq.toLowerCase()) ||
-                      s.categoria.toLowerCase().includes(servBusq.toLowerCase())
-                    )
-                  : todosServicios;
-                const grupos = filtrados.reduce((acc, s) => {
-                  if (!acc[s.categoria]) acc[s.categoria] = [];
-                  acc[s.categoria].push(s.nombre);
-                  return acc;
-                }, {});
-                return (
-                  <div ref={servRef} className="relative">
-                    <label className="block text-sm font-medium text-slate-700 mb-1">Tipo de servicio principal</label>
-                    <div
-                      className={`flex items-center gap-2 w-full rounded-xl border px-3 py-2.5 bg-white cursor-pointer transition ${errores.tipoServicio ? 'border-red-400 ring-1 ring-red-400' : servOpen ? 'border-primary ring-1 ring-primary' : 'border-gray-200 hover:border-slate-300'}`}
-                      onClick={() => setServOpen(o => !o)}
-                    >
-                      <svg className="w-4 h-4 text-slate-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-4.35-4.35M17 11A6 6 0 111 11a6 6 0 0116 0z" />
-                      </svg>
-                      {servOpen ? (
-                        <input
-                          autoFocus
-                          type="text"
-                          value={servBusq}
-                          onChange={e => setServBusq(e.target.value)}
-                          onClick={e => e.stopPropagation()}
-                          placeholder="Buscar servicio…"
-                          className="flex-1 text-sm bg-transparent outline-none text-slate-700 placeholder-slate-400"
-                        />
-                      ) : (
-                        <span className={`flex-1 text-sm ${form.tipoServicio ? 'text-slate-800 font-medium' : 'text-slate-400'}`}>
-                          {form.tipoServicio || 'Selecciona un servicio…'}
-                        </span>
-                      )}
-                      {form.tipoServicio && !servOpen && (
-                        <button
-                          type="button"
-                          onClick={e => { e.stopPropagation(); setForm(p => ({ ...p, tipoServicio: '' })); }}
-                          className="text-slate-400 hover:text-red-500 transition shrink-0"
-                        >
-                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
-                            <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-                          </svg>
-                        </button>
-                      )}
-                      <svg className={`w-4 h-4 text-slate-400 shrink-0 transition-transform ${servOpen ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
-                      </svg>
-                    </div>
-                    {servOpen && (
-                      <div className="absolute z-30 mt-1 w-full bg-white border border-gray-200 rounded-xl shadow-lg max-h-60 overflow-y-auto">
-                        {Object.keys(grupos).length === 0 ? (
-                          <p className="px-4 py-3 text-sm text-slate-400 text-center">Sin resultados</p>
-                        ) : (
-                          Object.entries(grupos).map(([cat, nombres]) => (
-                            <div key={cat}>
-                              <p className="px-3 pt-2 pb-1 text-[10px] font-bold uppercase tracking-widest text-slate-400">{cat}</p>
-                              {nombres.map(nombre => (
-                                <button
-                                  key={nombre}
-                                  type="button"
-                                  onMouseDown={() => {
-                                    setForm(p => ({ ...p, tipoServicio: nombre }));
-                                    setServBusq('');
-                                    setServOpen(false);
-                                    if (errores.tipoServicio) setErrores(p => ({ ...p, tipoServicio: '' }));
-                                  }}
-                                  className={`w-full text-left px-4 py-2 text-sm transition ${form.tipoServicio === nombre ? 'bg-red-50 text-accent font-semibold' : 'text-slate-700 hover:bg-slate-50'}`}
-                                >
-                                  {nombre}
-                                </button>
-                              ))}
-                            </div>
-                          ))
-                        )}
-                      </div>
-                    )}
-                    {errores.tipoServicio && <p className="mt-1 text-xs text-red-500">{errores.tipoServicio}</p>}
-                  </div>
-                );
-              })()}
+              {/* Sección de servicios: instrucciones eliminadas por solicitud */}
               <div>
-                <p className="block text-sm font-medium text-slate-700 mb-2">
-                  Servicios adicionales <span className="text-gray-400 font-normal">(opcional)</span>
-                </p>
                 <div className="space-y-3 max-h-72 overflow-y-auto pr-1">
                   {CATEGORIAS_SERVICIOS.map((cat) => {
                     const selCount = cat.servicios.filter(s => form.adicionales.includes(s.nombre)).length;
@@ -1976,15 +1874,15 @@ export default function NuevaSolicitud() {
                           const catExiste = CATEGORIAS_SERVICIOS.some(c => c.categoria === catFinal);
                           if (!catExiste) agregarCategoria({ nombre: catFinal });
                           await agregarServicio(catFinal, { nombre, precio });
-                          // Seleccionarlo como servicio principal si no hay uno aún
+                          // Agregar como servicio adicional y fijar precio manual
                           setForm(p => ({
                             ...p,
-                            tipoServicio: p.tipoServicio || nombre,
+                            adicionales: Array.from(new Set([...(p.adicionales || []), nombre])),
                             preciosManuales: { ...p.preciosManuales, [nombre]: precio },
                           }));
                           setNuevoServForm({ open: false, nombre: '', categoria: '', precio: '' });
                           toast.success(`Servicio "${nombre}" agregado al catálogo`);
-                          if (errores.tipoServicio) setErrores(p => ({ ...p, tipoServicio: '' }));
+                          // limpiar otros errores si aplica
                         }}
                         className="flex-1 rounded-lg bg-accent py-2 text-sm font-semibold text-white hover:bg-red-700 disabled:opacity-50 transition"
                       >
@@ -2083,14 +1981,16 @@ export default function NuevaSolicitud() {
                   /* Encabezado */
                   #print-area .thermal-header {
                     display: flex !important;
-                    justify-content: space-between !important;
-                    align-items: flex-start !important;
+                    flex-direction: column !important;
+                    align-items: center !important;
+                    text-align: center !important;
                     border-bottom: 2px solid #000 !important;
                     padding-bottom: 2mm !important;
                     margin-bottom: 2mm !important;
+                    gap: 2mm !important;
                   }
                   #print-area .thermal-logo {
-                    height: 24px !important;
+                    height: 36px !important;
                     filter: grayscale(100%) contrast(500%) brightness(0%) !important;
                   }
                   #print-area .thermal-orden-num {

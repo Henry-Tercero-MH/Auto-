@@ -177,12 +177,8 @@ export default function Reportes() {
 
   const imprimirDoc = (prefijo) => {
     if (!solicitudSeleccionada) return;
-    const prev = document.title;
-    document.title = `${prefijo}-${solicitudSeleccionada.id}`;
-    // Inyectar estilos de impresión solo mientras se imprime
-    // Los estilos de impresión ya están incrustados en el componente #print-recibo
+    // Evitar renombrar el documento antes de imprimir (no modificar document.title)
     window.print();
-    document.title = prev;
   };
 
   /* ── Estilos compartidos ── */
@@ -485,8 +481,8 @@ export default function Reportes() {
                         box-sizing: border-box !important;
                       }
 
-                      #print-recibo .r-header { display: flex !important; justify-content: space-between !important; align-items: flex-start !important; border-bottom: 2px solid #000 !important; padding-bottom: 2mm !important; margin-bottom: 2mm !important; }
-                      #print-recibo .r-logo { height: 24px !important; filter: grayscale(100%) contrast(500%) brightness(0%) !important; }
+                      #print-recibo .r-header { display: flex !important; flex-direction: column !important; align-items: center !important; text-align: center !important; border-bottom: 2px solid #000 !important; padding-bottom: 2mm !important; margin-bottom: 2mm !important; gap: 2mm !important; }
+                      #print-recibo .r-logo { height: 36px !important; filter: grayscale(100%) contrast(500%) brightness(0%) !important; }
                       #print-recibo .r-orden-num { font-size: 14pt !important; line-height: 1.1 !important; }
                       #print-recibo .r-section { border-bottom: 1.5px dashed #000 !important; padding: 1.5mm 0 !important; margin-bottom: 1mm !important; }
                       #print-recibo .r-section-title { font-size: 10pt !important; text-transform: uppercase !important; margin-bottom: 1mm !important; display: block !important; }
@@ -503,15 +499,14 @@ export default function Reportes() {
                   `}</style>
 
                   {/* Encabezado */}
-                  <div className="r-header border-b border-gray-400 px-2 py-1.5 flex items-center justify-between gap-2">
-                    <img src={logo} alt="AUTO+" className="r-logo h-8 object-contain" />
-                    <div className="text-right leading-tight">
-                      <p className="r-label text-xs print:text-[8px] text-gray-500 uppercase tracking-wider">Orden de Trabajo</p>
-                      <p className="r-orden-num text-accent font-black text-2xl print:text-lg tracking-wide">
-                        No. {String(solicitudSeleccionada.id).replace(/\D/g, '').padStart(5, '0')}
-                      </p>
-                      <p className="r-label text-gray-500 text-xs print:text-[8px]">{solicitudSeleccionada.fecha}</p>
-                    </div>
+                  <div className="r-header border-b border-gray-400 px-2 py-1.5 flex flex-col items-center text-center gap-1">
+                    <img src={logo} alt="AUTO+" className="r-logo h-14 object-contain mx-auto" />
+                    <p className="r-address text-[11px] print:text-[9px] text-gray-600">1ra avenida, 10 calle, zona 1 Retalhuleu</p>
+                    <p className="r-label text-xs print:text-[8px] text-gray-500 uppercase tracking-wider">ORDEN DE TRABAJO</p>
+                    <p className="r-orden-num text-accent font-black text-2xl print:text-lg tracking-wide">
+                      No. {String(solicitudSeleccionada.id).replace(/\D/g, '').padStart(5, '0')}
+                    </p>
+                    <p className="r-label text-gray-500 text-xs print:text-[8px]">{solicitudSeleccionada.fecha}</p>
                   </div>
 
                   {/* Cliente */}
