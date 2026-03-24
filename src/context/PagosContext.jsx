@@ -12,23 +12,48 @@ const ESTADO_PAGO = {
 
 export function PagosProvider({ children }) {
   const [pagos, setPagos] = useState([]);
+  const [cargando, setCargando] = useState(true);
+  const [error, setError] = useState(null);
 
   useEffect(() => {
+    let mounted = true;
     api.getPagos()
-      .then((data) => setPagos(Array.isArray(data) ? data : []))
-      .catch(() => {});
+      .then((data) => { if (mounted) setPagos(Array.isArray(data) ? data : []); })
+      .catch((e) => { if (mounted) setError(e.message); })
+      .finally(() => { if (mounted) setCargando(false); });
+    return () => { mounted = false; };
+  }, []);
+
+  // Polling cada 45s para mantener pagos sincronizados (como Solicitudes)
+  useEffect(() => {
+    const interval = setInterval(() => {
+      api.getPagos().then((data) => setPagos(Array.isArray(data) ? data : [])).catch(() => {});
+    }, 45_000);
+    return () => clearInterval(interval);
   }, []);
 
   // Crear pago al registrar una nueva solicitud
   const agregarPago = useCallback(async (datos) => {
     const result = await api.crearPago(datos);
     const id = result?.id ?? null;
-    setPagos((prev) => [...prev, { ...datos, id }]);
+    const pagoCreado = { ...datos, id };
+    setPagos((prev) => [...prev, pagoCreado]);
+    return pagoCreado;
   }, []);
 
   // Actualizar estado del pago cuando cambia el estado de la solicitud
   const sincronizarEstado = useCallback(async (solicitudId, nuevoEstadoSolicitud) => {
-    const pago = pagos.find((p) => p.solicitud_id === solicitudId);
+    // buscar localmente; si no está, intentar sincronizar trayendo del servidor
+    let pago = pagos.find((p) => p.solicitud_id === solicitudId);
+    if (!pago) {
+      try {
+        const all = await api.getPagos();
+        setPagos(Array.isArray(all) ? all : []);
+        pago = (Array.isArray(all) ? all : []).find((p) => p.solicitud_id === solicitudId);
+      } catch (e) {
+        console.warn('[pagos] al refrescar para sincronizar estado:', e.message);
+      }
+    }
     if (!pago?.id) return;
     const nuevoEstadoPago = ESTADO_PAGO[nuevoEstadoSolicitud] ?? 'Pendiente';
     setPagos((prev) =>
@@ -41,8 +66,21 @@ export function PagosProvider({ children }) {
     }
   }, [pagos]);
 
+  // Refrescar manualmente desde servidor
+  const refrescar = useCallback(async () => {
+    setCargando(true);
+    try {
+      const data = await api.getPagos();
+      setPagos(Array.isArray(data) ? data : []);
+    } catch (e) {
+      setError(e.message);
+    } finally {
+      setCargando(false);
+    }
+  }, []);
+
   return (
-    <PagosContext.Provider value={{ pagos, agregarPago, sincronizarEstado }}>
+    <PagosContext.Provider value={{ pagos, cargando, error, agregarPago, sincronizarEstado, refrescar }}>
       {children}
     </PagosContext.Provider>
   );

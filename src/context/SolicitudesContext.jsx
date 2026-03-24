@@ -90,6 +90,17 @@ export function SolicitudesProvider({ children }) {
     setSolicitudes((prev) => prev.filter((s) => s.id !== id));
     try {
       await api.eliminarSolicitud(id);
+      // Intentar limpiar pagos vinculados en el servidor (si existen)
+      try {
+        const pagos = await api.getPagos();
+        const relacionados = (Array.isArray(pagos) ? pagos : []).filter(p => p.solicitud_id === id);
+        if (relacionados.length) {
+          await Promise.all(relacionados.map(p => api.eliminarPago(p.id)));
+        }
+      } catch (inner) {
+        // no crítico: PagosProvider tiene polling y se refrescará eventualmente
+        console.warn('[solicitudes] no se pudo limpiar pagos vinculados:', inner.message);
+      }
     } catch (e) {
       setError(e.message);
       api.getSolicitudes().then(setSolicitudes).catch(() => {});
