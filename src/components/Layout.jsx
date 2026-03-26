@@ -10,7 +10,7 @@ const pageTitles = {
   '/': 'Dashboard',
   '/solicitudes': 'Solicitudes',
   '/nueva-solicitud': 'Nueva Solicitud',
-  '/seguimiento': 'Seguimiento de Vehículo',
+  '/seguimiento': 'Inventario de Repuestos',
   '/servicios': 'Servicios',
   '/catalogos': 'Catálogos',
   '/reportes': 'Reportes',
@@ -23,7 +23,7 @@ const breadcrumbMap = {
   '/catalogos':      [{ label: 'Dashboard', to: '/' }, { label: 'Catálogos' }],
   '/reportes':       [{ label: 'Dashboard', to: '/' }, { label: 'Reportes' }],
   '/servicios':      [{ label: 'Dashboard', to: '/' }, { label: 'Servicios' }],
-  '/seguimiento':    [{ label: 'Seguimiento de Vehículo' }],
+  '/seguimiento':    [{ label: 'Dashboard', to: '/' }, { label: 'Inventario de Repuestos' }],
 };
 
 function formatFecha(iso) {

@@ -43,6 +43,7 @@ export function CatalogosProvider({ children }) {
   const [tiposDano,      setTiposDano]      = useState(TIPOS_DANO_INICIAL);
   const [configNegocio,  setConfigNegocio]  = useState(CONFIG_NEGOCIO_INICIAL);
   const [horarioAcceso,  setHorarioAcceso]  = useState(HORARIO_INICIAL);
+  const [repuestos,      setRepuestos]      = useState([]);
 
   // ── Estado conectado a Sheets ──────────────────────────────────────────
   const [clientes,  setClientes]  = useState([]);
@@ -104,6 +105,14 @@ export function CatalogosProvider({ children }) {
       .then((data) => { if (data?.length) setVehiculos(data); })
       .catch(() => {});
 
+    const pRepuestos = api.getRepuestos()
+      .then((data) => {
+        if (data?.length) {
+          setRepuestos(data.map((r) => ({ ...r, precio: Number(r.precio) || 0, stock: Number(r.stock) || 0 })));
+        }
+      })
+      .catch(() => {});
+
     const pServicios = api.getServicios()
       .then((data) => {
         if (!data?.length) {
@@ -138,7 +147,7 @@ export function CatalogosProvider({ children }) {
       })
       .catch((err) => console.error('[Servicios] error:', err));
 
-    Promise.all([pClientes, pMecanicos, pMarcas, pConfig, pVehiculos, pServicios])
+    Promise.all([pClientes, pMecanicos, pMarcas, pConfig, pVehiculos, pRepuestos, pServicios])
       .finally(() => setCargando(false));
   }, []);
 
@@ -327,6 +336,31 @@ export function CatalogosProvider({ children }) {
   }, []);
 
   // ─────────────────────────────────────────────────────────────────────
+  // REPUESTOS (locales)
+  // ─────────────────────────────────────────────────────────────────────
+  const agregarRepuesto = useCallback(async (rep) => {
+    try {
+      const { id } = await api.crearRepuesto(rep);
+      setRepuestos((prev) => [...prev, { ...rep, id }]);
+      return id;
+    } catch {
+      const id = `R${String(Date.now()).slice(-6)}`;
+      setRepuestos((prev) => [...prev, { ...rep, id }]);
+      return id;
+    }
+  }, []);
+
+  const editarRepuesto = useCallback(async (id, data) => {
+    setRepuestos((prev) => prev.map((r) => (r.id === id ? { ...r, ...data } : r)));
+    try { await api.editarRepuesto(id, data); } catch { /* red */ }
+  }, []);
+
+  const eliminarRepuesto = useCallback(async (id) => {
+    setRepuestos((prev) => prev.filter((r) => r.id !== id));
+    try { await api.eliminarRepuesto(id); } catch { /* red */ }
+  }, []);
+
+  // ─────────────────────────────────────────────────────────────────────
   // TIPOS DE DAÑO (locales)
   // ─────────────────────────────────────────────────────────────────────
   const agregarTipoDano = useCallback((tipo) => {
@@ -397,6 +431,7 @@ export function CatalogosProvider({ children }) {
         cargando,
         clientes, marcas, servicios, preciosMap, estados, mecanicos, tiposDano, configNegocio, horarioAcceso,
         vehiculos, agregarVehiculo, editarVehiculoCat, eliminarVehiculoCat, vehiculosPorCliente,
+        repuestos, agregarRepuesto, editarRepuesto, eliminarRepuesto,
         agregarCliente, editarCliente, eliminarCliente,
         agregarMarca, eliminarMarca, agregarModelo, eliminarModelo,
         agregarCategoria, editarCategoria, eliminarCategoria,

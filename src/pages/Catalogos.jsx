@@ -26,6 +26,7 @@ const icons = {
   warn:    'M12 9v2m0 4h.01M10.29 3.86l-8.9 15.54A1 1 0 002.27 21h19.46a1 1 0 00.88-1.6l-8.9-15.54a1.14 1.14 0 00-2.02 0z',
   flag:    'M3 21v-4m0 0V5a2 2 0 012-2h6.5l1 1H21l-3 6 3 6h-8.5l-1-1H5a2 2 0 00-2 2z',
   mec:     'M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.066 2.573c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.573 1.066c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.066-2.573c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065zM15 12a3 3 0 11-6 0 3 3 0 016 0z',
+  box:     'M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4',
   damage:  'M13 10V3L4 14h7v7l9-11h-7z',
   config:  'M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4',
   save:    'M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4',
@@ -41,6 +42,7 @@ const TABS = [
   { key: 'estados',     label: 'Estados',        iconPath: icons.flag   },
   { key: 'mecanicos',   label: 'Mecánicos',      iconPath: icons.mec    },
   { key: 'tiposdano',   label: 'Tipos de Daño',  iconPath: icons.damage },
+  { key: 'repuestos',   label: 'Repuestos',      iconPath: icons.box    },
   { key: 'config',      label: 'Configuración',  iconPath: icons.config },
 ];
 
@@ -1207,11 +1209,140 @@ function TabConfig() {
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════════
+   TAB: REPUESTOS
+   ═══════════════════════════════════════════════════════════════════════════════ */
+function TabRepuestos() {
+  const { repuestos, agregarRepuesto, editarRepuesto, eliminarRepuesto } = useCatalogos();
+  const [busqueda, setBusqueda] = useState('');
+  const [modal, setModal]       = useState(null); // null | 'nuevo' | objeto repuesto
+  const [form, setForm]         = useState({ nombre: '', descripcion: '', categoria: '', precio: '', stock: '' });
+  const [confirm, setConfirm]   = useState(null);
+
+  const filtrados = useMemo(
+    () => repuestos.filter((r) =>
+      String(r.nombre    ?? '').toLowerCase().includes(busqueda.toLowerCase()) ||
+      String(r.categoria ?? '').toLowerCase().includes(busqueda.toLowerCase()) ||
+      String(r.id        ?? '').toLowerCase().includes(busqueda.toLowerCase())
+    ),
+    [repuestos, busqueda]
+  );
+
+  const openNew  = () => { setForm({ nombre: '', descripcion: '', categoria: '', precio: '', stock: '' }); setModal('nuevo'); };
+  const openEdit = (r) => { setForm({ nombre: r.nombre || '', descripcion: r.descripcion || '', categoria: r.categoria || '', precio: r.precio || '', stock: r.stock ?? '' }); setModal(r); };
+  const closeModal = () => setModal(null);
+
+  const handleSave = () => {
+    if (!form.nombre.trim()) return toast.error('El nombre es obligatorio');
+    if (!form.precio || Number(form.precio) <= 0) return toast.error('Ingresa un precio válido');
+    const payload = {
+      nombre:      form.nombre.trim(),
+      descripcion: form.descripcion.trim(),
+      categoria:   form.categoria.trim(),
+      precio:      Number(form.precio),
+      stock:       Number(form.stock) || 0,
+    };
+    if (modal === 'nuevo') {
+      const existe = repuestos.some((r) => r.nombre.trim().toLowerCase() === form.nombre.trim().toLowerCase());
+      if (existe) return toast.error('Ya existe un repuesto con ese nombre');
+      agregarRepuesto(payload);
+      toast.success('Repuesto agregado');
+    } else {
+      editarRepuesto(modal.id, payload);
+      toast.success('Repuesto actualizado');
+    }
+    closeModal();
+  };
+
+  return (
+    <div className="space-y-4">
+      <Toolbar busqueda={busqueda} onBusqueda={setBusqueda} placeholder="Buscar por nombre, categoría o ID…" count={`${filtrados.length} repuesto(s)`} onAdd={openNew} addLabel="Nuevo repuesto" />
+
+      <div className="bg-white rounded-lg border border-slate-200 shadow-sm overflow-x-auto">
+        <table className="w-full text-[13px]">
+          <thead>
+            <tr className="bg-slate-50 border-b border-slate-200">
+              <th className="text-left px-4 py-2.5 font-semibold text-slate-500 uppercase text-[11px] tracking-wider hidden sm:table-cell">ID</th>
+              <th className="text-left px-4 py-2.5 font-semibold text-slate-500 uppercase text-[11px] tracking-wider">Nombre</th>
+              <th className="text-left px-4 py-2.5 font-semibold text-slate-500 uppercase text-[11px] tracking-wider hidden sm:table-cell">Categoría</th>
+              <th className="text-right px-4 py-2.5 font-semibold text-slate-500 uppercase text-[11px] tracking-wider w-20 hidden md:table-cell">Stock</th>
+              <th className="text-right px-4 py-2.5 font-semibold text-slate-500 uppercase text-[11px] tracking-wider w-28">Precio</th>
+              <th className="px-4 py-2.5 w-20"></th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-slate-100">
+            {filtrados.map((r) => (
+              <tr key={r.id} className="hover:bg-slate-50/70 transition-colors">
+                <td className="px-4 py-2.5 font-mono text-[11px] text-slate-400 hidden sm:table-cell">{r.id || '—'}</td>
+                <td className="px-4 py-2.5 font-medium text-slate-800">
+                  {r.nombre}
+                  <span className="sm:hidden block text-[11px] text-slate-400">{r.categoria || ''}</span>
+                </td>
+                <td className="px-4 py-2.5 text-slate-500 hidden sm:table-cell">{r.categoria || '—'}</td>
+                <td className="px-4 py-2.5 text-right tabular-nums text-slate-600 hidden md:table-cell">{r.stock ?? 0}</td>
+                <td className="px-4 py-2.5 text-right font-semibold text-slate-700 tabular-nums">Q {Number(r.precio).toFixed(2)}</td>
+                <td className="px-4 py-2.5">
+                  <div className="flex justify-end gap-1">
+                    <button onClick={() => openEdit(r)} title="Editar" className="p-1.5 rounded hover:bg-blue-50 text-slate-400 hover:text-blue-600 transition"><I d={icons.edit} className="w-4 h-4" /></button>
+                    <button onClick={() => setConfirm(r.id)} title="Eliminar" className="p-1.5 rounded hover:bg-red-50 text-slate-400 hover:text-red-600 transition"><I d={icons.trash} className="w-4 h-4" /></button>
+                  </div>
+                </td>
+              </tr>
+            ))}
+            {filtrados.length === 0 && (
+              <tr><td colSpan={6} className="text-center py-10 text-slate-400 text-sm">Sin resultados</td></tr>
+            )}
+          </tbody>
+        </table>
+      </div>
+
+      <Modal open={!!modal} onClose={closeModal} title={modal === 'nuevo' ? 'Nuevo repuesto' : 'Editar repuesto'}>
+        <div className="space-y-4">
+          <div>
+            <label className={labelCls}>Nombre *</label>
+            <input className={inputCls} placeholder="Ej: Filtro de aceite" value={form.nombre} onChange={(e) => setForm({ ...form, nombre: e.target.value })} autoFocus />
+          </div>
+          <div>
+            <label className={labelCls}>Descripción</label>
+            <input className={inputCls} placeholder="Ej: Filtro para motor 1.6L" value={form.descripcion} onChange={(e) => setForm({ ...form, descripcion: e.target.value })} />
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className={labelCls}>Categoría</label>
+              <input className={inputCls} placeholder="Ej: Motor, Frenos…" value={form.categoria} onChange={(e) => setForm({ ...form, categoria: e.target.value })} />
+            </div>
+            <div>
+              <label className={labelCls}>Stock</label>
+              <input type="number" min="0" className={inputCls} placeholder="0" value={form.stock} onChange={(e) => setForm({ ...form, stock: e.target.value })} />
+            </div>
+          </div>
+          <div>
+            <label className={labelCls}>Precio (Q) *</label>
+            <div className="relative">
+              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[13px] text-slate-400 font-semibold">Q</span>
+              <input type="number" min="0" step="0.01" className={`${inputCls} !pl-7`} placeholder="0.00" value={form.precio} onChange={(e) => setForm({ ...form, precio: e.target.value })} />
+            </div>
+          </div>
+          <div className="flex justify-end gap-2 pt-2 border-t border-slate-100">
+            <button onClick={closeModal} className={btnSecondary}>Cancelar</button>
+            <button onClick={handleSave} className={btnPrimary}>{modal === 'nuevo' ? 'Guardar' : 'Actualizar'}</button>
+          </div>
+        </div>
+      </Modal>
+
+      <ConfirmModal open={!!confirm} title="Eliminar repuesto" message="¿Eliminar este repuesto? Esta acción no se puede deshacer."
+        onConfirm={() => { eliminarRepuesto(confirm); toast.success('Repuesto eliminado'); setConfirm(null); }}
+        onCancel={() => setConfirm(null)}
+      />
+    </div>
+  );
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════════
    PÁGINA PRINCIPAL — CATÁLOGOS
    ═══════════════════════════════════════════════════════════════════════════════ */
 export default function Catalogos() {
   const [tab, setTab] = useState('clientes');
-  const { cargando, resetCatalogos, clientes, vehiculos, servicios, estados, mecanicos, tiposDano } = useCatalogos();
+  const { cargando, resetCatalogos, clientes, vehiculos, servicios, estados, mecanicos, tiposDano, repuestos } = useCatalogos();
 
   if (cargando) return <SpinnerBolitas texto="Cargando catálogos..." />;
 
@@ -1223,6 +1354,7 @@ export default function Catalogos() {
     { label: 'Estados',   value: estados.length,    iconPath: icons.flag   },
     { label: 'Mecánicos', value: mecanicos.length,  iconPath: icons.mec    },
     { label: 'T. Daño',   value: tiposDano.length,  iconPath: icons.damage },
+    { label: 'Repuestos', value: repuestos.length,  iconPath: icons.box    },
   ];
 
   return (
@@ -1235,7 +1367,7 @@ export default function Catalogos() {
       </div>
 
       {/* KPI */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2 sm:gap-3">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-7 gap-2 sm:gap-3">
         {kpis.map((k) => (
           <div key={k.label} className="bg-white rounded-lg border border-slate-200 px-3 sm:px-4 py-2.5 sm:py-3 flex items-center gap-2 sm:gap-3">
             <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0"><I d={k.iconPath} className="w-4 h-4 sm:w-5 sm:h-5 text-primary" /></div>
@@ -1267,6 +1399,7 @@ export default function Catalogos() {
         {tab === 'estados'   && <TabEstados />}
         {tab === 'mecanicos' && <TabMecanicos />}
         {tab === 'tiposdano' && <TabTiposDano />}
+        {tab === 'repuestos' && <TabRepuestos />}
         {tab === 'config'    && <TabConfig />}
       </div>
     </div>

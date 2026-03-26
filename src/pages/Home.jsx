@@ -4,7 +4,7 @@ import { Link } from 'react-router-dom';
 import {
   Plus, ClipboardList, CalendarDays, Clock, Wrench, CheckCircle2,
   UserMinus, AlertTriangle, Zap, ChevronRight, Database, BarChart3,
-  TrendingUp, CalendarCheck, BadgeCheck, Receipt,
+  TrendingUp, CalendarCheck, BadgeCheck, Receipt, Package,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useCatalogos } from '../context/CatalogosContext';
@@ -96,10 +96,14 @@ function KpiCard({ label, value, sub, color, bg, Icon: IconComp, border }) {
 const formatQ = (n) => `Q ${Number(n).toLocaleString('es-GT', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
 export default function Home() {
+
   const { user } = useAuth();
   const { estados } = useCatalogos();
   const { solicitudes, cargando } = useSolicitudes();
   const { pagos } = usePagos();
+
+  // Log temporal para depuración: mostrar el campo 'marca' de todas las solicitudes
+  console.log('Solicitudes (campo marca):', solicitudes.map(s => ({ id: s.id, marca: s.marca })));
 
   const today = new Date().toLocaleDateString('es-GT', {
     weekday: 'long', year: 'numeric', month: 'long', day: 'numeric',
@@ -123,11 +127,35 @@ export default function Home() {
     solicitudes.forEach((s) => { estadoSol[s.id] = s.estado; });
     const monto = (p) => Number(p.monto) || 0;
     const sum   = (arr) => arr.reduce((t, p) => t + monto(p), 0);
+
+    // Calcular totales de repuestos y mano de obra
+    // - R:id:desc:precio → repuestos
+    // - Lo que queda del total (precio - repuestos) → mano de obra (servicios + M: extra)
+    let totalRepuestos = 0;
+    let totalManoObra  = 0;
+    solicitudes.forEach((s) => {
+      let repEnEsta = 0;
+      if (typeof s.marca === 'string' && s.marca.includes(':')) {
+        s.marca.split('|').forEach((parte) => {
+          if (parte.startsWith('R:')) {
+            // R:id:desc:precio  (índice 3)
+            const precio = Number(parte.split(':')[3]) || 0;
+            totalRepuestos += precio;
+            repEnEsta       += precio;
+          }
+        });
+      }
+      // Mano de obra = total orden - repuestos en esa orden
+      totalManoObra += Math.max(0, (Number(s.precio) || 0) - repEnEsta);
+    });
+
     return {
       porCobrar:       sum(pagos.filter((p) => { const st = estadoSol[p.solicitud_id]; return st === 'Pendiente' || st === 'En proceso'; })),
       totalCompletado: sum(pagos.filter((p) => estadoSol[p.solicitud_id] === 'Completada')),
       hoy:             sum(pagos.filter((p) => (p.fecha || '').slice(0, 10) === hoy)),
       mes:             sum(pagos.filter((p) => (p.fecha || '').startsWith(mes))),
+      totalRepuestos,
+      totalManoObra,
     };
   }, [solicitudes, pagos, hoy]);
 
@@ -184,12 +212,14 @@ export default function Home() {
       </div>
 
       {/* ── Resumen financiero ── */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
         {[
           { label: 'Hoy',        value: formatQ(finanzas.hoy),             color: 'text-blue-600',   bg: 'bg-blue-50',   iconColor: 'text-blue-400',   icon: TrendingUp    },
           { label: 'Este mes',   value: formatQ(finanzas.mes),             color: 'text-violet-600', bg: 'bg-violet-50', iconColor: 'text-violet-400', icon: CalendarCheck },
           { label: 'Completado', value: formatQ(finanzas.totalCompletado), color: 'text-green-600',  bg: 'bg-green-50',  iconColor: 'text-green-400',  icon: BadgeCheck    },
           { label: 'Por cobrar', value: formatQ(finanzas.porCobrar),       color: 'text-accent',     bg: 'bg-red-50',    iconColor: 'text-red-300',    icon: Receipt       },
+          { label: 'Repuestos vendidos', value: formatQ(finanzas.totalRepuestos), color: 'text-orange-600', bg: 'bg-orange-50', iconColor: 'text-orange-400', icon: Package },
+          { label: 'Mano de obra',       value: formatQ(finanzas.totalManoObra),  color: 'text-amber-600', bg: 'bg-amber-50',  iconColor: 'text-amber-400',  icon: Wrench  },
         ].map(({ label, value, color, bg, iconColor, icon }) => {
           const FinIcon = icon;
           return (
