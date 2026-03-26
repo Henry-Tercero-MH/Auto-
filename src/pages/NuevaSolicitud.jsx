@@ -1242,12 +1242,7 @@ export default function NuevaSolicitud() {
         e.anio = 'Año no válido';
       }
       if (!form.modelo) e.modelo = 'Modelo requerido';
-      if (form.placa.trim()) {
-        const placaNorm = form.placa.trim().replace(/[\s-]/g, '').toUpperCase();
-        if (!/^[A-Z]{1,3}\d{3,6}$/.test(placaNorm)) {
-          e.placa = 'Placa no válida — ej: ABC123 o ABC-1234';
-        }
-      }
+      // Validación de placa eliminada: ahora se permite cualquier formato
       if (form.kilometraje && (isNaN(form.kilometraje) || +form.kilometraje < 0)) {
         e.kilometraje = 'Kilometraje no válido';
       }
