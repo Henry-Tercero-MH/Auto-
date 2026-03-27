@@ -128,9 +128,15 @@ export default function Home() {
     const monto = (p) => Number(p.monto) || 0;
     const sum   = (arr) => arr.reduce((t, p) => t + monto(p), 0);
 
+    // Mapa solicitud_id → monto total del pago (más confiable que s.precio del Sheet)
+    const montoSol = {};
+    pagos.forEach((p) => {
+      montoSol[p.solicitud_id] = (montoSol[p.solicitud_id] || 0) + (Number(p.monto) || 0);
+    });
+
     // Calcular totales de repuestos y mano de obra
-    // - R:id:desc:precio → repuestos
-    // - Lo que queda del total (precio - repuestos) → mano de obra (servicios + M: extra)
+    // - R:id:desc:precio en campo marca → repuestos
+    // - (monto total pago) - repuestos → mano de obra (servicios + M: extra)
     let totalRepuestos = 0;
     let totalManoObra  = 0;
     solicitudes.forEach((s) => {
@@ -138,15 +144,14 @@ export default function Home() {
       if (typeof s.marca === 'string' && s.marca.includes(':')) {
         s.marca.split('|').forEach((parte) => {
           if (parte.startsWith('R:')) {
-            // R:id:desc:precio  (índice 3)
             const precio = Number(parte.split(':')[3]) || 0;
             totalRepuestos += precio;
-            repEnEsta       += precio;
+            repEnEsta      += precio;
           }
         });
       }
-      // Mano de obra = total orden - repuestos en esa orden
-      totalManoObra += Math.max(0, (Number(s.precio) || 0) - repEnEsta);
+      const totalOrden = montoSol[s.id] || Number(s.precio) || 0;
+      totalManoObra += Math.max(0, totalOrden - repEnEsta);
     });
 
     return {
