@@ -49,6 +49,7 @@ export default function Reportes() {
   const [hasta, setHasta]                 = useState(hoy);
   const [estadoFiltro, setEstadoFiltro]   = useState('Todos');
   const [mecanicoFiltro, setMecanicoFiltro] = useState('Todos');
+  const [buscar, setBuscar] = useState('');
 
   // Mapa solicitud_id → monto real del pago
   const pagosMap = useMemo(() => {
@@ -76,9 +77,17 @@ export default function Reportes() {
       if (mecanicoFiltro !== 'Todos') {
         if (!s.mecanico || String(s.mecanico.id) !== String(mecanicoFiltro)) return false;
       }
+      if (buscar && String(buscar).trim() !== '') {
+        const q = String(buscar).toLowerCase().trim();
+        const cliente = String(s.cliente || '').toLowerCase();
+        const vehiculo = String(s.vehiculo || '').toLowerCase();
+        const placa = String(s.placa || '').toLowerCase();
+        const id = String(s.id || '').toLowerCase();
+        if (!cliente.includes(q) && !vehiculo.includes(q) && !placa.includes(q) && !id.includes(q)) return false;
+      }
       return true;
     });
-  }, [solicitudes, desde, hasta, estadoFiltro, mecanicoFiltro]);
+  }, [solicitudes, desde, hasta, estadoFiltro, mecanicoFiltro, buscar]);
 
 
   const serviciosVendidos = useMemo(() => {
@@ -278,7 +287,18 @@ export default function Reportes() {
       {tab === 'ordenes' && (
         <div className="space-y-3">
           <div className="flex flex-wrap items-center justify-between gap-2">
-            <h3 className="text-sm font-semibold text-primary">Listado de órdenes</h3>
+            <div className="flex items-center gap-3 min-w-0">
+              <h3 className="text-sm font-semibold text-primary">Listado de órdenes</h3>
+              <div className="min-w-0">
+                <input
+                  type="search"
+                  placeholder="Buscar por nombre, vehículo, placa o ID"
+                  value={buscar}
+                  onChange={(e) => setBuscar(e.target.value)}
+                  className="w-full sm:w-64 block border border-slate-300 rounded-md px-3 py-2 text-sm text-slate-700 bg-white focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none"
+                />
+              </div>
+            </div>
             <div className="flex gap-2">
               <button type="button" onClick={exportarOrdenes} disabled={!solicitudesFiltradas.length}
                 className={solicitudesFiltradas.length ? btnSecundario : `${btnSecundario} opacity-40 cursor-not-allowed`}>
@@ -301,7 +321,14 @@ export default function Reportes() {
                   <div key={`${s.id}-${i}`} className="bg-white rounded-xl border border-gray-100 shadow-sm p-3 space-y-1.5">
                     <div className="flex items-center justify-between">
                       <span className="font-mono text-[11px] text-slate-400">#{s.id}</span>
-                      <span className="text-[11px] text-slate-400">{s.fecha}</span>
+                      <div className="flex items-center gap-2">
+                        <button type="button" onClick={() => { setIdSeleccionado(s.id); setTab('documentos'); }}
+                          className="inline-flex items-center gap-1 px-2 py-1 rounded text-xs font-semibold border border-slate-300 text-slate-700 hover:bg-slate-50 transition">
+                          <Icon path="M15 12a3 3 0 11-6 0 3 3 0 016 0z M2.458 12C3.732 7.943 7.523 5 12 5c4.477 0 8.268 2.943 9.542 7-1.274 4.057-5.065 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                          Ver
+                        </button>
+                        <span className="text-[11px] text-slate-400">{s.fecha}</span>
+                      </div>
                     </div>
                     <p className="font-semibold text-sm text-slate-800 uppercase">{s.cliente}</p>
                     <p className="text-xs text-slate-500 uppercase">{s.vehiculo}</p>
@@ -316,7 +343,7 @@ export default function Reportes() {
 
               {/* Tabla desktop */}
               <div className="hidden sm:block bg-white rounded-xl border border-gray-100 shadow-sm overflow-x-auto">
-                <table className="w-full text-sm min-w-[700px]">
+                <table className="w-full text-sm min-w-[760px]">
                   <thead>
                     <tr className="bg-slate-50 text-slate-500 text-xs uppercase tracking-wider">
                       <th className="text-left px-4 py-3">ID</th>
@@ -327,21 +354,29 @@ export default function Reportes() {
                       <th className="text-left px-4 py-3">Mecánico</th>
                       <th className="text-left px-4 py-3">Estado</th>
                       <th className="text-right px-4 py-3">Total (Q)</th>
+                      <th className="text-right px-4 py-3">Acciones</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-100">
                     {solicitudesFiltradas.map((s, i) => (
-                      <tr key={`${s.id}-${i}`} className="hover:bg-slate-50">
-                        <td className="px-4 py-2 text-xs font-mono text-slate-500">#{s.id}</td>
-                        <td className="px-4 py-2 text-xs text-slate-600">{s.fecha}</td>
-                        <td className="px-4 py-2 text-xs text-slate-800 uppercase">{s.cliente}</td>
-                        <td className="px-4 py-2 text-xs text-slate-600 uppercase">{s.vehiculo}</td>
-                        <td className="px-4 py-2 text-xs text-slate-600 uppercase">{s.servicio}</td>
-                        <td className="px-4 py-2 text-xs text-slate-600">{s.mecanico?.name || s.mecanico?.nombre || '—'}</td>
-                        <td className="px-4 py-2 text-xs text-slate-700">{s.estado}</td>
-                        <td className="px-4 py-2 text-xs text-right font-semibold text-slate-800">{calcularTotal(s).toFixed(2)}</td>
-                      </tr>
-                    ))}
+                          <tr key={`${s.id}-${i}`} className="hover:bg-slate-50">
+                            <td className="px-4 py-2 text-xs font-mono text-slate-500">#{s.id}</td>
+                            <td className="px-4 py-2 text-xs text-slate-600">{s.fecha}</td>
+                            <td className="px-4 py-2 text-xs text-slate-800 uppercase">{s.cliente}</td>
+                            <td className="px-4 py-2 text-xs text-slate-600 uppercase">{s.vehiculo}</td>
+                            <td className="px-4 py-2 text-xs text-slate-600 uppercase">{s.servicio}</td>
+                            <td className="px-4 py-2 text-xs text-slate-600">{s.mecanico?.name || s.mecanico?.nombre || '—'}</td>
+                            <td className="px-4 py-2 text-xs text-slate-700">{s.estado}</td>
+                            <td className="px-4 py-2 text-xs text-right font-semibold text-slate-800">{calcularTotal(s).toFixed(2)}</td>
+                            <td className="px-4 py-2 text-xs text-right">
+                              <button type="button" onClick={() => { setIdSeleccionado(s.id); setTab('documentos'); }}
+                                className="inline-flex items-center gap-2 px-2 py-1 rounded text-xs font-semibold border border-slate-300 text-slate-700 hover:bg-slate-50 transition">
+                                <Icon path="M15 12a3 3 0 11-6 0 3 3 0 016 0z M2.458 12C3.732 7.943 7.523 5 12 5c4.477 0 8.268 2.943 9.542 7-1.274 4.057-5.065 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                                Ver
+                              </button>
+                            </td>
+                          </tr>
+                        ))}
                   </tbody>
                 </table>
               </div>
