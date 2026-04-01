@@ -32,7 +32,14 @@ const TABS = [
   { key: 'ordenes',    label: 'Listado de órdenes',    short: 'Órdenes'    },
   { key: 'servicios',  label: 'Servicios vendidos',     short: 'Servicios'  },
   { key: 'documentos', label: 'Documentos imprimibles', short: 'Documentos' },
+  { key: 'resumen',    label: 'Resumen mensual',        short: 'Por mes'    },
 ];
+
+const labelMes = (ym) => {
+  const [y, m] = ym.split('-');
+  return new Date(Number(y), Number(m) - 1, 1)
+    .toLocaleDateString('es-GT', { month: 'long', year: 'numeric' });
+};
 
 export default function Reportes() {
   const { solicitudes, cargando } = useSolicitudes();
@@ -45,6 +52,7 @@ export default function Reportes() {
   const inicioMes = `${hoy.slice(0, 7)}-01`;
 
   const [tab, setTab]                     = useState('ordenes');
+  const [mesSeleccionado, setMesSeleccionado] = useState(hoy.slice(0, 7));
   const [desde, setDesde]                 = useState(inicioMes);
   const [hasta, setHasta]                 = useState(hoy);
   const [estadoFiltro, setEstadoFiltro]   = useState('Todos');
@@ -89,6 +97,148 @@ export default function Reportes() {
     });
   }, [solicitudes, desde, hasta, estadoFiltro, mecanicoFiltro, buscar]);
 
+
+  const resumenMensual = useMemo(() => {
+    const mapa = {};
+    solicitudes.forEach((s) => {
+      const mes = (s.fecha || '').slice(0, 7);
+      if (!mes) return;
+      if (!mapa[mes]) mapa[mes] = { mes, ordenes: 0, completadas: 0, repuestos: 0, manoObra: 0, ingresos: 0, clientesSet: new Set() };
+      mapa[mes].ordenes++;
+      if (s.estado === 'Completada') mapa[mes].completadas++;
+      mapa[mes].clientesSet.add((s.cliente || '').toLowerCase());
+      let repEnEsta = 0;
+      if (typeof s.marca === 'string' && s.marca.includes(':')) {
+        s.marca.split('|').forEach((parte) => {
+          if (parte.startsWith('R:')) {
+            const precio = Number(parte.split(':')[3]) || 0;
+            mapa[mes].repuestos += precio;
+            repEnEsta += precio;
+          }
+        });
+      }
+      const totalOrden = pagosMap[s.id] || Number(s.precio) || 0;
+      mapa[mes].ingresos += totalOrden;
+      mapa[mes].manoObra += Math.max(0, totalOrden - repEnEsta);
+    });
+    return Object.values(mapa)
+      .sort((a, b) => b.mes.localeCompare(a.mes))
+      .map(({ clientesSet, ...rest }) => ({ ...rest, clientes: clientesSet.size }));
+  }, [solicitudes, pagosMap]);
+
+  const exportarDetalladoMes = () => {
+    if (!mesSeleccionado) return;
+    const solMes = solicitudes
+      .filter((s) => (s.fecha || '').startsWith(mesSeleccionado))
+      .sort((a, b) => Number(a.id) - Number(b.id));
+    if (!solMes.length) { toast.error('Sin órdenes en el mes seleccionado'); return; }
+
+    const resRow  = resumenMensual.find((r) => r.mes === mesSeleccionado);
+    const taller  = configNegocio?.nombre || 'AUTO+';
+    const periodo = labelMes(mesSeleccionado);
+    const generado = new Date().toLocaleDateString('es-GT', { day: '2-digit', month: '2-digit', year: 'numeric' });
+    const wb = XLSX.utils.book_new();
+
+    // ── helper: ancho de columnas ─────────────────────────────────────────
+    const colWidths = (ws, widths) => { ws['!cols'] = widths.map((w) => ({ wch: w })); };
+
+    // ════════════════════════════════════════════════════════════════════════
+    // HOJA 1 — RESUMEN DEL PERÍODO
+    // ════════════════════════════════════════════════════════════════════════
+    const wsRes = XLSX.utils.aoa_to_sheet([
+      [taller],
+      [`Reporte de periodo: ${periodo}`],
+      [`Generado el: ${generado}`],
+      [],
+      ['INDICADOR', 'VALOR'],
+      ['Total de órdenes',         resRow?.ordenes     ?? 0],
+      ['Órdenes completadas',      resRow?.completadas ?? 0],
+      ['Clientes atendidos',       resRow?.clientes    ?? 0],
+      ['Repuestos vendidos (Q)',   resRow ? `Q ${resRow.repuestos.toFixed(2)}`  : 'Q 0.00'],
+      ['Mano de obra (Q)',         resRow ? `Q ${resRow.manoObra.toFixed(2)}`   : 'Q 0.00'],
+      ['Total ingresos (Q)',       resRow ? `Q ${resRow.ingresos.toFixed(2)}`   : 'Q 0.00'],
+    ]);
+    colWidths(wsRes, [30, 25]);
+    XLSX.utils.book_append_sheet(wb, wsRes, 'Resumen');
+
+    // ════════════════════════════════════════════════════════════════════════
+    // HOJA 2 — DETALLE DE ÓRDENES (una fila por orden, todo en columnas)
+    // ════════════════════════════════════════════════════════════════════════
+    const headers = [
+      'No. Orden', 'Fecha', 'Cliente', 'Vehículo', 'Placa', 'Km',
+      'Servicio(s)', 'Repuestos (detalle)', 'M. de obra extra',
+      'Mecánico', 'Estado',
+      'Subtotal repuestos (Q)', 'Subtotal servicios (Q)', 'Total (Q)',
+    ];
+
+    const filas = solMes.map((s) => {
+      const total = pagosMap[s.id] || Number(s.precio) || 0;
+      let repTotal = 0;
+      const repDetalle = [];
+      const moExtra    = [];
+
+      if (typeof s.marca === 'string') {
+        s.marca.split('|').forEach((parte) => {
+          if (parte.startsWith('R:')) {
+            const p = parte.split(':');
+            const precio = Number(p[3]) || 0;
+            repTotal += precio;
+            repDetalle.push(`${p[2] || 'Repuesto'}: Q ${precio.toFixed(2)}`);
+          }
+          if (parte.startsWith('M:')) {
+            const p = parte.split(':');
+            moExtra.push(`${p[1] || ''}: Q ${Number(p[2]).toFixed(2)}`);
+          }
+        });
+      }
+
+      const moTotal = Math.max(0, total - repTotal);
+      const idFormato = `#S${String(s.id).padStart(3, '0')}`;
+
+      return [
+        idFormato,
+        s.fecha || '',
+        (s.cliente || '').toUpperCase(),
+        (s.vehiculo || '').toUpperCase(),
+        (s.placa || '').toUpperCase(),
+        s.kilometraje || '',
+        (s.servicio || '').toUpperCase(),
+        repDetalle.length ? repDetalle.join('\n') : '—',
+        moExtra.length    ? moExtra.join('\n')    : '—',
+        s.mecanico?.name || s.mecanico?.nombre || 'Sin asignar',
+        s.estado || '',
+        repTotal.toFixed(2),
+        moTotal.toFixed(2),
+        total.toFixed(2),
+      ];
+    });
+
+    // Fila de totales al final
+    const sumRep   = solMes.reduce((t, s) => {
+      let r = 0;
+      if (typeof s.marca === 'string') s.marca.split('|').forEach((p) => { if (p.startsWith('R:')) r += Number(p.split(':')[3]) || 0; });
+      return t + r;
+    }, 0);
+    const sumTotal = solMes.reduce((t, s) => t + (pagosMap[s.id] || Number(s.precio) || 0), 0);
+    const sumMO    = Math.max(0, sumTotal - sumRep);
+
+    filas.push([
+      'TOTALES', '', '', '', '', '', '', '', '', '', '',
+      sumRep.toFixed(2), sumMO.toFixed(2), sumTotal.toFixed(2),
+    ]);
+
+    const wsDetalle = XLSX.utils.aoa_to_sheet([
+      [taller, '', '', '', '', '', '', '', '', '', '', '', '', `Período: ${periodo}`],
+      [],
+      headers,
+      ...filas,
+    ]);
+    colWidths(wsDetalle, [12, 12, 22, 22, 10, 8, 30, 35, 25, 18, 14, 20, 20, 14]);
+    XLSX.utils.book_append_sheet(wb, wsDetalle, 'Detalle ordenes');
+
+    XLSX.writeFile(wb, `reporte_${mesSeleccionado}.xlsx`);
+    toast.success(`Reporte de ${periodo} exportado`);
+  };
 
   const serviciosVendidos = useMemo(() => {
     const mapa = {};
@@ -184,7 +334,7 @@ export default function Reportes() {
     );
   };
 
-  const imprimirDoc = (prefijo) => {
+  const imprimirDoc = () => {
     if (!solicitudSeleccionada) return;
     // Evitar renombrar el documento antes de imprimir (no modificar document.title)
     window.print();
@@ -875,7 +1025,7 @@ export default function Reportes() {
                     </span>
                   )}
                   {/* Imprimir (térmica B&W) */}
-                  <button type="button" onClick={() => imprimirDoc('Orden')} className={`w-full sm:w-auto ${btnPrimario}`}>
+                  <button type="button" onClick={() => imprimirDoc()} className={`w-full sm:w-auto ${btnPrimario}`}>
                     <Icon path="M6 9V4a2 2 0 012-2h8a2 2 0 012 2v5m-2 4h2a2 2 0 002-2v-1a2 2 0 00-2-2H4a2 2 0 00-2 2v1a2 2 0 002 2h2m0 0v3a2 2 0 002 2h8a2 2 0 002-2v-3m-12 0h12" />
                     Imprimir comprobante
                   </button>
@@ -885,6 +1035,90 @@ export default function Reportes() {
               <p className="text-xs text-slate-400 text-center py-6">
                 Selecciona una orden para ver el documento de impresión.
               </p>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* ══════════════════════════════════════════
+          TAB: RESUMEN MENSUAL
+      ══════════════════════════════════════════ */}
+      {tab === 'resumen' && (
+        <div className="space-y-3">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <h3 className="text-sm font-semibold text-primary">Resumen por mes</h3>
+            <div className="flex items-center gap-2 flex-wrap">
+              <select
+                value={mesSeleccionado}
+                onChange={(e) => setMesSeleccionado(e.target.value)}
+                className="border border-slate-300 rounded-md px-3 py-2 text-sm text-slate-700 bg-white focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none capitalize"
+              >
+                {resumenMensual.length === 0
+                  ? <option value="">Sin datos</option>
+                  : resumenMensual.map((r) => (
+                      <option key={r.mes} value={r.mes}>{labelMes(r.mes)}</option>
+                    ))
+                }
+              </select>
+              <button
+                type="button"
+                onClick={exportarDetalladoMes}
+                disabled={!mesSeleccionado || !resumenMensual.length}
+                className={mesSeleccionado && resumenMensual.length ? btnPrimario : `${btnPrimario} opacity-40 cursor-not-allowed`}
+              >
+                <Icon path="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-8 0V5a2 2 0 012-2h4a2 2 0 012 2v2M9 12h6m-6 4h3" />
+                Exportar detalle Excel
+              </button>
+            </div>
+          </div>
+
+          <div className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-x-auto">
+            {resumenMensual.length === 0 ? (
+              <p className="text-xs text-slate-400 text-center py-10">Sin datos registrados.</p>
+            ) : (
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="bg-primary text-white text-xs uppercase">
+                    <th className="px-4 py-3 text-left font-semibold">Mes</th>
+                    <th className="px-4 py-3 text-center font-semibold">Órdenes</th>
+                    <th className="px-4 py-3 text-center font-semibold">Completadas</th>
+                    <th className="px-4 py-3 text-center font-semibold">Clientes</th>
+                    <th className="px-4 py-3 text-right font-semibold">Repuestos</th>
+                    <th className="px-4 py-3 text-right font-semibold">Mano de obra</th>
+                    <th className="px-4 py-3 text-right font-semibold">Total ingresos</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {resumenMensual.map((r, i) => {
+                    const esActual = r.mes === new Date().toISOString().slice(0, 7);
+                    return (
+                      <tr key={r.mes} className={`border-t border-gray-100 ${esActual ? 'bg-blue-50' : i % 2 === 0 ? 'bg-white' : 'bg-slate-50'}`}>
+                        <td className="px-4 py-3 font-semibold text-primary capitalize">
+                          {labelMes(r.mes)}
+                          {esActual && <span className="ml-2 text-[10px] bg-blue-100 text-blue-600 px-1.5 py-0.5 rounded-full font-bold">en curso</span>}
+                        </td>
+                        <td className="px-4 py-3 text-center text-slate-700">{r.ordenes}</td>
+                        <td className="px-4 py-3 text-center text-green-600 font-semibold">{r.completadas}</td>
+                        <td className="px-4 py-3 text-center text-slate-700">{r.clientes}</td>
+                        <td className="px-4 py-3 text-right text-orange-600">Q {r.repuestos.toFixed(2)}</td>
+                        <td className="px-4 py-3 text-right text-amber-600">Q {r.manoObra.toFixed(2)}</td>
+                        <td className="px-4 py-3 text-right font-bold text-primary">Q {r.ingresos.toFixed(2)}</td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+                <tfoot>
+                  <tr className="border-t-2 border-primary bg-slate-50">
+                    <td className="px-4 py-3 font-bold text-primary text-xs uppercase">Total general</td>
+                    <td className="px-4 py-3 text-center font-bold text-slate-700">{resumenMensual.reduce((s, r) => s + r.ordenes, 0)}</td>
+                    <td className="px-4 py-3 text-center font-bold text-green-600">{resumenMensual.reduce((s, r) => s + r.completadas, 0)}</td>
+                    <td className="px-4 py-3 text-center font-bold text-slate-700">—</td>
+                    <td className="px-4 py-3 text-right font-bold text-orange-600">Q {resumenMensual.reduce((s, r) => s + r.repuestos, 0).toFixed(2)}</td>
+                    <td className="px-4 py-3 text-right font-bold text-amber-600">Q {resumenMensual.reduce((s, r) => s + r.manoObra, 0).toFixed(2)}</td>
+                    <td className="px-4 py-3 text-right font-bold text-primary">Q {resumenMensual.reduce((s, r) => s + r.ingresos, 0).toFixed(2)}</td>
+                  </tr>
+                </tfoot>
+              </table>
             )}
           </div>
         </div>

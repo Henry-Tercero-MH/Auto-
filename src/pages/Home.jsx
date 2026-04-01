@@ -111,10 +111,12 @@ export default function Home() {
   const hoy = new Date().toISOString().slice(0, 10);
 
   const kpis = useMemo(() => {
-    const total       = solicitudes.length;
+    const mes     = new Date().toISOString().slice(0, 7);
+    const solMes  = solicitudes.filter((s) => (s.fecha || '').startsWith(mes));
+    const total       = solMes.length;
     const pendientes  = solicitudes.filter((s) => s.estado === 'Pendiente').length;
     const enProceso   = solicitudes.filter((s) => s.estado === 'En proceso').length;
-    const completadas = solicitudes.filter((s) => s.estado === 'Completada').length;
+    const completadas = solMes.filter((s) => s.estado === 'Completada').length;
     const sinAsignar  = solicitudes.filter((s) => !s.mecanico && s.estado === 'Pendiente').length;
     const hoyTotal    = solicitudes.filter((s) => s.fecha === hoy).length;
     return { total, pendientes, enProceso, completadas, sinAsignar, hoyTotal };
@@ -122,24 +124,24 @@ export default function Home() {
 
   const finanzas = useMemo(() => {
     const mes = new Date().toISOString().slice(0, 7);
-    // Cruzar pagos con el estado actual de la solicitud
     const estadoSol = {};
     solicitudes.forEach((s) => { estadoSol[s.id] = s.estado; });
     const monto = (p) => Number(p.monto) || 0;
     const sum   = (arr) => arr.reduce((t, p) => t + monto(p), 0);
 
-    // Mapa solicitud_id → monto total del pago (más confiable que s.precio del Sheet)
+    const pagosMes = pagos.filter((p) => (p.fecha || '').startsWith(mes));
+
+    // Mapa solicitud_id → monto del mes (para repuestos/manoObra)
     const montoSol = {};
-    pagos.forEach((p) => {
+    pagosMes.forEach((p) => {
       montoSol[p.solicitud_id] = (montoSol[p.solicitud_id] || 0) + (Number(p.monto) || 0);
     });
 
-    // Calcular totales de repuestos y mano de obra
-    // - R:id:desc:precio en campo marca → repuestos
-    // - (monto total pago) - repuestos → mano de obra (servicios + M: extra)
+    // Repuestos y mano de obra solo del mes actual
+    const solMes = solicitudes.filter((s) => (s.fecha || '').startsWith(mes));
     let totalRepuestos = 0;
     let totalManoObra  = 0;
-    solicitudes.forEach((s) => {
+    solMes.forEach((s) => {
       let repEnEsta = 0;
       if (typeof s.marca === 'string' && s.marca.includes(':')) {
         s.marca.split('|').forEach((parte) => {
@@ -155,10 +157,10 @@ export default function Home() {
     });
 
     return {
-      porCobrar:       sum(pagos.filter((p) => { const st = estadoSol[p.solicitud_id]; return st === 'Pendiente' || st === 'En proceso'; })),
-      totalCompletado: sum(pagos.filter((p) => estadoSol[p.solicitud_id] === 'Completada')),
+      porCobrar:       sum(pagosMes.filter((p) => { const st = estadoSol[p.solicitud_id]; return st === 'Pendiente' || st === 'En proceso'; })),
+      totalCompletado: sum(pagosMes.filter((p) => estadoSol[p.solicitud_id] === 'Completada')),
       hoy:             sum(pagos.filter((p) => (p.fecha || '').slice(0, 10) === hoy)),
-      mes:             sum(pagos.filter((p) => (p.fecha || '').startsWith(mes))),
+      mes:             sum(pagosMes),
       totalRepuestos,
       totalManoObra,
     };
@@ -208,11 +210,11 @@ export default function Home() {
 
       {/* ── KPIs operativos ── */}
       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-3 lg:grid-cols-6 gap-3 sm:gap-4">
-        <KpiCard label="Total"       value={kpis.total}       sub="todas las órdenes" Icon={ClipboardList}  color="text-primary"     bg="bg-blue-50"    />
+        <KpiCard label="Total"       value={kpis.total}       sub="órdenes este mes"  Icon={ClipboardList}  color="text-primary"     bg="bg-blue-50"    />
         <KpiCard label="Hoy"         value={kpis.hoyTotal}    sub="ingresaron hoy"    Icon={CalendarDays}   color="text-blue-500"    bg="bg-blue-50"    />
         <KpiCard label="Pendientes"  value={kpis.pendientes}  sub="por atender"       Icon={Clock}          color="text-amber-500"   bg="bg-amber-50"   />
         <KpiCard label="En proceso"  value={kpis.enProceso}   sub="en taller"         Icon={Wrench}         color="text-orange-500"  bg="bg-orange-50"  />
-        <KpiCard label="Completadas" value={kpis.completadas} sub="finalizadas"       Icon={CheckCircle2}   color="text-green-500"   bg="bg-green-50"   />
+        <KpiCard label="Completadas" value={kpis.completadas} sub="este mes"          Icon={CheckCircle2}   color="text-green-500"   bg="bg-green-50"   />
         <KpiCard label="Sin asignar" value={kpis.sinAsignar}  sub="sin mecánico"      Icon={UserMinus}      color="text-slate-500"   bg="bg-slate-100"  />
       </div>
 

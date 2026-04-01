@@ -167,6 +167,10 @@ export default function Solicitudes() {
         (s.servicio || '').toLowerCase().includes(q) ||
         (s.id || '').includes(q);
       return matchFiltro && matchCliente && matchBusqueda;
+    }).sort((a, b) => {
+      const byFecha = (b.fecha || '').localeCompare(a.fecha || '');
+      if (byFecha !== 0) return byFecha;
+      return Number(b.id) - Number(a.id);
     });
   }, [solicitudes, filtro, busqueda, clienteFiltro, esMecanico, user]);
 
