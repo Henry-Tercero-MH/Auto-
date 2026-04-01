@@ -166,7 +166,14 @@ export default function Home() {
     };
   }, [solicitudes, pagos, hoy]);
 
-  const recientes = solicitudes.slice(0, 8);
+  const recientes = solicitudes
+    .filter((s) => (s.fecha || '').startsWith(new Date().toISOString().slice(0, 7)))
+    .sort((a, b) => {
+      const byFecha = (b.fecha || '').localeCompare(a.fecha || '');
+      if (byFecha !== 0) return byFecha;
+      return Number(b.id) - Number(a.id);
+    })
+    .slice(0, 8);
 
   const estadoStyles = useMemo(() => {
     const m = {};
@@ -259,7 +266,7 @@ export default function Home() {
       {/* ── Solicitudes recientes ── */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-100">
         <div className="flex items-center justify-between px-4 sm:px-6 py-4 border-b border-gray-100">
-          <h3 className="font-semibold text-primary text-sm sm:text-base">Solicitudes recientes</h3>
+          <h3 className="font-semibold text-primary text-sm sm:text-base">Solicitudes del mes</h3>
           <Link to="/solicitudes" className="text-xs sm:text-sm text-accent hover:underline font-medium">Ver todas</Link>
         </div>
         <div className="overflow-x-auto">
