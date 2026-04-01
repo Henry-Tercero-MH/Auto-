@@ -143,10 +143,24 @@ export default function Solicitudes() {
   const busqueda = useDebounce(busquedaInput, 300);
   const [expandido, setExpandido] = useState(null);
   const [clienteFiltro, setClienteFiltro] = useState(searchParams.get('cliente') || '');
+  const [mesVista, setMesVista] = useState(() => new Date().toISOString().slice(0, 7));
 
   const clientesUnicos = useMemo(() =>
     [...new Set(solicitudes.map((s) => s.cliente).filter(Boolean))].sort(),
   [solicitudes]);
+
+  const mesActual = new Date().toISOString().slice(0, 7);
+
+  const mesesDisponibles = useMemo(() => {
+    const set = new Set(solicitudes.map((s) => (s.fecha || '').slice(0, 7)).filter(Boolean));
+    return [...set].sort((a, b) => b.localeCompare(a));
+  }, [solicitudes]);
+
+  const labelMesCorto = (ym) => {
+    const [y, m] = ym.split('-');
+    return new Date(Number(y), Number(m) - 1, 1)
+      .toLocaleDateString('es-GT', { month: 'long', year: 'numeric' });
+  };
 
   // El mecánico solo ve sus solicitudes + las Pendientes sin asignar
   const datosFiltrados = useMemo(() => {
@@ -156,7 +170,8 @@ export default function Solicitudes() {
         const disponible = !s.mecanico && s.estado === 'Pendiente';
         if (!esMia && !disponible) return false;
       }
-      const matchFiltro = filtro === 'Todos' || s.estado === filtro;
+      const matchMes     = (s.fecha || '').startsWith(mesVista);
+      const matchFiltro  = filtro === 'Todos' || s.estado === filtro;
       const matchCliente = !clienteFiltro || s.cliente === clienteFiltro;
       const q = busqueda.toLowerCase();
       const matchBusqueda =
@@ -166,22 +181,23 @@ export default function Solicitudes() {
         String(s.placa || '').toLowerCase().includes(q) ||
         (s.servicio || '').toLowerCase().includes(q) ||
         (s.id || '').includes(q);
-      return matchFiltro && matchCliente && matchBusqueda;
+      return matchMes && matchFiltro && matchCliente && matchBusqueda;
     }).sort((a, b) => {
       const byFecha = (b.fecha || '').localeCompare(a.fecha || '');
       if (byFecha !== 0) return byFecha;
       return Number(b.id) - Number(a.id);
     });
-  }, [solicitudes, filtro, busqueda, clienteFiltro, esMecanico, user]);
+  }, [solicitudes, filtro, busqueda, clienteFiltro, esMecanico, user, mesVista]);
 
   const conteo = useMemo(() => {
-    const base = esMecanico
+    const base = (esMecanico
       ? solicitudes.filter((s) => s.mecanico?.id === user?.id || (!s.mecanico && s.estado === 'Pendiente'))
-      : solicitudes;
+      : solicitudes
+    ).filter((s) => (s.fecha || '').startsWith(mesVista));
     const c = { Todos: base.length };
     ESTADOS.forEach((e) => { c[e] = base.filter((s) => s.estado === e).length; });
     return c;
-  }, [solicitudes, ESTADOS, esMecanico, user]);
+  }, [solicitudes, ESTADOS, esMecanico, user, mesVista]);
 
   const cargaPorMecanico = useMemo(() => {
     if (!esAdmin) return [];
@@ -310,6 +326,25 @@ export default function Solicitudes() {
           </div>
         ) : null;
       })()}
+
+      {/* Selector de mes */}
+      <div className="flex items-center gap-2 flex-wrap">
+        <span className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Período:</span>
+        {mesesDisponibles.map((m) => (
+          <button
+            key={m}
+            onClick={() => setMesVista(m)}
+            className={`px-3 py-1.5 rounded-full text-xs font-semibold transition-all border ${
+              mesVista === m
+                ? 'bg-primary text-white border-primary shadow-sm'
+                : 'bg-white border-gray-200 text-slate-500 hover:border-primary hover:text-primary'
+            }`}
+          >
+            {labelMesCorto(m)}
+            {m === mesActual && <span className="ml-1 opacity-70">●</span>}
+          </button>
+        ))}
+      </div>
 
       {/* Filtros */}
       <div className="flex flex-wrap gap-2">
@@ -623,7 +658,7 @@ export default function Solicitudes() {
           </div>
 
           <p className="text-xs text-slate-400 text-right mt-3">
-            Mostrando {datosFiltrados.length} de {solicitudes.length} solicitudes
+            Mostrando {datosFiltrados.length} de {solicitudes.filter((s) => (s.fecha || '').startsWith(mesVista)).length} solicitudes en {labelMesCorto(mesVista)}
           </p>
         </div>
 
