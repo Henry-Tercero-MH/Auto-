@@ -160,9 +160,15 @@ export function CatalogosProvider({ children }) {
       setClientes((prev) => [...prev, { ...cliente, id, activo: true }]);
       return id;
     } catch {
-      const id = `C${String(Date.now()).slice(-6)}`;
-      setClientes((prev) => [...prev, { ...cliente, id, activo: true }]);
-      return id;
+      setClientes((prev) => {
+        const maxNum = prev.reduce((max, c) => {
+          const n = parseInt((c.id || '').replace(/\D/g, ''), 10);
+          return isNaN(n) ? max : Math.max(max, n);
+        }, 0);
+        const id = `C${String(maxNum + 1).padStart(3, '0')}`;
+        return [...prev, { ...cliente, id, activo: true }];
+      });
+      return null;
     }
   }, []);
 
@@ -185,9 +191,15 @@ export function CatalogosProvider({ children }) {
       setVehiculos((prev) => [...prev, { ...v, id }]);
       return id;
     } catch {
-      const id = `V${String(Date.now()).slice(-6)}`;
-      setVehiculos((prev) => [...prev, { ...v, id }]);
-      return id;
+      setVehiculos((prev) => {
+        const maxNum = prev.reduce((max, item) => {
+          const n = parseInt((item.id || '').replace(/\D/g, ''), 10);
+          return isNaN(n) ? max : Math.max(max, n);
+        }, 0);
+        const id = `V${String(maxNum + 1).padStart(3, '0')}`;
+        return [...prev, { ...v, id }];
+      });
+      return null;
     }
   }, []);
 
@@ -213,10 +225,14 @@ export function CatalogosProvider({ children }) {
       const { id } = await api.crearMecanico(mec);
       setMecanicos((prev) => [...prev, { ...mec, id, activo: true }]);
     } catch {
-      setMecanicos((prev) => [
-        ...prev,
-        { ...mec, id: `M${String(prev.length + 1).padStart(3, '0')}`, activo: true },
-      ]);
+      setMecanicos((prev) => {
+        const maxNum = prev.reduce((max, m) => {
+          const n = parseInt((m.id || '').replace(/\D/g, ''), 10);
+          return isNaN(n) ? max : Math.max(max, n);
+        }, 0);
+        const id = `M${String(maxNum + 1).padStart(3, '0')}`;
+        return [...prev, { ...mec, id, activo: true }];
+      });
     }
   }, []);
 
@@ -344,9 +360,15 @@ export function CatalogosProvider({ children }) {
       setRepuestos((prev) => [...prev, { ...rep, id }]);
       return id;
     } catch {
-      const id = `R${String(Date.now()).slice(-6)}`;
-      setRepuestos((prev) => [...prev, { ...rep, id }]);
-      return id;
+      setRepuestos((prev) => {
+        const maxNum = prev.reduce((max, item) => {
+          const n = parseInt((item.id || '').replace(/\D/g, ''), 10);
+          return isNaN(n) ? max : Math.max(max, n);
+        }, 0);
+        const id = `R${String(maxNum + 1).padStart(3, '0')}`;
+        return [...prev, { ...rep, id }];
+      });
+      return null;
     }
   }, []);
 

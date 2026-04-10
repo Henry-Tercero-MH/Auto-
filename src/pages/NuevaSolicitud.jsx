@@ -291,9 +291,9 @@ const inputCls = (err) =>
     err ? 'border-red-400 focus:ring-red-300 bg-red-50' : 'border-gray-200 focus:ring-accent focus:border-accent'
   }`;
 
-function genOrden() {
-  const next = parseInt(localStorage.getItem('drivebot_next_orden') || '1', 10);
-  return String(next).padStart(5, '0');
+function genOrdenFallback() {
+  // Solo se usa si Sheets no responde — usa timestamp para evitar colisiones entre dispositivos
+  return String(Date.now()).slice(-5);
 }
 
 // ── ZonaRect ─────────────────────────────────────────────────────────────────
@@ -1183,13 +1183,27 @@ export default function NuevaSolicitud() {
   const [step, setStep] = useState(() => draft?.step ?? 1);
   const [form, setForm] = useState(() => draft?.form ?? initialState);
   const [errores, setErrores] = useState({});
-  const [ordenNum, setOrdenNum] = useState(() => draft?.ordenNum ?? genOrden());
+  const [ordenNum, setOrdenNum] = useState(() => draft?.ordenNum ?? genOrdenFallback());
   const [clienteSeleccionado, setClienteSeleccionado] = useState(false);
   const [catalogoRepuestos, setCatalogoRepuestos] = useState([]);
 
-  // Cargar catálogo de repuestos al montar
+  // Cargar catálogo de repuestos y calcular número de orden real desde Sheets
   useEffect(() => {
     api.getRepuestos().then(setCatalogoRepuestos).catch(() => {});
+
+    // Solo recalcular si no hay borrador activo (para no pisar un formulario en progreso)
+    if (!draft) {
+      api.getSolicitudes()
+        .then((data) => {
+          // Extraer el número más alto de IDs tipo "S001", "S0023", etc.
+          const maxNum = (data || []).reduce((max, s) => {
+            const n = parseInt((s.id || '').replace(/\D/g, ''), 10);
+            return isNaN(n) ? max : Math.max(max, n);
+          }, 0);
+          setOrdenNum(String(maxNum + 1).padStart(5, '0'));
+        })
+        .catch(() => {}); // Si falla, queda el fallback por timestamp
+    }
   }, []);
 
   // Persistir borrador en cada cambio
@@ -1494,8 +1508,14 @@ export default function NuevaSolicitud() {
       });
       localStorage.removeItem(DRAFT_KEY);
       setForm(initialState);
-      setOrdenNum(genOrden());
       setStep(1);
+      api.getSolicitudes().then((data) => {
+        const maxNum = (data || []).reduce((max, s) => {
+          const n = parseInt((s.id || '').replace(/\D/g, ''), 10);
+          return isNaN(n) ? max : Math.max(max, n);
+        }, 0);
+        setOrdenNum(String(maxNum + 1).padStart(5, '0'));
+      }).catch(() => setOrdenNum(genOrdenFallback()));
       setClienteSeleccionado(false);
       toast.success('¡Solicitud registrada exitosamente!');
     } catch (err) {
@@ -2128,7 +2148,13 @@ export default function NuevaSolicitud() {
                           setStep(1);
                           setErrores({});
                           setClienteSeleccionado(false);
-                          setOrdenNum(genOrden());
+                          api.getSolicitudes().then((data) => {
+                            const maxNum = (data || []).reduce((max, s) => {
+                              const n = parseInt((s.id || '').replace(/\D/g, ''), 10);
+                              return isNaN(n) ? max : Math.max(max, n);
+                            }, 0);
+                            setOrdenNum(String(maxNum + 1).padStart(5, '0'));
+                          }).catch(() => setOrdenNum(genOrdenFallback()));
                           toast.success('Formulario limpiado');
                         }}
                         className="flex-1 bg-red-500 text-white text-xs font-semibold px-3 py-1.5 rounded-lg hover:bg-red-600"
