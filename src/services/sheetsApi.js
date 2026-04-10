@@ -1,6 +1,6 @@
 // ── Google Apps Script Web App — cliente fetch v2 ─────────────────────────
 const BASE_URL =
-  'https://script.google.com/macros/s/AKfycbzYkVBTdfVImSG4SzYh-Vl2KSfrH45jox5Ha27rrHoDHMhgcqf3ttxzv7jmVXM0659M/exec';
+  'https://script.google.com/macros/s/AKfycbz9duRI6pDlndQrJLIm3fEUCokqKpKGKh1Vo1eRuvlmLA9ZjRvoTIJYwMtIqIMoam7F/exec';
 
 // URL pública del Web App (se exporta para abrir/imprimir el libro completo desde el frontend)
 export const APP_SCRIPT_URL = BASE_URL;
