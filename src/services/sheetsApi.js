@@ -1,6 +1,6 @@
 // ── Google Apps Script Web App — cliente fetch v2 ─────────────────────────
 const BASE_URL =
-  'https://script.google.com/macros/s/AKfycbz9duRI6pDlndQrJLIm3fEUCokqKpKGKh1Vo1eRuvlmLA9ZjRvoTIJYwMtIqIMoam7F/exec';
+  'https://script.google.com/macros/s/AKfycby2GvR3J2L1XXIpFqG8WzoM_MQ7qrTtsL3wxxn3hVuvlRtvYBdAOXsiuHk_5Wx8T9RM/exec';
 
 // URL pública del Web App (se exporta para abrir/imprimir el libro completo desde el frontend)
 export const APP_SCRIPT_URL = BASE_URL;
@@ -188,4 +188,23 @@ export const api = {
   // ── Bitácora ──────────────────────────────────────────────────────────
   getBitacora: ()      => get('bitacora'),
   log:         (datos) => post({ accion: 'logBitacora', datos }),
+
+  // ── Resumen Órdenes ───────────────────────────────────────────────────
+  generarResumenOrdenes:  ()   => post({ accion: 'generarResumenOrdenes' }),
+  actualizarFilaResumen:  (id) => post({ accion: 'actualizarFilaResumen', id }),
+
+  // ── Hojas y campos dinámicos ──────────────────────────────────────────
+  // crearHojaDinamica('MiHoja', ['id','nombre','precio'])
+  crearHojaDinamica:  (nombre, headers)       => post({ accion: 'crearHojaDinamica', nombre, headers }),
+  // agregarColumna('MiHoja', 'nueva_columna')
+  agregarColumna:     (hoja, columna)         => post({ accion: 'agregarColumna', hoja, columna }),
+  // eliminarHoja('MiHoja') — no permite borrar hojas del sistema
+  eliminarHoja:       (nombre)                => post({ accion: 'eliminarHoja', nombre }),
+  // lista todas las hojas con sus headers y total de filas
+  getHojasDinamicas:  ()                      => post({ accion: 'getHojasDinamicas' }),
+  // CRUD genérico sobre cualquier hoja por nombre
+  getRegistros:       (hoja)                  => post({ accion: 'getRegistros',      hoja }),
+  insertarRegistro:   (hoja, datos)           => post({ accion: 'insertarRegistro',  hoja, datos }),
+  editarRegistro:     (hoja, id, datos)       => post({ accion: 'editarRegistro',    hoja, id, datos }),
+  eliminarRegistro:   (hoja, id)              => post({ accion: 'eliminarRegistro',  hoja, id }),
 };
