@@ -3,6 +3,7 @@ import toast from 'react-hot-toast';
 import html2canvas from 'html2canvas';
 import jsPDF from 'jspdf';
 import { api } from '../services/sheetsApi';
+import { guardarDetalleOrden } from '../services/detalleOrden';
 import logo from '../imagenes/logoMecanica.png';
 import { formatQ, CategoryIcon } from '../data/servicios';
 import { useCatalogos } from '../context/CatalogosContext';
@@ -1497,6 +1498,16 @@ export default function NuevaSolicitud() {
       };
 
       const solicitudId = await agregarSolicitud(datos);
+
+      // Guardar detalle individual en DetalleOrdenes
+      guardarDetalleOrden({
+        solicitudId,
+        fecha:    datos.fecha,
+        cliente:  datos.cliente,
+        vehiculo: datos.vehiculo,
+        placa:    datos.placa,
+        marca:    marcaStr,
+      }).catch(e => console.warn('[detalleOrden] crear:', e.message));
 
       // Descontar stock de repuestos del catálogo
       await Promise.allSettled(

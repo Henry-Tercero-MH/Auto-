@@ -7,6 +7,7 @@ import SpinnerBolitas from '../components/SpinnerBolitas';
 import { usePagos } from '../context/PagosContext';
 import logo from '../imagenes/logoMecanica.png';
 import { APP_SCRIPT_URL, api } from '../services/sheetsApi';
+import { guardarDetalleOrden } from '../services/detalleOrden';
 
 const TIPO_DANO_LABELS = {
   rayon:  'Rayón',
@@ -386,7 +387,20 @@ export default function Reportes() {
 
   const imprimirDoc = () => {
     if (!solicitudSeleccionada) return;
-    // Evitar renombrar el documento antes de imprimir (no modificar document.title)
+    // Si hay extras, guardarlos en DetalleOrdenes antes de imprimir
+    if (extrasManoObra.length > 0 || extrasRepuestos.length > 0) {
+      const s = solicitudSeleccionada;
+      guardarDetalleOrden({
+        solicitudId:     s.id,
+        fecha:           s.fecha,
+        cliente:         s.cliente,
+        vehiculo:        s.vehiculo,
+        placa:           s.placa,
+        marca:           s.marca,
+        extrasManoObra:  extrasManoObra.map(m => ({ descripcion: m.descripcion, precio: m.precio || 0 })),
+        extrasRepuestos: extrasRepuestos.map(r => ({ descripcion: r.descripcion, precio: r.precio || 0 })),
+      }).catch(e => console.warn('[detalleOrden] imprimir:', e.message));
+    }
     window.print();
   };
 

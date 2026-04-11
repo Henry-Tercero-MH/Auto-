@@ -1,5 +1,6 @@
 import { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { api } from '../services/sheetsApi';
+import { eliminarDetalleOrden } from '../services/detalleOrden';
 
 const SolicitudesContext = createContext();
 
@@ -90,6 +91,8 @@ export function SolicitudesProvider({ children }) {
     setSolicitudes((prev) => prev.filter((s) => s.id !== id));
     try {
       await api.eliminarSolicitud(id);
+      // Eliminar fila en DetalleOrdenes
+      eliminarDetalleOrden(id).catch(e => console.warn('[detalleOrden] eliminar:', e.message));
       // Intentar limpiar pagos vinculados en el servidor (si existen)
       try {
         const pagos = await api.getPagos();

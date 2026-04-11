@@ -193,6 +193,10 @@ export const api = {
   generarResumenOrdenes:  ()   => post({ accion: 'generarResumenOrdenes' }),
   actualizarFilaResumen:  (id) => post({ accion: 'actualizarFilaResumen', id }),
 
+  // ── Detalle Órdenes ───────────────────────────────────────────────────
+  guardarDetalleOrden:    (datos) => post({ accion: 'guardarDetalleOrden', datos }),
+  eliminarDetalleOrden:   (id)    => post({ accion: 'eliminarDetalleOrden', id }),
+
   // ── Hojas y campos dinámicos ──────────────────────────────────────────
   // crearHojaDinamica('MiHoja', ['id','nombre','precio'])
   crearHojaDinamica:  (nombre, headers)       => post({ accion: 'crearHojaDinamica', nombre, headers }),
