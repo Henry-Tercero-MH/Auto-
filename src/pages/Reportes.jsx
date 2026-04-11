@@ -796,7 +796,14 @@ export default function Reportes() {
                       const serviciosGuardados = entradas.filter(e => e.startsWith('S:')).map(e => { const p = e.split(':'); return { nombre: p[1] || '', precio: parseFloat(p[2]) || 0 }; });
                       const manoObraRows = entradas.filter(e => e.startsWith('M:')).map(e => { const p = e.split(':'); return { desc: p[1] || '', precio: parseFloat(p[2]) || 0 }; });
                       const repuestosRows = entradas.filter(e => e.startsWith('R:')).map(e => { const p = e.split(':'); return { desc: p[2] || '', precio: parseFloat(p[3]) || 0 }; });
-                      const inspeccionRows = entradas.filter(e => e.startsWith('I:')).map(e => { const p = e.split(':'); return { zona: ZONA_LABELS[p[1]] || p[1] || '', tipo: TIPO_DANO_LABELS[p[2]] || p[2] || '' }; });
+                      const inspeccionRows = entradas.filter(e => e.startsWith('I:')).map(e => {
+                        const p = e.split(':');
+                        // clave guardada como "vista__zona" o legacy "vista::zona"
+                        const claveZona = (p[1] || '').replace('::', '__');
+                        const zonaId = claveZona.includes('__') ? claveZona.split('__')[1] : claveZona;
+                        const tipoRaw = p[2] || '';
+                        return { zona: ZONA_LABELS[zonaId] || zonaId, tipo: TIPO_DANO_LABELS[tipoRaw] || tipoRaw };
+                      });
                       // Si hay servicios con precios guardados, usarlos; si no, dividir el total por igual (compatibilidad atrás)
                       const nombres = (solicitudSeleccionada.servicio || '').split(',').map(n => n.trim()).filter(Boolean);
                       const totalExtras = [...manoObraRows, ...repuestosRows].reduce((s, r) => s + r.precio, 0);

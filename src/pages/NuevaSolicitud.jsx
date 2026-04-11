@@ -1473,7 +1473,7 @@ export default function NuevaSolicitud() {
       const repuestosStr = repuestosResueltos.map(r => `R:${r.id}:${r.descripcion}:${r.precio}`);
       const inspeccionStr = Object.entries(form.inspeccion || {})
         .filter(([, v]) => v)
-        .map(([zona, tipo]) => `I:${zona}:${tipo}`);
+        .map(([zona, tipo]) => `I:${zona.replace('::', '__')}:${tipo}`);
       const marcaStr = [...serviciosStr, ...manoObraStr, ...repuestosStr, ...inspeccionStr].join('|');
 
       const ahora = new Date();
