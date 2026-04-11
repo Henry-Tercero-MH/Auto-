@@ -2161,7 +2161,7 @@ export default function NuevaSolicitud() {
                             }, 0);
                             setOrdenNum(String(maxNum + 1).padStart(5, '0'));
                           }).catch(() => setOrdenNum(genOrdenFallback()));
-                          toast.success('Formulario limpiado');
+                          toast.success('Formulario limpiado', { duration: 1000 });
                         }}
                         className="flex-1 bg-red-500 text-white text-xs font-semibold px-3 py-1.5 rounded-lg hover:bg-red-600"
                       >Sí, limpiar</button>
