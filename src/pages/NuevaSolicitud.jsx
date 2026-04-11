@@ -1463,12 +1463,18 @@ export default function NuevaSolicitud() {
         })
       );
 
-      // Guardar en campo "marca": repuestos "R:id:desc:precio" y mano de obra extra "M:desc:precio", separado por "|"
+      // Guardar en campo "marca": servicios "S:nombre:precio", repuestos "R:id:desc:precio", mano de obra extra "M:desc:precio", inspección "I:zona:tipo", separado por "|"
+      const serviciosStr = (form.adicionales || [])
+        .filter(Boolean)
+        .map(n => `S:${n}:${form.preciosManuales[n] || 0}`);
       const manoObraStr = (form.manoObraExtra || [])
         .filter(m => m.descripcion)
         .map(m => `M:${m.descripcion}:${m.precio}`);
       const repuestosStr = repuestosResueltos.map(r => `R:${r.id}:${r.descripcion}:${r.precio}`);
-      const marcaStr = [...manoObraStr, ...repuestosStr].join('|');
+      const inspeccionStr = Object.entries(form.inspeccion || {})
+        .filter(([, v]) => v)
+        .map(([zona, tipo]) => `I:${zona}:${tipo}`);
+      const marcaStr = [...serviciosStr, ...manoObraStr, ...repuestosStr, ...inspeccionStr].join('|');
 
       const ahora = new Date();
       const horaEntrada = ahora.toLocaleTimeString('es-GT', { hour: '2-digit', minute: '2-digit', hour12: true });

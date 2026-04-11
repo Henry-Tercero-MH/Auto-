@@ -8,6 +8,31 @@ import { usePagos } from '../context/PagosContext';
 import logo from '../imagenes/logoMecanica.png';
 import { APP_SCRIPT_URL, api } from '../services/sheetsApi';
 
+const ZONA_LABELS = {
+  bumper_front:    'Bumper Delantero',
+  bumper_rear:     'Bumper Trasero',
+  capot:           'Capot',
+  cajuela:         'Cajuela',
+  cristal_front:   'Cristal Delantero',
+  cristal_rear:    'Cristal Trasero',
+  techo:           'Techo',
+  faro_izq:        'Faro Izquierdo',
+  faro_der:        'Faro Derecho',
+  calavera_izq:    'Calavera Izquierda',
+  calavera_der:    'Calavera Derecha',
+  mascara:         'Máscara / Grille',
+  salp_del_izq:    'Salpicadera Del. Izq',
+  salp_del_der:    'Salpicadera Del. Der',
+  salp_tras_izq:   'Salpicadera Tras. Izq',
+  salp_tras_der:   'Salpicadera Tras. Der',
+  puerta_del_izq:  'Puerta Del. Izquierda',
+  puerta_del_der:  'Puerta Del. Derecha',
+  puerta_tras_izq: 'Puerta Tras. Izquierda',
+  puerta_tras_der: 'Puerta Tras. Derecha',
+  espejo_izq:      'Espejo Izquierdo',
+  espejo_der:      'Espejo Derecho',
+};
+
 const Icon = ({ path, className = 'w-4 h-4' }) => (
   <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.8}>
     <path strokeLinecap="round" strokeLinejoin="round" d={path} />
@@ -244,11 +269,23 @@ export default function Reportes() {
     const mapa = {};
     solicitudesFiltradas.forEach((s) => {
       const nombres = (s.servicio || '').split(',').map((n) => n.trim()).filter(Boolean);
-      const montoPorServicio = nombres.length > 0 ? (pagosMap[s.id] || 0) / nombres.length : 0;
+      // Intentar obtener precios individuales desde el campo "marca" (entradas S:nombre:precio)
+      const entradas = (s.marca || '').split('|').map(e => e.trim()).filter(Boolean);
+      const serviciosGuardados = {};
+      entradas.filter(e => e.startsWith('S:')).forEach(e => {
+        const p = e.split(':');
+        serviciosGuardados[(p[1] || '').toLowerCase()] = parseFloat(p[2]) || 0;
+      });
+      const tienePreciosIndividuales = Object.keys(serviciosGuardados).length > 0;
+      const montoPorServicio = !tienePreciosIndividuales && nombres.length > 0
+        ? (pagosMap[s.id] || 0) / nombres.length
+        : 0;
       nombres.forEach((nombre) => {
         if (!mapa[nombre]) mapa[nombre] = { servicio: nombre, cantidad: 0, ingresos: 0 };
         mapa[nombre].cantidad += 1;
-        mapa[nombre].ingresos += montoPorServicio;
+        mapa[nombre].ingresos += tienePreciosIndividuales
+          ? (serviciosGuardados[nombre.toLowerCase()] || 0)
+          : montoPorServicio;
       });
     });
     return Object.values(mapa).sort((a, b) => b.cantidad - a.cantidad);
@@ -291,10 +328,17 @@ export default function Reportes() {
     const s = solicitudSeleccionada;
     const numF = `F-${String(s.id).replace(/\D/g, '').padStart(4, '0')}`;
     const nombres = (s.servicio || '').split(',').map((n) => n.trim()).filter(Boolean);
-    const porServicio = nombres.length > 0 ? totalSeleccionada / nombres.length : 0;
-    const lineas = nombres.map((n) =>
-      `• ${n.toUpperCase()}${porServicio > 0 ? `: Q ${porServicio.toFixed(2)}` : ''}`
-    ).join('\n');
+    const entradasWA = (s.marca || '').split('|').map(e => e.trim()).filter(Boolean);
+    const svcGuardadosWA = {};
+    entradasWA.filter(e => e.startsWith('S:')).forEach(e => {
+      const p = e.split(':'); svcGuardadosWA[(p[1] || '').toLowerCase()] = parseFloat(p[2]) || 0;
+    });
+    const tienePreciosWA = Object.keys(svcGuardadosWA).length > 0;
+    const porServicio = !tienePreciosWA && nombres.length > 0 ? totalSeleccionada / nombres.length : 0;
+    const lineas = nombres.map((n) => {
+      const precio = tienePreciosWA ? (svcGuardadosWA[n.toLowerCase()] || 0) : porServicio;
+      return `• ${n.toUpperCase()}${precio > 0 ? `: Q ${precio.toFixed(2)}` : ''}`;
+    }).join('\n');
     return [
       `🔧 *${configNegocio?.nombre || 'AUTO+'}*`,
       `📋 Comprobante *${numF}*`,
@@ -741,21 +785,28 @@ export default function Reportes() {
                       <span>Precio</span>
                     </div>
                     {(() => {
-                      // Parsear campo "marca": "R:id:desc:precio" repuestos, "M:desc:precio" mano de obra extra
+                      // Parsear campo "marca": "S:nombre:precio" servicios, "R:id:desc:precio" repuestos, "M:desc:precio" mano de obra extra, "I:zona:tipo" inspección
                       const entradas = (solicitudSeleccionada.marca || '').split('|').map(r => r.trim()).filter(Boolean);
+                      const serviciosGuardados = entradas.filter(e => e.startsWith('S:')).map(e => { const p = e.split(':'); return { nombre: p[1] || '', precio: parseFloat(p[2]) || 0 }; });
                       const manoObraRows = entradas.filter(e => e.startsWith('M:')).map(e => { const p = e.split(':'); return { desc: p[1] || '', precio: parseFloat(p[2]) || 0 }; });
                       const repuestosRows = entradas.filter(e => e.startsWith('R:')).map(e => { const p = e.split(':'); return { desc: p[2] || '', precio: parseFloat(p[3]) || 0 }; });
-                      const totalExtras = [...manoObraRows, ...repuestosRows].reduce((s, r) => s + r.precio, 0);
+                      const inspeccionRows = entradas.filter(e => e.startsWith('I:')).map(e => { const p = e.split(':'); return { zona: ZONA_LABELS[p[1]] || p[1] || '', tipo: p[2] || '' }; });
+                      // Si hay servicios con precios guardados, usarlos; si no, dividir el total por igual (compatibilidad atrás)
                       const nombres = (solicitudSeleccionada.servicio || '').split(',').map(n => n.trim()).filter(Boolean);
+                      const totalExtras = [...manoObraRows, ...repuestosRows].reduce((s, r) => s + r.precio, 0);
                       const totalServicios = totalSeleccionada - totalExtras;
                       const porServicio = nombres.length > 0 ? totalServicios / nombres.length : 0;
+                      const getServicioPrecio = (nombre) => {
+                        const sg = serviciosGuardados.find(s => s.nombre.toLowerCase() === nombre.toLowerCase());
+                        return sg ? sg.precio : porServicio;
+                      };
                       return (
                         <>
                           {nombres.map((nombre, i) => (
                             <div key={`srv-${i}-${nombre}`} className="r-serv-row flex items-center justify-between px-2 py-1.5 print:py-1 border-b border-dotted border-gray-200">
                               <span className="text-gray-800 font-medium text-sm print:text-[9px] flex-1 pr-1 uppercase">{nombre}</span>
                               <span className="font-bold text-gray-700 text-sm print:text-[9px]">
-                                {porServicio > 0 ? `Q ${porServicio.toFixed(2)}` : '—'}
+                                {getServicioPrecio(nombre) > 0 ? `Q ${getServicioPrecio(nombre).toFixed(2)}` : '—'}
                               </span>
                             </div>
                           ))}
@@ -775,6 +826,17 @@ export default function Reportes() {
                             <div key={`rep-${i}`} className="r-serv-row flex items-center justify-between px-2 py-1.5 print:py-1 border-b border-dotted border-gray-200">
                               <span className="text-gray-800 font-medium text-sm print:text-[9px] flex-1 pr-1">{r.desc}</span>
                               <span className="font-bold text-gray-700 text-sm print:text-[9px]">{r.precio > 0 ? `Q ${r.precio.toFixed(2)}` : '—'}</span>
+                            </div>
+                          ))}
+                          {inspeccionRows.length > 0 && (
+                            <div className="r-table-head flex justify-between bg-primary text-white text-xs print:text-[7px] uppercase font-bold px-2 py-1 print:py-0.5">
+                              <span>Inspección visual</span>
+                            </div>
+                          )}
+                          {inspeccionRows.map((d, i) => (
+                            <div key={`insp-${i}`} className="r-serv-row flex items-center justify-between px-2 py-1.5 print:py-1 border-b border-dotted border-gray-200">
+                              <span className="text-gray-800 font-medium text-sm print:text-[9px] flex-1 pr-1 uppercase">{d.zona}</span>
+                              <span className="text-gray-500 text-xs print:text-[8px] capitalize">{d.tipo}</span>
                             </div>
                           ))}
                         </>
